@@ -1,0 +1,14 @@
+{
+  "name": "Weighted Inventory",
+  "version": "1.0.0",
+  "manifest_version": 1,
+  "description": "Inventory management system.",
+  "action": {
+    "title": "Inventory",
+    "icon": "/vite.svg",
+    "popover": "/",
+    "width": 400,
+    "height": 700
+  },
+  "background_url": "/"
+}

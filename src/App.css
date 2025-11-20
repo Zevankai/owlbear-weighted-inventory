@@ -1,0 +1,190 @@
+/* src/App.css */
+
+/* 1. Global Reset & Box Model Fix */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-dark: #1e1e1e;
+  --bg-panel: #2a2a2a;
+  --accent-gold: #f0e130;
+  --text-main: #ffffff;
+  --text-muted: #a0a0a0;
+  --border: #444;
+  --danger: #ff4d4d;
+  --success: #4dff88;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* --- Main Layout --- */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh; /* Full viewport height */
+  overflow: hidden;
+}
+
+.loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  color: var(--accent-gold);
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+/* --- Navigation Bar --- */
+.nav-bar {
+  display: flex;
+  flex-wrap: wrap; /* Allows buttons to wrap to the next line */
+  background-color: var(--bg-dark);
+  border-bottom: 1px solid var(--border);
+  padding: 0;
+  flex-shrink: 0; /* Prevents nav from shrinking when content is long */
+}
+
+.nav-btn {
+  flex: 1 0 auto; /* Grow to fill space, allowing multiple rows */
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  padding: 10px 8px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-width: 60px; /* Minimum width to prevent crushing */
+}
+
+.nav-btn:hover {
+  color: var(--text-main);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.nav-btn.active {
+  color: var(--accent-gold);
+  border-bottom-color: var(--accent-gold);
+  background-color: rgba(240, 225, 48, 0.05);
+}
+
+/* --- Content Area --- */
+.content {
+  flex: 1;
+  padding: 12px;
+  overflow-y: auto; /* Internal scrolling */
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: var(--border) var(--bg-dark);
+}
+
+/* Webkit Scrollbar (Chrome/Edge) */
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+.content::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+.content::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 4px;
+}
+
+/* --- Sections / Cards --- */
+.section {
+  background-color: var(--bg-panel);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #333;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+h2 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent-gold);
+}
+
+/* --- Dashboard Grids (Home Tab) --- */
+.totals-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 12px;
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.stat-box {
+  background: rgba(0,0,0,0.2);
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+
+.stat-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.stat-value.warning { color: var(--accent-gold); }
+.stat-value.danger { color: var(--danger); }
+
+/* --- Form Elements & Inputs --- */
+.search-input {
+  width: 100%;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  margin-top: 4px;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent-gold);
+}
+
+button.action-btn {
+  background-color: var(--border);
+  color: var(--text-main);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+button.action-btn:hover {
+  background-color: #555;
+  color: var(--accent-gold);
+}

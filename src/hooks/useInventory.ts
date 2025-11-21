@@ -105,7 +105,11 @@ export function useInventory() {
   const updateData = useCallback(async (updates: Partial<CharacterData>) => {
     // Capture tokenName at call time to prevent stale closure issues
     const nameToSave = tokenName;
-    if (!nameToSave) return;
+    console.log('[updateData] Called with tokenName:', nameToSave, 'updates:', Object.keys(updates));
+    if (!nameToSave) {
+      console.warn('[updateData] ABORTED - tokenName is null/empty');
+      return;
+    }
 
     // Optimistic Update for UI responsiveness
     setAllRoomData((prev) => {
@@ -118,7 +122,9 @@ export function useInventory() {
 
     // Queue the save to prevent race conditions
     saveQueue = saveQueue.then(async () => {
+      console.log('[updateData] Executing save for:', nameToSave);
       const latestRoomData = await fetchRoomData();
+      console.log('[updateData] Fetched room data keys:', Object.keys(latestRoomData));
       const currentData = latestRoomData[nameToSave] || DEFAULT_CHARACTER_DATA;
       const mergedData = { ...currentData, ...updates };
 
@@ -128,8 +134,9 @@ export function useInventory() {
           [nameToSave]: mergedData
         }
       });
+      console.log('[updateData] Save completed for:', nameToSave);
     }).catch(err => {
-      console.error('Failed to save inventory:', err);
+      console.error('[updateData] Failed to save inventory:', err);
     });
 
     return saveQueue;

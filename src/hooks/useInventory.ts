@@ -7,6 +7,9 @@ import { DEFAULT_CHARACTER_DATA } from '../constants';
 const ROOM_DATA_KEY = 'com.weighted-inventory/room-data'; // Global Room Storage
 const LEGACY_TOKEN_KEY = 'com.weighted-inventory/data'; // Old Token Storage (for migration)
 
+// Save queue to prevent race conditions - saves execute one at a time
+let saveQueue: Promise<void> = Promise.resolve();
+
 export function useInventory() {
   const [tokenId, setTokenId] = useState<string | null>(null);
   const [tokenName, setTokenName] = useState<string | null>(null);
@@ -100,28 +103,43 @@ export function useInventory() {
 
   // 6. Update Data (Writes to Room Metadata keyed by Name)
   const updateData = useCallback(async (updates: Partial<CharacterData>) => {
-    if (!tokenName) return;
+    // Capture tokenName at call time to prevent stale closure issues
+    const nameToSave = tokenName;
+    console.log('[updateData] Called with tokenName:', nameToSave, 'updates:', Object.keys(updates));
+    if (!nameToSave) {
+      console.warn('[updateData] ABORTED - tokenName is null/empty');
+      return;
+    }
 
     // Optimistic Update for UI responsiveness
     setAllRoomData((prev) => {
-        const currentData = prev[tokenName] || DEFAULT_CHARACTER_DATA;
+        const currentData = prev[nameToSave] || DEFAULT_CHARACTER_DATA;
         return {
             ...prev,
-            [tokenName]: { ...currentData, ...updates }
+            [nameToSave]: { ...currentData, ...updates }
         };
     });
 
-    // Actual Save
-    const latestRoomData = await fetchRoomData();
-    const currentData = latestRoomData[tokenName] || DEFAULT_CHARACTER_DATA;
-    const mergedData = { ...currentData, ...updates };
+    // Queue the save to prevent race conditions
+    saveQueue = saveQueue.then(async () => {
+      console.log('[updateData] Executing save for:', nameToSave);
+      const latestRoomData = await fetchRoomData();
+      console.log('[updateData] Fetched room data keys:', Object.keys(latestRoomData));
+      const currentData = latestRoomData[nameToSave] || DEFAULT_CHARACTER_DATA;
+      const mergedData = { ...currentData, ...updates };
 
-    await OBR.room.setMetadata({
-      [ROOM_DATA_KEY]: {
-        ...latestRoomData,
-        [tokenName]: mergedData
-      }
+      await OBR.room.setMetadata({
+        [ROOM_DATA_KEY]: {
+          ...latestRoomData,
+          [nameToSave]: mergedData
+        }
+      });
+      console.log('[updateData] Save completed for:', nameToSave);
+    }).catch(err => {
+      console.error('[updateData] Failed to save inventory:', err);
     });
+
+    return saveQueue;
   }, [tokenName]);
 
   // 7. Derived Data for the UI

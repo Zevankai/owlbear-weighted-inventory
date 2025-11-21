@@ -488,7 +488,26 @@ function App() {
       <main className="content">
         {activeTab === 'Home' && stats && (
             <div className="section">
-                <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
+                    {/* Debug button - subtle and only on Home tab */}
+                    <button
+                        onClick={() => { setShowDebug(true); loadDebugInfo(); }}
+                        style={{
+                            background: 'transparent',
+                            color: '#666',
+                            border: '1px solid #333',
+                            padding: '2px 6px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '9px',
+                            fontWeight: 'normal'
+                        }}
+                        title="Storage Debug Info"
+                    >
+                        ⚙
+                    </button>
+                </div>
                 
                 {/* --- TOKEN PROFILE (Player Only) --- */}
                 {!viewingStorageId && (
@@ -1139,31 +1158,29 @@ function App() {
         )}
       </main>
 
-      {/* Debug Panel */}
-      <div style={{
-        position: 'fixed',
-        bottom: '10px',
-        right: '10px',
-        zIndex: 9999
-      }}>
-        {!showDebug ? (
-          <button
-            onClick={() => { setShowDebug(true); loadDebugInfo(); }}
+      {/* Debug Panel Modal */}
+      {showDebug && (
+        <>
+          {/* Backdrop */}
+          <div
+            onClick={() => setShowDebug(false)}
             style={{
-              background: '#ff6b6b',
-              color: 'white',
-              border: 'none',
-              padding: '8px 12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '11px',
-              fontWeight: 'bold'
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 9998
             }}
-          >
-            DEBUG
-          </button>
-        ) : (
+          />
+          {/* Panel */}
           <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 9999,
             background: 'rgba(0,0,0,0.95)',
             border: '2px solid #ff6b6b',
             borderRadius: '8px',
@@ -1268,8 +1285,8 @@ function App() {
               </>
             )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </div>
   );
 }

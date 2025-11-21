@@ -17,13 +17,6 @@ export function useInventory() {
   const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch data from the token's own metadata
-  const fetchTokenData = async (id: string): Promise<CharacterData | null> => {
-    const items = await OBR.scene.items.getItems([id]);
-    if (items.length === 0) return null;
-    return (items[0].metadata[TOKEN_DATA_KEY] as CharacterData) || null;
-  };
-
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
     const name = token.name || 'Unnamed';

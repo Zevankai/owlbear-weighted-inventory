@@ -76,33 +76,72 @@ function App() {
 
   // Debug functions
   const loadDebugInfo = async () => {
-    const metadata = await OBR.room.getMetadata();
-    const keys = Object.keys(metadata);
-    const totalSize = JSON.stringify(metadata).length;
+    // Get room metadata
+    const roomMetadata = await OBR.room.getMetadata();
+    const roomKeys = Object.keys(roomMetadata);
+    const roomSize = JSON.stringify(roomMetadata).length;
+
+    // Get current token metadata if selected
+    let tokenSize = 0;
+    let tokenDataSize = 0;
+    let hasLegacyRoomData = false;
+    let hasLegacyNameKeys = false;
+
+    if (tokenId) {
+      const items = await OBR.scene.items.getItems([tokenId]);
+      if (items.length > 0) {
+        tokenSize = JSON.stringify(items[0].metadata).length;
+        const tokenData = items[0].metadata['com.weighted-inventory/data'];
+        if (tokenData) {
+          tokenDataSize = JSON.stringify(tokenData).length;
+        }
+      }
+    }
+
+    // Check for legacy data
     const legacyKey = 'com.weighted-inventory/room-data';
-    const hasLegacy = !!metadata[legacyKey];
-    const legacySize = hasLegacy ? JSON.stringify(metadata[legacyKey]).length : 0;
+    hasLegacyRoomData = !!roomMetadata[legacyKey];
+
+    // Check for legacy per-name keys
+    const legacyNameKeys = roomKeys.filter(k => k.startsWith('com.weighted-inventory/token/'));
+    hasLegacyNameKeys = legacyNameKeys.length > 0;
 
     setDebugInfo({
-      keys,
-      totalSize,
-      hasLegacy,
-      legacySize,
-      metadata
+      roomKeys,
+      roomSize,
+      tokenSize,
+      tokenDataSize,
+      hasLegacyRoomData,
+      hasLegacyNameKeys,
+      legacyNameKeys
     });
   };
 
   const cleanupLegacyData = async () => {
-    if (!debugInfo?.hasLegacy) {
+    if (!debugInfo?.hasLegacyRoomData && !debugInfo?.hasLegacyNameKeys) {
       alert('No legacy data to clean up!');
       return;
     }
 
-    const confirmed = window.confirm('This will delete the old shared storage key and keep only per-token keys. Continue?');
+    const confirmed = window.confirm('This will delete old room-based storage keys. Token data has already been migrated. Continue?');
     if (!confirmed) return;
 
-    await OBR.room.setMetadata({ 'com.weighted-inventory/room-data': undefined });
-    alert('Legacy data cleaned up! Refresh to see changes.');
+    const updates: Record<string, undefined> = {};
+
+    // Remove old shared key
+    if (debugInfo.hasLegacyRoomData) {
+      updates['com.weighted-inventory/room-data'] = undefined;
+    }
+
+    // Remove old per-name keys
+    if (debugInfo.hasLegacyNameKeys && debugInfo.legacyNameKeys) {
+      debugInfo.legacyNameKeys.forEach((key: string) => {
+        updates[key] = undefined;
+      });
+    }
+
+    await OBR.room.setMetadata(updates);
+    alert('Legacy data cleaned up! Room metadata freed.');
     loadDebugInfo();
   };
 
@@ -1156,20 +1195,38 @@ function App() {
             {debugInfo && (
               <>
                 <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
-                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Total Metadata Size:</div>
-                  <div style={{fontSize: '14px', fontWeight: 'bold', color: debugInfo.totalSize > 15000 ? '#ff6b6b' : '#51cf66'}}>
-                    {debugInfo.totalSize} bytes / 16384 bytes
+                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>✨ Current Token Storage:</div>
+                  {tokenId ? (
+                    <>
+                      <div style={{fontSize: '14px', fontWeight: 'bold', color: debugInfo.tokenDataSize > 15000 ? '#ff6b6b' : '#51cf66'}}>
+                        {debugInfo.tokenDataSize} bytes / 16384 bytes
+                      </div>
+                      <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
+                        {((debugInfo.tokenDataSize / 16384) * 100).toFixed(1)}% used (this token only)
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{color: '#aaa', fontSize: '10px'}}>No token selected</div>
+                  )}
+                </div>
+
+                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
+                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Room Metadata (shared):</div>
+                  <div style={{fontSize: '12px', color: debugInfo.roomSize > 15000 ? '#ff6b6b' : '#51cf66'}}>
+                    {debugInfo.roomSize} bytes / 16384 bytes
                   </div>
                   <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
-                    {((debugInfo.totalSize / 16384) * 100).toFixed(1)}% used
+                    Used by all extensions ({debugInfo.roomKeys.length} keys)
                   </div>
                 </div>
 
                 <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
                   <div style={{color: '#4dabf7', marginBottom: '4px'}}>Legacy Data:</div>
-                  {debugInfo.hasLegacy ? (
+                  {(debugInfo.hasLegacyRoomData || debugInfo.hasLegacyNameKeys) ? (
                     <>
-                      <div style={{color: '#ff6b6b', fontWeight: 'bold'}}>⚠️ FOUND ({debugInfo.legacySize} bytes)</div>
+                      <div style={{color: '#ff6b6b', fontWeight: 'bold'}}>
+                        ⚠️ FOUND {debugInfo.hasLegacyNameKeys ? `(${debugInfo.legacyNameKeys.length} old keys)` : ''}
+                      </div>
                       <button
                         onClick={cleanupLegacyData}
                         style={{
@@ -1189,20 +1246,8 @@ function App() {
                       </button>
                     </>
                   ) : (
-                    <div style={{color: '#51cf66'}}>✓ Clean (migrated)</div>
+                    <div style={{color: '#51cf66'}}>✓ Clean (using token storage)</div>
                   )}
-                </div>
-
-                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
-                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Metadata Keys ({debugInfo.keys.length}):</div>
-                  <div style={{fontSize: '10px', color: '#aaa', maxHeight: '120px', overflow: 'auto'}}>
-                    {debugInfo.keys.map((key: string) => (
-                      <div key={key} style={{marginBottom: '2px'}}>
-                        {key.includes('token/') ? '🔑 ' : ''}
-                        {key}
-                      </div>
-                    ))}
-                  </div>
                 </div>
 
                 <button

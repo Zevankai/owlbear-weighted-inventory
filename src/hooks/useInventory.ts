@@ -91,15 +91,20 @@ export function useInventory() {
 
   const handleSelection = async (token: Item) => {
     const name = token.name || 'Unnamed';
+    console.log('[handleSelection] Selected token:', name);
     setTokenId(token.id);
     setTokenName(name);
     setTokenImage((token as any).image?.url || null);
 
     // Try to load existing data
+    const key = getTokenKey(name);
+    console.log('[handleSelection] Loading from key:', key);
     let data = await fetchTokenData(name);
+    console.log('[handleSelection] Loaded data:', data ? `${data.inventory?.length || 0} items` : 'null');
 
     // If no data, check for legacy formats to migrate
     if (!data) {
+      console.log('[handleSelection] No data found, checking legacy...');
       data = await migrateLegacyData(name, token);
     }
 
@@ -109,6 +114,8 @@ export function useInventory() {
 
   const updateData = useCallback(async (updates: Partial<CharacterData>) => {
     const nameToSave = tokenName;
+    console.log('[updateData] Called for:', nameToSave);
+    console.log('[updateData] Updates:', JSON.stringify(updates).slice(0, 200));
     if (!nameToSave) {
       console.warn('[updateData] ABORTED - tokenName is null');
       return;
@@ -122,12 +129,15 @@ export function useInventory() {
 
     // Save to per-token key (no race conditions with other tokens!)
     try {
+      const key = getTokenKey(nameToSave);
+      console.log('[updateData] Fetching current data for key:', key);
       const currentData = await fetchTokenData(nameToSave) || DEFAULT_CHARACTER_DATA;
       const mergedData = { ...currentData, ...updates };
-      await OBR.room.setMetadata({ [getTokenKey(nameToSave)]: mergedData });
-      console.log('[updateData] Saved for:', nameToSave);
+      console.log('[updateData] Saving merged data, size:', JSON.stringify(mergedData).length, 'bytes');
+      await OBR.room.setMetadata({ [key]: mergedData });
+      console.log('[updateData] SUCCESS - saved to:', key);
     } catch (err) {
-      console.error('[updateData] Failed:', err);
+      console.error('[updateData] FAILED:', err);
     }
   }, [tokenName]);
 

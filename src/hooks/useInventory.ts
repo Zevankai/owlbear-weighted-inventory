@@ -28,13 +28,31 @@ export function useInventory() {
   // Check for and migrate legacy data
   const migrateLegacyData = async (name: string, token: Item): Promise<CharacterData | null> => {
     const metadata = await OBR.room.getMetadata();
+    console.log('[Migration] Total room metadata keys:', Object.keys(metadata));
+    console.log('[Migration] Total metadata size:', JSON.stringify(metadata).length, 'bytes');
 
     // Check old room-data format first
     const legacyRoomData = metadata[LEGACY_ROOM_KEY] as Record<string, CharacterData> | undefined;
     if (legacyRoomData && legacyRoomData[name]) {
       console.log(`[Migration] Found ${name} in legacy room-data, migrating...`);
       const data = legacyRoomData[name];
+
+      // Save to new key
       await OBR.room.setMetadata({ [getTokenKey(name)]: data });
+
+      // CRITICAL: Delete the specific character from legacy storage to free space
+      const remainingLegacyData = { ...legacyRoomData };
+      delete remainingLegacyData[name];
+
+      if (Object.keys(remainingLegacyData).length === 0) {
+        // No more characters, delete entire legacy key
+        console.log('[Migration] Deleting empty legacy room-data key');
+        await OBR.room.setMetadata({ [LEGACY_ROOM_KEY]: undefined });
+      } else {
+        // Update legacy key with remaining data
+        await OBR.room.setMetadata({ [LEGACY_ROOM_KEY]: remainingLegacyData });
+      }
+
       return data;
     }
 
@@ -53,6 +71,27 @@ export function useInventory() {
     let mounted = true;
 
     const init = async () => {
+      // Check if we need to do a one-time bulk migration
+      const metadata = await OBR.room.getMetadata();
+      const legacyRoomData = metadata[LEGACY_ROOM_KEY] as Record<string, CharacterData> | undefined;
+
+      if (legacyRoomData) {
+        console.log('[Init] Found legacy room-data, performing bulk migration...');
+        const updates: Record<string, CharacterData | undefined> = {};
+
+        // Migrate all characters to new keys
+        for (const [name, data] of Object.entries(legacyRoomData)) {
+          console.log(`[Init] Migrating ${name}...`);
+          updates[getTokenKey(name)] = data;
+        }
+
+        // Delete legacy key
+        updates[LEGACY_ROOM_KEY] = undefined;
+
+        await OBR.room.setMetadata(updates);
+        console.log('[Init] Bulk migration complete');
+      }
+
       const selection = await OBR.player.getSelection();
       if (selection && selection.length > 0) {
         const items = await OBR.scene.items.getItems(selection);

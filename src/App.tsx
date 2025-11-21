@@ -66,9 +66,45 @@ function App() {
 
   const [newVaultName, setNewVaultName] = useState('');
 
+  // Debug state
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+
   useEffect(() => {
     OBR.onReady(() => setReady(true));
   }, []);
+
+  // Debug functions
+  const loadDebugInfo = async () => {
+    const metadata = await OBR.room.getMetadata();
+    const keys = Object.keys(metadata);
+    const totalSize = JSON.stringify(metadata).length;
+    const legacyKey = 'com.weighted-inventory/room-data';
+    const hasLegacy = !!metadata[legacyKey];
+    const legacySize = hasLegacy ? JSON.stringify(metadata[legacyKey]).length : 0;
+
+    setDebugInfo({
+      keys,
+      totalSize,
+      hasLegacy,
+      legacySize,
+      metadata
+    });
+  };
+
+  const cleanupLegacyData = async () => {
+    if (!debugInfo?.hasLegacy) {
+      alert('No legacy data to clean up!');
+      return;
+    }
+
+    const confirmed = window.confirm('This will delete the old shared storage key and keep only per-token keys. Continue?');
+    if (!confirmed) return;
+
+    await OBR.room.setMetadata({ 'com.weighted-inventory/room-data': undefined });
+    alert('Legacy data cleaned up! Refresh to see changes.');
+    loadDebugInfo();
+  };
 
   // --- CORE UPDATE HANDLER ---
   const handleUpdateData = (updates: Partial<CharacterData>) => {
@@ -1063,6 +1099,132 @@ function App() {
             </div>
         )}
       </main>
+
+      {/* Debug Panel */}
+      <div style={{
+        position: 'fixed',
+        bottom: '10px',
+        right: '10px',
+        zIndex: 9999
+      }}>
+        {!showDebug ? (
+          <button
+            onClick={() => { setShowDebug(true); loadDebugInfo(); }}
+            style={{
+              background: '#ff6b6b',
+              color: 'white',
+              border: 'none',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontWeight: 'bold'
+            }}
+          >
+            DEBUG
+          </button>
+        ) : (
+          <div style={{
+            background: 'rgba(0,0,0,0.95)',
+            border: '2px solid #ff6b6b',
+            borderRadius: '8px',
+            padding: '12px',
+            width: '300px',
+            maxHeight: '400px',
+            overflow: 'auto',
+            fontSize: '11px',
+            color: 'white'
+          }}>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center'}}>
+              <strong style={{color: '#ff6b6b'}}>Storage Debug</strong>
+              <button
+                onClick={() => setShowDebug(false)}
+                style={{
+                  background: '#333',
+                  color: 'white',
+                  border: 'none',
+                  padding: '2px 8px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '10px'
+                }}
+              >
+                CLOSE
+              </button>
+            </div>
+
+            {debugInfo && (
+              <>
+                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
+                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Total Metadata Size:</div>
+                  <div style={{fontSize: '14px', fontWeight: 'bold', color: debugInfo.totalSize > 15000 ? '#ff6b6b' : '#51cf66'}}>
+                    {debugInfo.totalSize} bytes / 16384 bytes
+                  </div>
+                  <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
+                    {((debugInfo.totalSize / 16384) * 100).toFixed(1)}% used
+                  </div>
+                </div>
+
+                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
+                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Legacy Data:</div>
+                  {debugInfo.hasLegacy ? (
+                    <>
+                      <div style={{color: '#ff6b6b', fontWeight: 'bold'}}>⚠️ FOUND ({debugInfo.legacySize} bytes)</div>
+                      <button
+                        onClick={cleanupLegacyData}
+                        style={{
+                          background: '#ff6b6b',
+                          color: 'white',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          marginTop: '6px',
+                          width: '100%'
+                        }}
+                      >
+                        CLEANUP LEGACY DATA
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{color: '#51cf66'}}>✓ Clean (migrated)</div>
+                  )}
+                </div>
+
+                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
+                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Metadata Keys ({debugInfo.keys.length}):</div>
+                  <div style={{fontSize: '10px', color: '#aaa', maxHeight: '120px', overflow: 'auto'}}>
+                    {debugInfo.keys.map((key: string) => (
+                      <div key={key} style={{marginBottom: '2px'}}>
+                        {key.includes('token/') ? '🔑 ' : ''}
+                        {key}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={loadDebugInfo}
+                  style={{
+                    background: '#333',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    width: '100%'
+                  }}
+                >
+                  REFRESH
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

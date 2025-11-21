@@ -1,45 +1,62 @@
 import { useEffect, useState, useCallback } from 'react';
 import OBR from '@owlbear-rodeo/sdk';
-import type { Item } from '@owlbear-rodeo/sdk'; 
+import type { Item } from '@owlbear-rodeo/sdk';
 import type { CharacterData } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
 
-const ROOM_DATA_KEY = 'com.weighted-inventory/room-data'; // Global Room Storage
-const LEGACY_TOKEN_KEY = 'com.weighted-inventory/data'; // Old Token Storage (for migration)
+// Per-token storage key prefix (each token gets 16KB)
+const TOKEN_KEY_PREFIX = 'com.weighted-inventory/token/';
+// Legacy keys for migration
+const LEGACY_ROOM_KEY = 'com.weighted-inventory/room-data';
+const LEGACY_TOKEN_KEY = 'com.weighted-inventory/data';
 
-// Save queue to prevent race conditions - saves execute one at a time
-let saveQueue: Promise<void> = Promise.resolve();
+const getTokenKey = (name: string) => `${TOKEN_KEY_PREFIX}${name}`;
 
 export function useInventory() {
   const [tokenId, setTokenId] = useState<string | null>(null);
   const [tokenName, setTokenName] = useState<string | null>(null);
-  const [tokenImage, setTokenImage] = useState<string | null>(null); 
-  
-  // We store the entire room's inventory database here
-  const [allRoomData, setAllRoomData] = useState<Record<string, CharacterData>>({});
-  
+  const [tokenImage, setTokenImage] = useState<string | null>(null);
+  const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // 1. Helper to fetch latest room data
-  const fetchRoomData = async () => {
+  // Fetch data for a specific token
+  const fetchTokenData = async (name: string): Promise<CharacterData | null> => {
     const metadata = await OBR.room.getMetadata();
-    return (metadata[ROOM_DATA_KEY] as Record<string, CharacterData>) || {};
+    return (metadata[getTokenKey(name)] as CharacterData) || null;
+  };
+
+  // Check for and migrate legacy data
+  const migrateLegacyData = async (name: string, token: Item): Promise<CharacterData | null> => {
+    const metadata = await OBR.room.getMetadata();
+
+    // Check old room-data format first
+    const legacyRoomData = metadata[LEGACY_ROOM_KEY] as Record<string, CharacterData> | undefined;
+    if (legacyRoomData && legacyRoomData[name]) {
+      console.log(`[Migration] Found ${name} in legacy room-data, migrating...`);
+      const data = legacyRoomData[name];
+      await OBR.room.setMetadata({ [getTokenKey(name)]: data });
+      return data;
+    }
+
+    // Check token metadata (oldest format)
+    const legacyTokenData = token.metadata[LEGACY_TOKEN_KEY] as CharacterData | undefined;
+    if (legacyTokenData) {
+      console.log(`[Migration] Found ${name} in token metadata, migrating...`);
+      await OBR.room.setMetadata({ [getTokenKey(name)]: legacyTokenData });
+      return legacyTokenData;
+    }
+
+    return null;
   };
 
   useEffect(() => {
     let mounted = true;
 
-    // 2. Initial Load & Listeners
     const init = async () => {
-      // Load Room Data
-      const initialRoomData = await fetchRoomData();
-      if (mounted) setAllRoomData(initialRoomData);
-
-      // Check Selection
       const selection = await OBR.player.getSelection();
       if (selection && selection.length > 0) {
         const items = await OBR.scene.items.getItems(selection);
-        if (items.length > 0) handleSelection(items[0], initialRoomData);
+        if (items.length > 0) await handleSelection(items[0]);
       } else {
         setLoading(false);
       }
@@ -47,22 +64,21 @@ export function useInventory() {
 
     init();
 
-    // 3. Listen for Room Metadata Changes (Syncs data between players instantly)
-    const roomSub = OBR.room.onMetadataChange((metadata) => {
-      const newData = (metadata[ROOM_DATA_KEY] as Record<string, CharacterData>) || {};
-      setAllRoomData(newData);
+    // Listen for metadata changes (syncs between players)
+    const roomSub = OBR.room.onMetadataChange(async (metadata) => {
+      if (!tokenName) return;
+      const newData = metadata[getTokenKey(tokenName)] as CharacterData | undefined;
+      if (newData && mounted) {
+        setCharacterData(newData);
+      }
     });
 
-    // 4. Listen for Selection Changes (Sticky Logic)
+    // Listen for selection changes
     const playerSub = OBR.player.onChange(async (player) => {
       const selection = player.selection;
       if (selection && selection.length > 0) {
         const items = await OBR.scene.items.getItems(selection);
-        if (items.length > 0) {
-           // We need the LATEST room data here to check for migration
-           const currentRoomData = await fetchRoomData(); 
-           handleSelection(items[0], currentRoomData);
-        }
+        if (items.length > 0) await handleSelection(items[0]);
       }
     });
 
@@ -71,85 +87,54 @@ export function useInventory() {
       roomSub();
       playerSub();
     };
-  }, []);
+  }, [tokenName]);
 
-  // 5. Handle Logic: Name Matching & Migration
-  const handleSelection = async (token: Item, currentRoomData: Record<string, CharacterData>) => {
+  const handleSelection = async (token: Item) => {
     const name = token.name || 'Unnamed';
     setTokenId(token.id);
     setTokenName(name);
+    setTokenImage((token as any).image?.url || null);
 
-    // Extract Image
-    // We safely check if 'image' property exists (Standard for Character tokens)
-    const imgUrl = (token as any).image?.url || null;
-    setTokenImage(imgUrl);
+    // Try to load existing data
+    let data = await fetchTokenData(name);
 
-    // MIGRATION CHECK:
-    // If this name doesn't exist in Room Data yet...
-    // BUT the specific token has "Legacy" data on it...
-    // We copy the Legacy data to the Room Data automatically.
-    if (!currentRoomData[name]) {
-      const legacyData = token.metadata[LEGACY_TOKEN_KEY] as CharacterData | undefined;
-      if (legacyData) {
-        console.log(`Migrating data for ${name} to Room Storage...`);
-        const newData = { ...currentRoomData, [name]: legacyData };
-        await OBR.room.setMetadata({ [ROOM_DATA_KEY]: newData });
-        // (Local state update happens via the onMetadataChange listener)
-      }
+    // If no data, check for legacy formats to migrate
+    if (!data) {
+      data = await migrateLegacyData(name, token);
     }
-    
+
+    setCharacterData(data || DEFAULT_CHARACTER_DATA);
     setLoading(false);
   };
 
-  // 6. Update Data (Writes to Room Metadata keyed by Name)
   const updateData = useCallback(async (updates: Partial<CharacterData>) => {
-    // Capture tokenName at call time to prevent stale closure issues
     const nameToSave = tokenName;
-    console.log('[updateData] Called with tokenName:', nameToSave, 'updates:', Object.keys(updates));
     if (!nameToSave) {
-      console.warn('[updateData] ABORTED - tokenName is null/empty');
+      console.warn('[updateData] ABORTED - tokenName is null');
       return;
     }
 
-    // Optimistic Update for UI responsiveness
-    setAllRoomData((prev) => {
-        const currentData = prev[nameToSave] || DEFAULT_CHARACTER_DATA;
-        return {
-            ...prev,
-            [nameToSave]: { ...currentData, ...updates }
-        };
+    // Optimistic update
+    setCharacterData((prev) => {
+      const current = prev || DEFAULT_CHARACTER_DATA;
+      return { ...current, ...updates };
     });
 
-    // Queue the save to prevent race conditions
-    saveQueue = saveQueue.then(async () => {
-      console.log('[updateData] Executing save for:', nameToSave);
-      const latestRoomData = await fetchRoomData();
-      console.log('[updateData] Fetched room data keys:', Object.keys(latestRoomData));
-      const currentData = latestRoomData[nameToSave] || DEFAULT_CHARACTER_DATA;
+    // Save to per-token key (no race conditions with other tokens!)
+    try {
+      const currentData = await fetchTokenData(nameToSave) || DEFAULT_CHARACTER_DATA;
       const mergedData = { ...currentData, ...updates };
-
-      await OBR.room.setMetadata({
-        [ROOM_DATA_KEY]: {
-          ...latestRoomData,
-          [nameToSave]: mergedData
-        }
-      });
-      console.log('[updateData] Save completed for:', nameToSave);
-    }).catch(err => {
-      console.error('[updateData] Failed to save inventory:', err);
-    });
-
-    return saveQueue;
+      await OBR.room.setMetadata({ [getTokenKey(nameToSave)]: mergedData });
+      console.log('[updateData] Saved for:', nameToSave);
+    } catch (err) {
+      console.error('[updateData] Failed:', err);
+    }
   }, [tokenName]);
-
-  // 7. Derived Data for the UI
-  // If we have a name selected, grab that name's data. Else null.
-  const characterData = tokenName ? (allRoomData[tokenName] || DEFAULT_CHARACTER_DATA) : null;
 
   return {
     tokenId,
-    tokenName,  // <--- New Export
-    tokenImage, // <--- New Export
+    tokenName,
+    tokenImage,
     characterData,
     updateData,
     loading

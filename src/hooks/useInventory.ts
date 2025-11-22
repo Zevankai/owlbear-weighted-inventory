@@ -84,10 +84,16 @@ export function useInventory() {
 
     const init = async () => {
       // Load player favorites
+      console.log('[Favorites] Loading favorites from player metadata...');
       const playerMetadata = await OBR.player.getMetadata();
+      console.log('[Favorites] Player metadata:', playerMetadata);
       const savedFavorites = playerMetadata[PLAYER_FAVORITES_KEY] as Array<{id: string; name: string; image?: string}> | undefined;
+      console.log('[Favorites] Saved favorites:', savedFavorites);
       if (savedFavorites && mounted) {
         setFavorites(savedFavorites);
+        console.log('[Favorites] Loaded', savedFavorites.length, 'favorites');
+      } else {
+        console.log('[Favorites] No favorites found');
       }
 
       const selection = await OBR.player.getSelection();
@@ -187,14 +193,19 @@ export function useInventory() {
 
     if (isFavorited) {
       // Remove from favorites
+      console.log('[Favorites] Removing', tokenName, 'from favorites');
       newFavorites = favorites.filter(f => f.id !== tokenId);
     } else {
       // Add to favorites
+      console.log('[Favorites] Adding', tokenName, 'to favorites');
       newFavorites = [...favorites, { id: tokenId, name: tokenName, image: tokenImage || undefined }];
     }
 
+    console.log('[Favorites] New favorites list:', newFavorites);
     setFavorites(newFavorites);
+    console.log('[Favorites] Saving to player metadata with key:', PLAYER_FAVORITES_KEY);
     await OBR.player.setMetadata({ [PLAYER_FAVORITES_KEY]: newFavorites });
+    console.log('[Favorites] Save complete');
   }, [tokenId, tokenName, tokenImage, favorites]);
 
   const isFavorited = tokenId ? favorites.some(f => f.id === tokenId) : false;

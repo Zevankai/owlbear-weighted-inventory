@@ -213,9 +213,28 @@ function App() {
   const handleToggleEquip = (item: Item) => {
     if (!currentDisplayData || !stats) return;
 
+    // UNEQUIP: Merge back into existing stack if possible
     if (item.equippedSlot) {
-        const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: null } : i);
-        handleUpdateData({ inventory: newInventory });
+        // Find matching unequipped item (same name, category, value, not equipped)
+        const matchingStack = currentDisplayData.inventory.find(i =>
+            i.id !== item.id &&
+            i.name === item.name &&
+            i.category === item.category &&
+            i.value === item.value &&
+            !i.equippedSlot
+        );
+
+        if (matchingStack) {
+            // Merge into existing stack and remove this item
+            const newInventory = currentDisplayData.inventory
+                .map(i => i.id === matchingStack.id ? { ...i, qty: i.qty + item.qty } : i)
+                .filter(i => i.id !== item.id);
+            handleUpdateData({ inventory: newInventory });
+        } else {
+            // Just unequip (no stack to merge into)
+            const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: null } : i);
+            handleUpdateData({ inventory: newInventory });
+        }
         return;
     }
 
@@ -270,8 +289,23 @@ function App() {
              }
         }
         if (currentUsed + cost > maxAllowed) { alert(`Not enough space in ${chosenSlot.toUpperCase()}.\nCost: ${cost}\nAvailable: ${maxAllowed - currentUsed}`); return; }
-        const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: chosenSlot } : i);
-        handleUpdateData({ inventory: newInventory });
+
+        // Ammo equips full stack, everything else equips only 1
+        const isAmmo = ['Ammo', 'Light Ammo'].includes(item.category);
+        if (!isAmmo && item.qty > 1) {
+            // Split the stack: equip 1, leave qty-1 in pack
+            const equippedItem = { ...item, id: uuidv4(), qty: 1, equippedSlot: chosenSlot };
+            const remainingItem = { ...item, qty: item.qty - 1 };
+            const newInventory = currentDisplayData.inventory.map(i =>
+                i.id === item.id ? remainingItem : i
+            );
+            newInventory.push(equippedItem);
+            handleUpdateData({ inventory: newInventory });
+        } else {
+            // Ammo or qty=1: equip the entire item/stack
+            const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: chosenSlot } : i);
+            handleUpdateData({ inventory: newInventory });
+        }
     }
   };
 

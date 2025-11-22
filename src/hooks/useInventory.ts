@@ -6,6 +6,8 @@ import { DEFAULT_CHARACTER_DATA } from '../constants';
 
 // Store data on each token's own metadata (16KB per token, not shared!)
 const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
+// Player favorites (stored in player metadata, unique per player)
+const PLAYER_FAVORITES_KEY = 'com.weighted-inventory/favorites';
 // Legacy keys for migration
 const LEGACY_ROOM_KEY = 'com.weighted-inventory/room-data';
 const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
@@ -16,6 +18,7 @@ export function useInventory() {
   const [tokenImage, setTokenImage] = useState<string | null>(null);
   const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState<Array<{id: string; name: string; image?: string}>>([]);
 
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
@@ -55,10 +58,38 @@ export function useInventory() {
     return null;
   };
 
+  const handleSelection = useCallback(async (token: Item) => {
+    const name = token.name || 'Unnamed';
+    console.log('[handleSelection] Selected token:', name, 'ID:', token.id);
+    setTokenId(token.id);
+    setTokenName(name);
+    setTokenImage((token as any).image?.url || null);
+
+    // Try to load existing data from token metadata
+    let data = token.metadata[TOKEN_DATA_KEY] as CharacterData | undefined || null;
+    console.log('[handleSelection] Token metadata:', data ? `${data.inventory?.length || 0} items` : 'null');
+
+    // If no data, check for legacy formats to migrate
+    if (!data) {
+      console.log('[handleSelection] No data found, checking legacy...');
+      data = await migrateLegacyData(token);
+    }
+
+    setCharacterData(data || DEFAULT_CHARACTER_DATA);
+    setLoading(false);
+  }, []);
+
   useEffect(() => {
     let mounted = true;
 
     const init = async () => {
+      // Load player favorites
+      const playerMetadata = await OBR.player.getMetadata();
+      const savedFavorites = playerMetadata[PLAYER_FAVORITES_KEY] as Array<{id: string; name: string; image?: string}> | undefined;
+      if (savedFavorites && mounted) {
+        setFavorites(savedFavorites);
+      }
+
       const selection = await OBR.player.getSelection();
       if (selection && selection.length > 0) {
         const items = await OBR.scene.items.getItems(selection);
@@ -96,28 +127,7 @@ export function useInventory() {
       itemsSub();
       playerSub();
     };
-  }, [tokenId]);
-
-  const handleSelection = async (token: Item) => {
-    const name = token.name || 'Unnamed';
-    console.log('[handleSelection] Selected token:', name, 'ID:', token.id);
-    setTokenId(token.id);
-    setTokenName(name);
-    setTokenImage((token as any).image?.url || null);
-
-    // Try to load existing data from token metadata
-    let data = token.metadata[TOKEN_DATA_KEY] as CharacterData | undefined || null;
-    console.log('[handleSelection] Token metadata:', data ? `${data.inventory?.length || 0} items` : 'null');
-
-    // If no data, check for legacy formats to migrate
-    if (!data) {
-      console.log('[handleSelection] No data found, checking legacy...');
-      data = await migrateLegacyData(token);
-    }
-
-    setCharacterData(data || DEFAULT_CHARACTER_DATA);
-    setLoading(false);
-  };
+  }, [tokenId, handleSelection]);
 
   const updateData = useCallback(async (updates: Partial<CharacterData>) => {
     const idToSave = tokenId;
@@ -156,12 +166,49 @@ export function useInventory() {
     }
   }, [tokenId]);
 
+  // Load token by ID (for favorites)
+  const loadTokenById = useCallback(async (id: string) => {
+    try {
+      const items = await OBR.scene.items.getItems([id]);
+      if (items.length > 0) {
+        await handleSelection(items[0]);
+      }
+    } catch (err) {
+      console.error('[loadTokenById] Failed:', err);
+    }
+  }, [handleSelection]);
+
+  // Toggle favorite
+  const toggleFavorite = useCallback(async () => {
+    if (!tokenId || !tokenName) return;
+
+    const isFavorited = favorites.some(f => f.id === tokenId);
+    let newFavorites: Array<{id: string; name: string; image?: string}>;
+
+    if (isFavorited) {
+      // Remove from favorites
+      newFavorites = favorites.filter(f => f.id !== tokenId);
+    } else {
+      // Add to favorites
+      newFavorites = [...favorites, { id: tokenId, name: tokenName, image: tokenImage || undefined }];
+    }
+
+    setFavorites(newFavorites);
+    await OBR.player.setMetadata({ [PLAYER_FAVORITES_KEY]: newFavorites });
+  }, [tokenId, tokenName, tokenImage, favorites]);
+
+  const isFavorited = tokenId ? favorites.some(f => f.id === tokenId) : false;
+
   return {
     tokenId,
     tokenName,
     tokenImage,
     characterData,
     updateData,
-    loading
+    loading,
+    favorites,
+    isFavorited,
+    toggleFavorite,
+    loadTokenById
   };
 }

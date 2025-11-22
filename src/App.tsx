@@ -21,7 +21,7 @@ function App() {
   const [viewingStorageId, setViewingStorageId] = useState<string | null>(null);
 
   // 1. Load Inventory Data
-  const { tokenId, tokenName, tokenImage, characterData, updateData, loading } = useInventory();
+  const { tokenId, tokenName, tokenImage, characterData, updateData, loading, favorites, isFavorited, toggleFavorite, loadTokenById } = useInventory();
 
   // --- VIRTUAL CONTEXT SWITCHING ---
   // Determine which data object we are currently viewing (Player or a specific Storage)
@@ -485,7 +485,62 @@ function App() {
   // --- RENDER ---
 
   if (!ready || loading) return <div className="loading">Loading...</div>;
-  if (!tokenId || !characterData || !currentDisplayData) return <div className="loading">No Data</div>;
+
+  // Show favorites menu when no token selected
+  if (!tokenId || !characterData || !currentDisplayData) {
+    return (
+      <div className="app-container">
+        <div className="section" style={{padding: '20px', textAlign: 'center'}}>
+          <h2 style={{marginBottom: '20px'}}>Inventory Manager</h2>
+          <p style={{color: 'var(--text-muted)', marginBottom: '20px'}}>
+            Select a token on the map to view its inventory
+          </p>
+
+          {favorites.length > 0 && (
+            <>
+              <div style={{borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px'}}>
+                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>⭐ FAVORITES</h3>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
+                  {favorites.map(fav => (
+                    <button
+                      key={fav.id}
+                      onClick={() => loadTokenById(fav.id)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '12px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid var(--border)',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        color: 'var(--text-main)',
+                        textAlign: 'left'
+                      }}
+                    >
+                      {fav.image && (
+                        <div style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          border: '2px solid var(--accent-gold)',
+                          flexShrink: 0
+                        }}>
+                          <img src={fav.image} alt={fav.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        </div>
+                      )}
+                      <div style={{fontWeight: 'bold', fontSize: '14px'}}>{fav.name}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
     { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
@@ -566,6 +621,25 @@ function App() {
                         <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)'}}>
                             {tokenName || 'Unknown Character'}
                         </div>
+                        <button
+                            onClick={toggleFavorite}
+                            style={{
+                                background: 'transparent',
+                                border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
+                                color: isFavorited ? 'var(--accent-gold)' : '#666',
+                                padding: '4px 12px',
+                                borderRadius: '12px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                marginTop: '8px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px'
+                            }}
+                            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                        >
+                            {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
+                        </button>
                     </div>
                 )}
 

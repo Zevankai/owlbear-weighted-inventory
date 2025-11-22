@@ -270,8 +270,23 @@ function App() {
              }
         }
         if (currentUsed + cost > maxAllowed) { alert(`Not enough space in ${chosenSlot.toUpperCase()}.\nCost: ${cost}\nAvailable: ${maxAllowed - currentUsed}`); return; }
-        const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: chosenSlot } : i);
-        handleUpdateData({ inventory: newInventory });
+
+        // Special handling for consumables: only equip 1, leave the rest in pack
+        const isConsumable = ['Consumable', 'Literature', 'Ammo', 'Light Ammo'].includes(item.category);
+        if (isConsumable && item.qty > 1) {
+            // Split the stack: equip 1, leave qty-1 in pack
+            const equippedItem = { ...item, id: uuidv4(), qty: 1, equippedSlot: chosenSlot };
+            const remainingItem = { ...item, qty: item.qty - 1 };
+            const newInventory = currentDisplayData.inventory.map(i =>
+                i.id === item.id ? remainingItem : i
+            );
+            newInventory.push(equippedItem);
+            handleUpdateData({ inventory: newInventory });
+        } else {
+            // Normal equip: equip the entire item
+            const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: chosenSlot } : i);
+            handleUpdateData({ inventory: newInventory });
+        }
     }
   };
 

@@ -16,9 +16,12 @@ type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
   const [ready, setReady] = useState(false);
-  
+
   // State for External Storage Viewing
   const [viewingStorageId, setViewingStorageId] = useState<string | null>(null);
+
+  // State for viewing favorites
+  const [viewingFavorites, setViewingFavorites] = useState(false);
 
   // 1. Load Inventory Data
   const { tokenId, tokenName, tokenImage, characterData, updateData, loading, favorites, isFavorited, toggleFavorite, loadTokenById } = useInventory();
@@ -486,25 +489,86 @@ function App() {
 
   if (!ready || loading) return <div className="loading">Loading...</div>;
 
-  // Show favorites menu when no token selected
-  if (!tokenId || !characterData || !currentDisplayData) {
+  // Show favorites menu when viewing favorites OR no token selected
+  if (viewingFavorites || !tokenId || !characterData || !currentDisplayData) {
     return (
       <div className="app-container">
         <div className="section" style={{padding: '20px', textAlign: 'center'}}>
-          <h2 style={{marginBottom: '20px'}}>Inventory Manager</h2>
-          <p style={{color: 'var(--text-muted)', marginBottom: '20px'}}>
-            Select a token on the map to view its inventory
-          </p>
+          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
+            <h2 style={{margin: 0}}>Inventory Manager</h2>
+            {tokenId && (
+              <button
+                onClick={() => setViewingFavorites(false)}
+                style={{
+                  background: 'var(--border)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '4px 12px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '11px'
+                }}
+              >
+                BACK
+              </button>
+            )}
+          </div>
+
+          {!tokenId && (
+            <p style={{color: 'var(--text-muted)', marginBottom: '20px'}}>
+              Select a token on the map to view its inventory
+            </p>
+          )}
+
+          {/* Current Token (if viewing from an active session) */}
+          {tokenId && tokenName && (
+            <div style={{borderBottom: '1px solid var(--border)', marginBottom: '20px', paddingBottom: '20px'}}>
+              <h3 style={{fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase'}}>Current Token</h3>
+              <button
+                onClick={() => setViewingFavorites(false)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px',
+                  background: 'rgba(240, 225, 48, 0.1)',
+                  border: '2px solid var(--accent-gold)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  color: 'var(--text-main)',
+                  textAlign: 'left',
+                  width: '100%'
+                }}
+              >
+                {tokenImage && (
+                  <div style={{
+                    width: '50px',
+                    height: '50px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: '3px solid var(--accent-gold)',
+                    flexShrink: 0
+                  }}>
+                    <img src={tokenImage} alt={tokenName} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                  </div>
+                )}
+                <div style={{fontWeight: 'bold', fontSize: '16px'}}>{tokenName}</div>
+              </button>
+            </div>
+          )}
 
           {favorites.length > 0 && (
             <>
-              <div style={{borderTop: '1px solid var(--border)', marginTop: '20px', paddingTop: '20px'}}>
+              <div style={{paddingTop: '20px'}}>
                 <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>⭐ FAVORITES</h3>
                 <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
                   {favorites.map(fav => (
                     <button
                       key={fav.id}
-                      onClick={() => loadTokenById(fav.id)}
+                      onClick={() => {
+                        loadTokenById(fav.id);
+                        setViewingFavorites(false);
+                      }}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -536,6 +600,12 @@ function App() {
                 </div>
               </div>
             </>
+          )}
+
+          {favorites.length === 0 && !tokenId && (
+            <p style={{color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px'}}>
+              No favorites yet. Add tokens to favorites from the Home tab!
+            </p>
           )}
         </div>
       </div>
@@ -621,25 +691,46 @@ function App() {
                         <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)'}}>
                             {tokenName || 'Unknown Character'}
                         </div>
-                        <button
-                            onClick={toggleFavorite}
-                            style={{
-                                background: 'transparent',
-                                border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
-                                color: isFavorited ? 'var(--accent-gold)' : '#666',
-                                padding: '4px 12px',
-                                borderRadius: '12px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                                marginTop: '8px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '4px'
-                            }}
-                            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                        >
-                            {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
-                        </button>
+                        <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
+                            <button
+                                onClick={toggleFavorite}
+                                style={{
+                                    background: 'transparent',
+                                    border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
+                                    color: isFavorited ? 'var(--accent-gold)' : '#666',
+                                    padding: '4px 12px',
+                                    borderRadius: '12px',
+                                    cursor: 'pointer',
+                                    fontSize: '11px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                                title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                            >
+                                {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
+                            </button>
+                            {favorites.length > 0 && (
+                                <button
+                                    onClick={() => setViewingFavorites(true)}
+                                    style={{
+                                        background: 'rgba(240, 225, 48, 0.1)',
+                                        border: '1px solid var(--accent-gold)',
+                                        color: 'var(--accent-gold)',
+                                        padding: '4px 12px',
+                                        borderRadius: '12px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px'
+                                    }}
+                                    title="View all favorite tokens"
+                                >
+                                    ⭐ View Favorites
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
 

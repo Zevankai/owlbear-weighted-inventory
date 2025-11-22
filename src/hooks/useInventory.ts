@@ -6,11 +6,13 @@ import { DEFAULT_CHARACTER_DATA } from '../constants';
 
 // Store data on each token's own metadata (16KB per token, not shared!)
 const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
-// Player favorites (stored in player metadata, unique per player)
-const PLAYER_FAVORITES_KEY = 'com.weighted-inventory/favorites';
+// Player favorites (stored in room metadata with player-specific keys)
+const FAVORITES_KEY_PREFIX = 'com.weighted-inventory/favorites/';
 // Legacy keys for migration
 const LEGACY_ROOM_KEY = 'com.weighted-inventory/room-data';
 const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
+
+const getFavoritesKey = (playerId: string) => `${FAVORITES_KEY_PREFIX}${playerId}`;
 
 export function useInventory() {
   const [tokenId, setTokenId] = useState<string | null>(null);
@@ -83,12 +85,18 @@ export function useInventory() {
     let mounted = true;
 
     const init = async () => {
-      // Load player favorites
-      console.log('[Favorites] Loading favorites from player metadata...');
-      const playerMetadata = await OBR.player.getMetadata();
-      console.log('[Favorites] Player metadata:', playerMetadata);
-      const savedFavorites = playerMetadata[PLAYER_FAVORITES_KEY] as Array<{id: string; name: string; image?: string}> | undefined;
+      // Load player favorites from room metadata (using player-specific key)
+      console.log('[Favorites] Loading favorites...');
+      const player = await OBR.player.getRole();
+      const playerId = await OBR.player.getId();
+      console.log('[Favorites] Player ID:', playerId);
+
+      const roomMetadata = await OBR.room.getMetadata();
+      const favoritesKey = getFavoritesKey(playerId);
+      console.log('[Favorites] Looking for key:', favoritesKey);
+      const savedFavorites = roomMetadata[favoritesKey] as Array<{id: string; name: string; image?: string}> | undefined;
       console.log('[Favorites] Saved favorites:', savedFavorites);
+
       if (savedFavorites && mounted) {
         setFavorites(savedFavorites);
         console.log('[Favorites] Loaded', savedFavorites.length, 'favorites');
@@ -203,8 +211,12 @@ export function useInventory() {
 
     console.log('[Favorites] New favorites list:', newFavorites);
     setFavorites(newFavorites);
-    console.log('[Favorites] Saving to player metadata with key:', PLAYER_FAVORITES_KEY);
-    await OBR.player.setMetadata({ [PLAYER_FAVORITES_KEY]: newFavorites });
+
+    // Save to room metadata with player-specific key
+    const playerId = await OBR.player.getId();
+    const favoritesKey = getFavoritesKey(playerId);
+    console.log('[Favorites] Saving to room metadata with key:', favoritesKey);
+    await OBR.room.setMetadata({ [favoritesKey]: newFavorites });
     console.log('[Favorites] Save complete');
   }, [tokenId, tokenName, tokenImage, favorites]);
 

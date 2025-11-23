@@ -492,120 +492,184 @@ function App() {
   // Show favorites menu when viewing favorites OR no token selected
   if (viewingFavorites || !tokenId || !characterData || !currentDisplayData) {
     return (
-      <div className="app-container">
-        <div className="section" style={{padding: '20px', textAlign: 'center'}}>
-          <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px'}}>
-            <h2 style={{margin: 0}}>Inventory Manager</h2>
-            {tokenId && (
-              <button
-                onClick={() => setViewingFavorites(false)}
-                style={{
-                  background: 'var(--border)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '4px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '11px'
-                }}
-              >
-                BACK
-              </button>
-            )}
-          </div>
+      <div className="app-container" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
+        <div style={{
+          padding: '16px',
+          borderBottom: '1px solid var(--border)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexShrink: 0
+        }}>
+          <h2 style={{margin: 0, fontSize: '18px'}}>Inventory Manager</h2>
+          {tokenId && (
+            <button
+              onClick={() => setViewingFavorites(false)}
+              style={{
+                background: 'var(--border)',
+                color: 'white',
+                border: 'none',
+                padding: '6px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 'bold'
+              }}
+            >
+              BACK
+            </button>
+          )}
+        </div>
 
+        <div style={{flex: 1, overflowY: 'auto', padding: '20px'}}>
           {!tokenId && (
-            <p style={{color: 'var(--text-muted)', marginBottom: '20px'}}>
-              Select a token on the map to view its inventory
-            </p>
+            <div style={{
+              textAlign: 'center',
+              padding: '40px 20px',
+              background: 'rgba(255,255,255,0.02)',
+              borderRadius: '8px',
+              marginBottom: '20px'
+            }}>
+              <div style={{fontSize: '48px', marginBottom: '12px'}}>📦</div>
+              <p style={{color: 'var(--text-main)', fontSize: '16px', marginBottom: '8px'}}>
+                Welcome to Inventory Manager
+              </p>
+              <p style={{color: 'var(--text-muted)', fontSize: '13px'}}>
+                Select a token on the map to view its inventory
+              </p>
+            </div>
           )}
 
           {/* Current Token (if viewing from an active session) */}
           {tokenId && tokenName && (
-            <div style={{borderBottom: '1px solid var(--border)', marginBottom: '20px', paddingBottom: '20px'}}>
-              <h3 style={{fontSize: '14px', color: 'var(--text-muted)', marginBottom: '12px', textTransform: 'uppercase'}}>Current Token</h3>
+            <div style={{marginBottom: '24px'}}>
+              <h3 style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                fontWeight: 'bold'
+              }}>
+                Current Token
+              </h3>
               <button
                 onClick={() => setViewingFavorites(false)}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  background: 'rgba(240, 225, 48, 0.1)',
+                  gap: '16px',
+                  padding: '16px',
+                  background: 'rgba(240, 225, 48, 0.15)',
                   border: '2px solid var(--accent-gold)',
-                  borderRadius: '4px',
+                  borderRadius: '8px',
                   cursor: 'pointer',
                   color: 'var(--text-main)',
                   textAlign: 'left',
-                  width: '100%'
+                  width: '100%',
+                  transition: 'all 0.2s'
                 }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(240, 225, 48, 0.25)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(240, 225, 48, 0.15)'}
               >
                 {tokenImage && (
                   <div style={{
-                    width: '50px',
-                    height: '50px',
+                    width: '60px',
+                    height: '60px',
                     borderRadius: '50%',
                     overflow: 'hidden',
                     border: '3px solid var(--accent-gold)',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
                   }}>
                     <img src={tokenImage} alt={tokenName} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                   </div>
                 )}
-                <div style={{fontWeight: 'bold', fontSize: '16px'}}>{tokenName}</div>
+                <div>
+                  <div style={{fontWeight: 'bold', fontSize: '18px', color: 'var(--accent-gold)'}}>{tokenName}</div>
+                  <div style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px'}}>Click to return</div>
+                </div>
               </button>
             </div>
           )}
 
           {favorites.length > 0 && (
-            <>
-              <div style={{paddingTop: '20px'}}>
-                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>⭐ FAVORITES</h3>
-                <div style={{display: 'flex', flexDirection: 'column', gap: '8px'}}>
-                  {favorites.map(fav => (
-                    <button
-                      key={fav.id}
-                      onClick={() => {
-                        loadTokenById(fav.id);
-                        setViewingFavorites(false);
-                      }}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '12px',
-                        padding: '12px',
-                        background: 'rgba(255,255,255,0.05)',
-                        border: '1px solid var(--border)',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        color: 'var(--text-main)',
-                        textAlign: 'left'
-                      }}
-                    >
-                      {fav.image && (
-                        <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          overflow: 'hidden',
-                          border: '2px solid var(--accent-gold)',
-                          flexShrink: 0
-                        }}>
-                          <img src={fav.image} alt={fav.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                        </div>
-                      )}
-                      <div style={{fontWeight: 'bold', fontSize: '14px'}}>{fav.name}</div>
-                    </button>
-                  ))}
-                </div>
+            <div>
+              <h3 style={{
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                marginBottom: '12px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                fontWeight: 'bold'
+              }}>
+                <span style={{color: 'var(--accent-gold)'}}>⭐</span> Favorite Tokens
+              </h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                gap: '12px'
+              }}>
+                {favorites.map(fav => (
+                  <button
+                    key={fav.id}
+                    onClick={() => {
+                      loadTokenById(fav.id);
+                      setViewingFavorites(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '14px',
+                      padding: '14px',
+                      background: 'rgba(255,255,255,0.05)',
+                      border: '1px solid var(--border)',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      color: 'var(--text-main)',
+                      textAlign: 'left',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                      e.currentTarget.style.borderColor = 'var(--accent-gold)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                    }}
+                  >
+                    {fav.image && (
+                      <div style={{
+                        width: '50px',
+                        height: '50px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '2px solid var(--accent-gold)',
+                        flexShrink: 0
+                      }}>
+                        <img src={fav.image} alt={fav.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                      </div>
+                    )}
+                    <div style={{fontWeight: 'bold', fontSize: '15px', flex: 1}}>{fav.name}</div>
+                  </button>
+                ))}
               </div>
-            </>
+            </div>
           )}
 
           {favorites.length === 0 && !tokenId && (
-            <p style={{color: 'var(--text-muted)', fontSize: '12px', marginTop: '20px'}}>
-              No favorites yet. Add tokens to favorites from the Home tab!
-            </p>
+            <div style={{
+              textAlign: 'center',
+              padding: '60px 20px',
+              color: 'var(--text-muted)'
+            }}>
+              <div style={{fontSize: '64px', marginBottom: '16px', opacity: 0.3}}>⭐</div>
+              <p style={{fontSize: '14px', marginBottom: '8px'}}>No favorites yet</p>
+              <p style={{fontSize: '12px', opacity: 0.7}}>
+                Select a token and add it to favorites from the Home tab
+              </p>
+            </div>
           )}
         </div>
       </div>

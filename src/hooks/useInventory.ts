@@ -258,21 +258,26 @@ export function useInventory() {
     if (!tokenId) return;
 
     try {
-      const items = await OBR.scene.items.getItems([tokenId]);
-      if (items.length === 0) return;
-
-      const token = items[0];
-      const hasEffect = token.attachedTo?.some((id: string) => id === OVERBURDENED_ATTACHMENT_ID);
+      // Check if effect already exists
+      const allItems = await OBR.scene.items.getItems();
+      const hasEffect = allItems.some(item => item.id === OVERBURDENED_ATTACHMENT_ID);
 
       if (isOverburdened && !hasEffect) {
         // Add red ring effect
         console.log('[Overburdened] Adding red ring effect to token');
 
+        const items = await OBR.scene.items.getItems([tokenId]);
+        if (items.length === 0) return;
+
+        const token = items[0] as any;
+        const tokenWidth = token.image?.width || 200;
+        const tokenHeight = token.image?.height || 200;
+
         const ring = buildShape()
           .id(OVERBURDENED_ATTACHMENT_ID)
           .shapeType("CIRCLE")
-          .width(token.scale.x * token.grid.dpi * 1.2) // 20% larger than token
-          .height(token.scale.y * token.grid.dpi * 1.2)
+          .width(tokenWidth * 1.2) // 20% larger than token
+          .height(tokenHeight * 1.2)
           .position({ x: token.position.x, y: token.position.y })
           .strokeColor("#ff0000") // Red
           .strokeWidth(8)

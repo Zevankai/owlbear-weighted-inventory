@@ -145,4 +145,13 @@ export const DEFAULT_CHARACTER_DATA: CharacterData = {
   favorites: [],
   gmNotes: '',
   condition: '',
+  claimedBy: undefined,
+  merchantShop: undefined,
 };
+
+// Room metadata keys for trading
+export const ACTIVE_TRADE_KEY = 'com.weighted-inventory/active-trade';
+export const TRADE_QUEUES_KEY = 'com.weighted-inventory/trade-queues';
+
+// Default merchant buyback rate (80%)
+export const DEFAULT_BUYBACK_RATE = 0.8;

@@ -48,6 +48,8 @@ function App() {
     }
     if (bgRgb) {
       document.documentElement.style.setProperty('--bg-panel', `rgba(${Math.min(bgRgb.r + 20, 255)}, ${Math.min(bgRgb.g + 20, 255)}, ${Math.min(bgRgb.b + 20, 255)}, 0.7)`);
+      // Set navbar background based on theme background
+      document.documentElement.style.setProperty('--nav-bg', `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.8)`);
     }
   }, [theme]);
 
@@ -1267,14 +1269,34 @@ function App() {
                     </div>
 
                     {(newItem.category?.includes('Weapon') || newItem.category === 'Shield') && (
-                         <div>
-                            <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Damage (Ex: 1d8)</label>
-                            <input 
-                              className="search-input" 
-                              value={newItem.damage || ''}
-                              onChange={e => setNewItem({...newItem, damage: e.target.value})}
-                            />
-                        </div>
+                         <>
+                            <div>
+                                <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Damage (Ex: 1d8)</label>
+                                <input
+                                  className="search-input"
+                                  value={newItem.damage || ''}
+                                  onChange={e => setNewItem({...newItem, damage: e.target.value})}
+                                />
+                            </div>
+                            <div>
+                                <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Hit Modifier (Ex: +2)</label>
+                                <input
+                                  className="search-input"
+                                  value={newItem.hitModifier || ''}
+                                  onChange={e => setNewItem({...newItem, hitModifier: e.target.value})}
+                                  placeholder="+0"
+                                />
+                            </div>
+                            <div>
+                                <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Damage Modifier (Ex: +1)</label>
+                                <input
+                                  className="search-input"
+                                  value={newItem.damageModifier || ''}
+                                  onChange={e => setNewItem({...newItem, damageModifier: e.target.value})}
+                                  placeholder="+0"
+                                />
+                            </div>
+                        </>
                     )}
 
                     {(newItem.category?.includes('Armor') || newItem.category === 'Shield') && (

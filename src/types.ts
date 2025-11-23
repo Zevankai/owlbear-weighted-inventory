@@ -31,6 +31,8 @@ export interface Item {
   qty: number;
   ac?: number;
   damage?: string;
+  damageModifier?: string;
+  hitModifier?: string;
   properties?: string;
   requiresAttunement: boolean;
   isAttuned: boolean;

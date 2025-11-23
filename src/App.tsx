@@ -53,13 +53,6 @@ function App() {
     }
   }, [theme]);
 
-  // Update over-encumbered visual effect when weight changes
-  useEffect(() => {
-    if (stats?.isOverburdened !== undefined) {
-      updateOverburdenedEffect(stats.isOverburdened);
-    }
-  }, [stats?.isOverburdened, updateOverburdenedEffect]);
-
   // --- VIRTUAL CONTEXT SWITCHING ---
   // Determine which data object we are currently viewing (Player or a specific Storage)
   const currentDisplayData: CharacterData | null = (() => {
@@ -87,6 +80,13 @@ function App() {
   })();
 
   const stats = usePackLogic(currentDisplayData);
+
+  // Update over-encumbered visual effect when weight changes
+  useEffect(() => {
+    if (stats?.isOverburdened !== undefined) {
+      updateOverburdenedEffect(stats.isOverburdened);
+    }
+  }, [stats?.isOverburdened, updateOverburdenedEffect]);
 
   // Form States
   const [newItem, setNewItem] = useState<Partial<Item>>({

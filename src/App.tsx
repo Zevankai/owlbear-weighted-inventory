@@ -95,7 +95,8 @@ function App() {
   const [repoSearch, setRepoSearch] = useState('');
   const [showRepo, setShowRepo] = useState(false);
   const [filterText, setFilterText] = useState('');
-  const [globalSearch, setGlobalSearch] = useState(''); 
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
 
   const [newStorage, setNewStorage] = useState<{name: string; description: string; type: StorageType}>({
       name: '', description: '', type: 'Small Pet'
@@ -214,7 +215,7 @@ function App() {
   const handleCreateItem = () => {
     if (!newItem.name || !currentDisplayData) return;
     const createdItem: Item = {
-      id: uuidv4(), name: newItem.name, category: newItem.category as ItemCategory, type: newItem.type || 'Gear', weight: newItem.weight || 0, qty: newItem.qty || 1, value: newItem.value || '', properties: newItem.properties || '', requiresAttunement: newItem.requiresAttunement || false, isAttuned: false, notes: '', ac: newItem.ac, damage: newItem.damage, equippedSlot: null
+      id: uuidv4(), name: newItem.name, category: newItem.category as ItemCategory, type: newItem.type || 'Gear', weight: newItem.weight || 0, qty: newItem.qty || 1, value: newItem.value || '', properties: newItem.properties || '', requiresAttunement: newItem.requiresAttunement || false, isAttuned: false, notes: '', ac: newItem.ac, damage: newItem.damage, equippedSlot: null, charges: newItem.charges, maxCharges: newItem.maxCharges, damageModifier: newItem.damageModifier, hitModifier: newItem.hitModifier
     };
     handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] });
     setNewItem({ name: '', category: 'Other', type: 'Gear', weight: 1, qty: 1, value: '', properties: '', requiresAttunement: false });
@@ -248,6 +249,38 @@ function App() {
     const newCurrency = { ...currentDisplayData.currency };
     newCurrency[coinType] = (newCurrency[coinType] || 0) + finalPrice;
     handleUpdateData({ inventory: newInventory, currency: newCurrency });
+  };
+
+  const handleDragStart = (itemId: string) => {
+    setDraggedItemId(itemId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Allow drop
+  };
+
+  const handleDrop = (targetItemId: string) => {
+    if (!currentDisplayData || !draggedItemId || draggedItemId === targetItemId) {
+      setDraggedItemId(null);
+      return;
+    }
+
+    const items = currentDisplayData.inventory;
+    const draggedIndex = items.findIndex(i => i.id === draggedItemId);
+    const targetIndex = items.findIndex(i => i.id === targetItemId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedItemId(null);
+      return;
+    }
+
+    // Reorder the array
+    const newItems = [...items];
+    const [draggedItem] = newItems.splice(draggedIndex, 1);
+    newItems.splice(targetIndex, 0, draggedItem);
+
+    handleUpdateData({ inventory: newItems });
+    setDraggedItemId(null);
   };
 
   const handleToggleEquip = (item: Item) => {
@@ -975,6 +1008,7 @@ function App() {
                                 <th style={{padding: '8px 4px'}}>ITEM</th>
                                 <th style={{padding: '8px 4px'}}>TYPE</th>
                                 <th style={{padding: '8px 4px'}}>VALUE</th>
+                                <th style={{padding: '8px 4px', textAlign:'center'}}>CHARGES</th>
                                 <th style={{padding: '8px 4px', textAlign:'center'}}>WT</th>
                                 <th style={{padding: '8px 4px', textAlign:'right'}}>ACTIONS</th>
                             </tr>
@@ -982,11 +1016,49 @@ function App() {
                         <tbody>
                             {currentDisplayData.inventory.filter(item => item.name.toLowerCase().includes(filterText.toLowerCase())).map((item) => (
                                 <Fragment key={item.id}>
-                                    <tr style={{borderTop: '1px solid #333'}}>
+                                    <tr
+                                        draggable
+                                        onDragStart={() => handleDragStart(item.id)}
+                                        onDragOver={handleDragOver}
+                                        onDrop={() => handleDrop(item.id)}
+                                        style={{
+                                            borderTop: '1px solid #333',
+                                            cursor: 'grab',
+                                            opacity: draggedItemId === item.id ? 0.5 : 1,
+                                            background: draggedItemId === item.id ? 'rgba(255, 215, 0, 0.1)' : 'transparent'
+                                        }}
+                                    >
                                         <td style={{padding: '8px 4px', width: '50px'}}><input type="number" value={item.qty} min="1" onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, qty: parseInt(e.target.value)} : i); handleUpdateData({inventory: newInv}); }} style={{width: '40px', background: '#222', border: '1px solid #444', color: 'white', textAlign: 'center', padding: '4px'}} /></td>
                                         <td style={{padding: '8px 4px'}}><div style={{fontWeight: 'bold', color: item.equippedSlot ? 'var(--accent-gold)' : 'var(--text-main)'}}>{item.name}</div>{item.equippedSlot && <div style={{fontSize: '9px', textTransform:'uppercase', color:'var(--accent-gold)'}}>[EQ: {item.equippedSlot}]</div>}</td>
                                         <td style={{padding: '8px 4px', width: '100px'}}><select value={item.category} onChange={(e) => { const cat = e.target.value as ItemCategory; const newWeight = DEFAULT_CATEGORY_WEIGHTS[cat] || item.weight; const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, category: cat, weight: newWeight} : i); handleUpdateData({inventory: newInv}); }} style={{width: '100%', background: 'transparent', border: 'none', color: '#aaa', fontSize: '11px', textOverflow:'ellipsis'}}>{ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></td>
                                         <td style={{padding: '8px 4px', fontSize: '11px', color: '#888'}}>{item.value || '-'}</td>
+                                        <td style={{padding: '8px 4px', textAlign:'center', fontSize: '11px'}}>
+                                            {item.maxCharges !== undefined ? (
+                                                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'}}>
+                                                    <button
+                                                        onClick={() => {
+                                                            const newCharges = Math.max(0, (item.charges || 0) - 1);
+                                                            const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, charges: newCharges} : i);
+                                                            handleUpdateData({inventory: newInv});
+                                                        }}
+                                                        style={{background: '#333', border: 'none', color: '#888', cursor: 'pointer', padding: '2px 6px', fontSize: '10px', borderRadius: '2px'}}
+                                                        title="Decrease charge"
+                                                    >−</button>
+                                                    <span style={{color: (item.charges || 0) === 0 ? '#f44' : 'var(--text-main)', fontWeight: 'bold', minWidth: '40px', textAlign: 'center'}}>
+                                                        {item.charges || 0}/{item.maxCharges}
+                                                    </span>
+                                                    <button
+                                                        onClick={() => {
+                                                            const newCharges = Math.min(item.maxCharges || 0, (item.charges || 0) + 1);
+                                                            const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, charges: newCharges} : i);
+                                                            handleUpdateData({inventory: newInv});
+                                                        }}
+                                                        style={{background: '#333', border: 'none', color: '#888', cursor: 'pointer', padding: '2px 6px', fontSize: '10px', borderRadius: '2px'}}
+                                                        title="Increase charge"
+                                                    >+</button>
+                                                </div>
+                                            ) : <span style={{color: '#444'}}>-</span>}
+                                        </td>
                                         <td style={{padding: '8px 4px', textAlign:'center', fontSize: '11px', color: '#888'}}>{item.weight * item.qty}</td>
                                         <td style={{padding: '8px 4px', textAlign:'right'}}>
                                             <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 4}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
@@ -997,7 +1069,7 @@ function App() {
                                     </tr>
                                     {editingItemId === item.id ? (
                                         <tr style={{background: 'rgba(0,0,0,0.2)'}}>
-                                            <td colSpan={6} style={{padding: '12px', borderBottom: '1px solid #222'}}>
+                                            <td colSpan={7} style={{padding: '12px', borderBottom: '1px solid #222'}}>
                                                 <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
                                                     <div>
                                                         <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Name</label>
@@ -1062,12 +1134,20 @@ function App() {
                                                             <label htmlFor={`attuned-${item.id}`} style={{fontSize: '11px', color: item.isAttuned ? 'cyan' : 'var(--text-muted)'}}>Is Attuned</label>
                                                         </div>
                                                     )}
+                                                    <div>
+                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Current Charges</label>
+                                                        <input type="number" className="search-input" style={{marginTop: 0}} value={item.charges ?? ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, charges: e.target.value ? parseInt(e.target.value) : undefined} : i); handleUpdateData({inventory: newInv}); }} placeholder="None" />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Max Charges</label>
+                                                        <input type="number" className="search-input" style={{marginTop: 0}} value={item.maxCharges ?? ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, maxCharges: e.target.value ? parseInt(e.target.value) : undefined} : i); handleUpdateData({inventory: newInv}); }} placeholder="None" />
+                                                    </div>
                                                 </div>
                                             </td>
                                         </tr>
                                     ) : (
                                         <tr style={{background: 'rgba(0,0,0,0.1)'}}>
-                                            <td colSpan={6} style={{padding: '4px 8px 12px 8px', borderBottom: '1px solid #222'}}>
+                                            <td colSpan={7} style={{padding: '4px 8px 12px 8px', borderBottom: '1px solid #222'}}>
                                                 <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                                                     <div style={{flex: 1, fontSize: '10px', color: '#888'}}>{item.properties || 'No notes'}</div>
                                                     {item.requiresAttunement && (<div onClick={() => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, isAttuned: !i.isAttuned} : i); handleUpdateData({inventory: newInv}); }} style={{cursor: 'pointer', color: item.isAttuned ? 'cyan' : '#444', fontSize: '14px', marginLeft:'8px'}} title="Toggle Attunement">{item.isAttuned ? '★' : '☆'}</div>)}
@@ -1320,7 +1400,9 @@ function App() {
                                                     damage: repoItem.damage,
                                                     damageModifier: '',
                                                     hitModifier: '',
-                                                    equippedSlot: null
+                                                    equippedSlot: null,
+                                                    charges: undefined,
+                                                    maxCharges: undefined
                                                 };
                                                 handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] });
                                             }}
@@ -1460,8 +1542,8 @@ function App() {
                     </div>
 
                     <div style={{display:'flex', alignItems:'center', marginTop: '10px'}}>
-                         <input 
-                            type="checkbox" 
+                         <input
+                            type="checkbox"
                             id="attunement"
                             checked={newItem.requiresAttunement}
                             onChange={e => setNewItem({...newItem, requiresAttunement: e.target.checked})}
@@ -1470,10 +1552,32 @@ function App() {
                          <label htmlFor="attunement" style={{color:'var(--text-main)', fontSize:'12px'}}>Requires Attunement</label>
                     </div>
 
+                    <div>
+                        <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Current Charges</label>
+                        <input
+                          type="number"
+                          className="search-input"
+                          value={newItem.charges ?? ''}
+                          onChange={e => setNewItem({...newItem, charges: e.target.value ? parseInt(e.target.value) : undefined})}
+                          placeholder="Leave empty if no charges"
+                        />
+                    </div>
+
+                    <div>
+                        <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Max Charges</label>
+                        <input
+                          type="number"
+                          className="search-input"
+                          value={newItem.maxCharges ?? ''}
+                          onChange={e => setNewItem({...newItem, maxCharges: e.target.value ? parseInt(e.target.value) : undefined})}
+                          placeholder="Leave empty if no charges"
+                        />
+                    </div>
+
                     <div style={{gridColumn: 'span 2'}}>
                         <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Properties / Notes</label>
-                        <textarea 
-                          className="search-input" 
+                        <textarea
+                          className="search-input"
                           rows={3}
                           value={newItem.properties}
                           onChange={e => setNewItem({...newItem, properties: e.target.value})}

@@ -38,6 +38,8 @@ export interface Item {
   isAttuned: boolean;
   notes?: string;
   equippedSlot?: 'weapon' | 'armor' | 'clothing' | 'jewelry' | 'utility' | null;
+  charges?: number;
+  maxCharges?: number;
 }
 
 export interface Vault {

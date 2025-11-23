@@ -42,7 +42,7 @@ export const PACK_DEFINITIONS: Record<PackType, PackStats> = {
     rules: ['Tool/Kit in Utility'] 
   },
   Travel: { 
-    capacity: 35, 
+    capacity: 55, 
     utilitySlots: 8, 
     slotModifiers: { weapon: -2 }, 
     rules: ['Camp Items in Utility'] 

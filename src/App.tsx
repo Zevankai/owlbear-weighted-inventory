@@ -34,7 +34,7 @@ function App() {
   const [viewingFavorites, setViewingFavorites] = useState(false);
 
   // 1. Load Inventory Data
-  const { tokenId, tokenName, tokenImage, characterData, updateData, loading, favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme } = useInventory();
+  const { tokenId, tokenName, tokenImage, characterData, updateData, loading, favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme, updateOverburdenedEffect } = useInventory();
 
   // Apply theme colors to CSS variables
   useEffect(() => {
@@ -52,6 +52,13 @@ function App() {
       document.documentElement.style.setProperty('--nav-bg', `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.8)`);
     }
   }, [theme]);
+
+  // Update over-encumbered visual effect when weight changes
+  useEffect(() => {
+    if (stats?.isOverburdened !== undefined) {
+      updateOverburdenedEffect(stats.isOverburdened);
+    }
+  }, [stats?.isOverburdened, updateOverburdenedEffect]);
 
   // --- VIRTUAL CONTEXT SWITCHING ---
   // Determine which data object we are currently viewing (Player or a specific Storage)

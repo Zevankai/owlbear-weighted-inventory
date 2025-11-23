@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import OBR from '@owlbear-rodeo/sdk';
+import OBR, { buildShape } from '@owlbear-rodeo/sdk';
 import type { Item } from '@owlbear-rodeo/sdk';
 import type { CharacterData } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
@@ -10,6 +10,8 @@ const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
 const FAVORITES_KEY_PREFIX = 'com.weighted-inventory/favorites/';
 // Player theme (stored in room metadata with player-specific keys)
 const THEME_KEY_PREFIX = 'com.weighted-inventory/theme/';
+// Over-encumbered visual effect attachment ID
+const OVERBURDENED_ATTACHMENT_ID = 'com.weighted-inventory/overburdened-indicator';
 // Legacy keys for migration
 const LEGACY_ROOM_KEY = 'com.weighted-inventory/room-data';
 const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
@@ -251,6 +253,48 @@ export function useInventory() {
     console.log('[Theme] Saved theme:', newTheme);
   }, []);
 
+  // Update over-encumbered visual effect
+  const updateOverburdenedEffect = useCallback(async (isOverburdened: boolean) => {
+    if (!tokenId) return;
+
+    try {
+      const items = await OBR.scene.items.getItems([tokenId]);
+      if (items.length === 0) return;
+
+      const token = items[0];
+      const hasEffect = token.attachedTo?.some((id: string) => id === OVERBURDENED_ATTACHMENT_ID);
+
+      if (isOverburdened && !hasEffect) {
+        // Add red ring effect
+        console.log('[Overburdened] Adding red ring effect to token');
+
+        const ring = buildShape()
+          .id(OVERBURDENED_ATTACHMENT_ID)
+          .shapeType("CIRCLE")
+          .width(token.scale.x * token.grid.dpi * 1.2) // 20% larger than token
+          .height(token.scale.y * token.grid.dpi * 1.2)
+          .position({ x: token.position.x, y: token.position.y })
+          .strokeColor("#ff0000") // Red
+          .strokeWidth(8)
+          .strokeOpacity(0.8)
+          .fillOpacity(0)
+          .layer("ATTACHMENT")
+          .attachedTo(tokenId)
+          .locked(true)
+          .disableHit(true)
+          .build();
+
+        await OBR.scene.items.addItems([ring]);
+      } else if (!isOverburdened && hasEffect) {
+        // Remove red ring effect
+        console.log('[Overburdened] Removing red ring effect from token');
+        await OBR.scene.items.deleteItems([OVERBURDENED_ATTACHMENT_ID]);
+      }
+    } catch (err) {
+      console.error('[Overburdened] Failed to update effect:', err);
+    }
+  }, [tokenId]);
+
   return {
     tokenId,
     tokenName,
@@ -263,7 +307,8 @@ export function useInventory() {
     toggleFavorite,
     loadTokenById,
     theme,
-    updateTheme
+    updateTheme,
+    updateOverburdenedEffect
   };
 }
 

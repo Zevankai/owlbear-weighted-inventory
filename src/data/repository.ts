@@ -322,4 +322,26 @@ export const ITEM_REPOSITORY: RepoItem[] = [
   { name: "Scavenger's Trinket Coil", value: "8 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Copper coil used to 'ping' debris for hollows. +2 Investigation in ruins or debris fields" },
   { name: "Warding Knot Pendant", value: "6 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Traditional charm against misfortune. +1 to saving throws vs curses or superstition effects (DM discretion)" },
   { name: "Ash-Stained Mourning Ring", value: "10 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Worn by widows and warriors alike. Advantage on Intimidation when invoking tragedy or loss" },
+
+  // --- HOMEBREW BOWS ---
+  { name: "Recurve Hunting Bow", value: "30 gp", damage: "1d8 Piercing", weight: 2, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Two-handed, Range 80/320. Short, efficient bow used by scouts and hunters. Its shape gives better power without added size" },
+  { name: "Ridgeback Longbow", value: "60 gp", damage: "1d10 Piercing", weight: 3, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Heavy, Two-handed, Range 150/600. Reinforced with a raised spine along the back. Requires great strength but fires with incredible stability" },
+  { name: "Double-Limbed Composite Bow", value: "75 gp", damage: "1d8 Piercing", weight: 2, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Two-handed, Range 90/350. Crafted with layered horn, sinew, and wood, producing extreme snap and consistent accuracy. +1 to hit at long range (nonmagical)" },
+  { name: "Whisperstring Bow", value: "35 gp", damage: "1d6 Piercing", weight: 2, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Light, Two-handed, Range 60/240. Small bow with treated strings designed to muffle vibration. Ranged attacks don't impose disadvantage when hidden but not unheard" },
+  { name: "Ironbranch Greatbow", value: "150 gp", damage: "1d12 Piercing", weight: 4, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Heavy, Two-handed, Range 200/800, STR 15 required. Massive war bow carved from dense heartwood. Disadvantage if STR < 15" },
+  { name: "Cliffstalker Bow", value: "40 gp", damage: "1d8 Piercing", weight: 2, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Two-handed, Range 80/320. Reinforced grip and edge-hooks allow archers to brace on uneven terrain. Ignore the first 10 ft of elevation difference when shooting" },
+  { name: "Sandstrider Bow", value: "25 gp", damage: "1d6 Piercing", weight: 2, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Two-handed, Range 70/280. Lightweight desert bow that resists heat warping. No disadvantage from sand-heavy winds or heat" },
+  { name: "Stormbent Harp Bow", value: "55 gp", damage: "1d8 Piercing", weight: 2, type: "Homebrew Bow", category: "Two-Handed Weapon", properties: "Two-handed, Range 100/400. Curved in an unusual shape that maintains tension even in storms. +1 to hit in rain, fog, or high wind" },
+
+  // --- HOMEBREW ARROWS ---
+  { name: "Broadhead Arrow", value: "5 sp", damage: "1d8 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Wide cutting tip for bleeding wounds. Normal piercing damage with +1 slashing flavor" },
+  { name: "Needlepoint Arrow", value: "6 sp", damage: "1d8 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Narrow penetrating tip. +1 to hit vs armored targets" },
+  { name: "Whistling Arrow", value: "3 sp", damage: "1d8 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Emits whistle audible up to 300 ft when fired. Used for signaling" },
+  { name: "Weighted Impact Arrow", value: "7 sp", damage: "1d8 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Heavy arrowhead. Knocks target 5 ft back if target has STR < 10" },
+  { name: "Barbed Arrow", value: "4 sp", damage: "1d8 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Hooked tip designed to catch flesh. DC 10 STR check to remove; failure deals 1 piercing damage" },
+  { name: "Rope Anchor Arrow", value: "1 gp", damage: "1d4 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Attached 50 ft cord. Secures in wood or earth for climbing or dragging" },
+  { name: "Blunthead Arrow", value: "2 sp", damage: "1d4 Bludgeoning", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Nonlethal damage. Ideal for knocking out small creatures or humanoids" },
+  { name: "Windcutter Arrow", value: "5 sp", damage: "1d8 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Aerodynamic fletching. Ignores light and moderate wind penalties" },
+  { name: "Fire-Hollow Arrow", value: "2 gp", damage: "1d8 Piercing + 1 Fire", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Hollow tip holds flammable oil. Ignites when fired, dealing normal piercing damage plus 1 fire damage" },
+  { name: "Tripline Arrow", value: "1 gp", damage: "1d4 Piercing", weight: 1, type: "Homebrew Arrow", category: "Ammo", properties: "Unfurls 15 ft cord when fired. Can be used for traps or alarms" },
 ];

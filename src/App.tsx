@@ -100,6 +100,9 @@ function App() {
   const [showDebug, setShowDebug] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
 
+  // Edit item state
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
   useEffect(() => {
     OBR.onReady(() => setReady(true));
   }, []);
@@ -977,19 +980,92 @@ function App() {
                                         <td style={{padding: '8px 4px', width: '100px'}}><select value={item.category} onChange={(e) => { const cat = e.target.value as ItemCategory; const newWeight = DEFAULT_CATEGORY_WEIGHTS[cat] || item.weight; const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, category: cat, weight: newWeight} : i); handleUpdateData({inventory: newInv}); }} style={{width: '100%', background: 'transparent', border: 'none', color: '#aaa', fontSize: '11px', textOverflow:'ellipsis'}}>{ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></td>
                                         <td style={{padding: '8px 4px', textAlign:'center', fontSize: '11px', color: '#888'}}>{item.weight * item.qty}</td>
                                         <td style={{padding: '8px 4px', textAlign:'right'}}>
-                                            <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 4}}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
-                                            <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginRight: 4}}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></button>
-                                            <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}}><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                            <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 4}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                                            <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 4}} title="Equip/Unequip"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
+                                            <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginRight: 4}} title="Sell"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></button>
+                                            <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}} title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                                         </td>
                                     </tr>
-                                    <tr style={{background: 'rgba(0,0,0,0.1)'}}>
-                                        <td colSpan={5} style={{padding: '4px 8px 12px 8px', borderBottom: '1px solid #222'}}>
-                                            <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                                <input placeholder="Notes / Properties..." value={item.properties || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, properties: e.target.value} : i); handleUpdateData({inventory: newInv}); }} style={{flex: 1, background: 'transparent', border: 'none', borderBottom: '1px solid #333', color: '#888', fontSize: '10px', padding: '0 4px'}} />
-                                                {item.requiresAttunement && (<div onClick={() => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, isAttuned: !i.isAttuned} : i); handleUpdateData({inventory: newInv}); }} style={{cursor: 'pointer', color: item.isAttuned ? 'cyan' : '#444', fontSize: '14px', marginLeft:'8px'}} title="Toggle Attunement">{item.isAttuned ? '★' : '☆'}</div>)}
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    {editingItemId === item.id ? (
+                                        <tr style={{background: 'rgba(0,0,0,0.2)'}}>
+                                            <td colSpan={5} style={{padding: '12px', borderBottom: '1px solid #222'}}>
+                                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+                                                    <div>
+                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Name</label>
+                                                        <input className="search-input" style={{marginTop: 0}} value={item.name} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, name: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Type</label>
+                                                        <input className="search-input" style={{marginTop: 0}} value={item.type} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, type: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Weight</label>
+                                                        <input type="number" className="search-input" style={{marginTop: 0}} value={item.weight} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, weight: parseFloat(e.target.value)} : i); handleUpdateData({inventory: newInv}); }} />
+                                                    </div>
+                                                    <div>
+                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Value</label>
+                                                        <input className="search-input" style={{marginTop: 0}} value={item.value} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, value: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                    </div>
+                                                    {(item.category?.includes('Weapon') || item.category === 'Shield') && (
+                                                        <>
+                                                            <div>
+                                                                <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Damage</label>
+                                                                <input className="search-input" style={{marginTop: 0}} value={item.damage || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, damage: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                            </div>
+                                                            <div>
+                                                                <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Hit Modifier</label>
+                                                                <input className="search-input" style={{marginTop: 0}} value={item.hitModifier || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, hitModifier: e.target.value} : i); handleUpdateData({inventory: newInv}); }} placeholder="+0" />
+                                                            </div>
+                                                            <div>
+                                                                <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Damage Modifier</label>
+                                                                <input className="search-input" style={{marginTop: 0}} value={item.damageModifier || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, damageModifier: e.target.value} : i); handleUpdateData({inventory: newInv}); }} placeholder="+0" />
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                    {(item.category?.includes('Armor') || item.category === 'Shield') && (
+                                                        <div>
+                                                            <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>AC</label>
+                                                            <input type="number" className="search-input" style={{marginTop: 0}} value={item.ac || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, ac: parseInt(e.target.value)} : i); handleUpdateData({inventory: newInv}); }} />
+                                                        </div>
+                                                    )}
+                                                    <div style={{gridColumn: 'span 2'}}>
+                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Properties / Notes</label>
+                                                        <textarea
+                                                            className="search-input"
+                                                            style={{marginTop: 0, minHeight: '60px', resize: 'vertical'}}
+                                                            value={item.properties || ''}
+                                                            onChange={(e) => {
+                                                                const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, properties: e.target.value} : i);
+                                                                handleUpdateData({inventory: newInv});
+                                                                // Auto-resize
+                                                                e.target.style.height = 'auto';
+                                                                e.target.style.height = e.target.scrollHeight + 'px';
+                                                            }}
+                                                        />
+                                                    </div>
+                                                    <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                                        <input type="checkbox" id={`attune-${item.id}`} checked={item.requiresAttunement} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, requiresAttunement: e.target.checked} : i); handleUpdateData({inventory: newInv}); }} />
+                                                        <label htmlFor={`attune-${item.id}`} style={{fontSize: '11px', color: 'var(--text-muted)'}}>Requires Attunement</label>
+                                                    </div>
+                                                    {item.requiresAttunement && (
+                                                        <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                                            <input type="checkbox" id={`attuned-${item.id}`} checked={item.isAttuned} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, isAttuned: e.target.checked} : i); handleUpdateData({inventory: newInv}); }} />
+                                                            <label htmlFor={`attuned-${item.id}`} style={{fontSize: '11px', color: item.isAttuned ? 'cyan' : 'var(--text-muted)'}}>Is Attuned</label>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        <tr style={{background: 'rgba(0,0,0,0.1)'}}>
+                                            <td colSpan={5} style={{padding: '4px 8px 12px 8px', borderBottom: '1px solid #222'}}>
+                                                <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
+                                                    <div style={{flex: 1, fontSize: '10px', color: '#888'}}>{item.properties || 'No notes'}</div>
+                                                    {item.requiresAttunement && (<div onClick={() => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, isAttuned: !i.isAttuned} : i); handleUpdateData({inventory: newInv}); }} style={{cursor: 'pointer', color: item.isAttuned ? 'cyan' : '#444', fontSize: '14px', marginLeft:'8px'}} title="Toggle Attunement">{item.isAttuned ? '★' : '☆'}</div>)}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )}
                                 </Fragment>
                             ))}
                         </tbody>

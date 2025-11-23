@@ -974,6 +974,7 @@ function App() {
                                 <th style={{padding: '8px 4px'}}>QTY</th>
                                 <th style={{padding: '8px 4px'}}>ITEM</th>
                                 <th style={{padding: '8px 4px'}}>TYPE</th>
+                                <th style={{padding: '8px 4px'}}>VALUE</th>
                                 <th style={{padding: '8px 4px', textAlign:'center'}}>WT</th>
                                 <th style={{padding: '8px 4px', textAlign:'right'}}>ACTIONS</th>
                             </tr>
@@ -985,6 +986,7 @@ function App() {
                                         <td style={{padding: '8px 4px', width: '50px'}}><input type="number" value={item.qty} min="1" onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, qty: parseInt(e.target.value)} : i); handleUpdateData({inventory: newInv}); }} style={{width: '40px', background: '#222', border: '1px solid #444', color: 'white', textAlign: 'center', padding: '4px'}} /></td>
                                         <td style={{padding: '8px 4px'}}><div style={{fontWeight: 'bold', color: item.equippedSlot ? 'var(--accent-gold)' : 'var(--text-main)'}}>{item.name}</div>{item.equippedSlot && <div style={{fontSize: '9px', textTransform:'uppercase', color:'var(--accent-gold)'}}>[EQ: {item.equippedSlot}]</div>}</td>
                                         <td style={{padding: '8px 4px', width: '100px'}}><select value={item.category} onChange={(e) => { const cat = e.target.value as ItemCategory; const newWeight = DEFAULT_CATEGORY_WEIGHTS[cat] || item.weight; const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, category: cat, weight: newWeight} : i); handleUpdateData({inventory: newInv}); }} style={{width: '100%', background: 'transparent', border: 'none', color: '#aaa', fontSize: '11px', textOverflow:'ellipsis'}}>{ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></td>
+                                        <td style={{padding: '8px 4px', fontSize: '11px', color: '#888'}}>{item.value || '-'}</td>
                                         <td style={{padding: '8px 4px', textAlign:'center', fontSize: '11px', color: '#888'}}>{item.weight * item.qty}</td>
                                         <td style={{padding: '8px 4px', textAlign:'right'}}>
                                             <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 4}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
@@ -995,7 +997,7 @@ function App() {
                                     </tr>
                                     {editingItemId === item.id ? (
                                         <tr style={{background: 'rgba(0,0,0,0.2)'}}>
-                                            <td colSpan={5} style={{padding: '12px', borderBottom: '1px solid #222'}}>
+                                            <td colSpan={6} style={{padding: '12px', borderBottom: '1px solid #222'}}>
                                                 <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
                                                     <div>
                                                         <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Name</label>
@@ -1065,7 +1067,7 @@ function App() {
                                         </tr>
                                     ) : (
                                         <tr style={{background: 'rgba(0,0,0,0.1)'}}>
-                                            <td colSpan={5} style={{padding: '4px 8px 12px 8px', borderBottom: '1px solid #222'}}>
+                                            <td colSpan={6} style={{padding: '4px 8px 12px 8px', borderBottom: '1px solid #222'}}>
                                                 <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
                                                     <div style={{flex: 1, fontSize: '10px', color: '#888'}}>{item.properties || 'No notes'}</div>
                                                     {item.requiresAttunement && (<div onClick={() => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, isAttuned: !i.isAttuned} : i); handleUpdateData({inventory: newInv}); }} style={{cursor: 'pointer', color: item.isAttuned ? 'cyan' : '#444', fontSize: '14px', marginLeft:'8px'}} title="Toggle Attunement">{item.isAttuned ? '★' : '☆'}</div>)}

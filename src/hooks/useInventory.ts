@@ -309,11 +309,18 @@ export function useInventory() {
 
   // Claim a token (binds it to current player)
   const claimToken = useCallback(async () => {
-    if (!tokenId || !playerId) return;
+    if (!tokenId || !playerId || !characterData) return;
+
+    // Check if claiming is enabled (GM must enable it first)
+    if (!characterData.claimingEnabled) {
+      console.log('[Claim] Claiming is not enabled for this token');
+      return false;
+    }
 
     await updateData({ claimedBy: playerId });
     console.log('[Claim] Token claimed by player:', playerId);
-  }, [tokenId, playerId, updateData]);
+    return true;
+  }, [tokenId, playerId, characterData, updateData]);
 
   // Unclaim a token (removes claim)
   const unclaimToken = useCallback(async () => {

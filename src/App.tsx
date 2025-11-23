@@ -1486,22 +1486,39 @@ function App() {
                                 {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}
                               </div>
                             )}
-                            {canEditToken() && !characterData.claimedBy && (
-                              <button
-                                onClick={claimToken}
-                                style={{
-                                  background: 'rgba(0,255,0,0.1)',
-                                  border: '1px solid #0f0',
-                                  color: '#0f0',
-                                  padding: '6px 16px',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '11px',
-                                  fontWeight: 'bold'
-                                }}
-                              >
-                                CLAIM TOKEN
-                              </button>
+                            {!characterData.claimedBy && (
+                              <>
+                                {/* Show claiming status */}
+                                {!characterData.claimingEnabled && playerRole !== 'GM' && (
+                                  <div style={{fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
+                                    🔒 Claiming disabled (GM must enable)
+                                  </div>
+                                )}
+                                {/* Claim button */}
+                                {canEditToken() && (
+                                  <button
+                                    onClick={async () => {
+                                      const success = await claimToken();
+                                      if (success === false) {
+                                        alert('Claiming is not enabled for this token. Ask the GM to enable claiming first.');
+                                      }
+                                    }}
+                                    style={{
+                                      background: characterData.claimingEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(128,128,128,0.1)',
+                                      border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
+                                      color: characterData.claimingEnabled ? '#0f0' : '#888',
+                                      padding: '6px 16px',
+                                      borderRadius: '4px',
+                                      cursor: characterData.claimingEnabled ? 'pointer' : 'not-allowed',
+                                      fontSize: '11px',
+                                      fontWeight: 'bold',
+                                      opacity: characterData.claimingEnabled ? 1 : 0.5
+                                    }}
+                                  >
+                                    CLAIM TOKEN
+                                  </button>
+                                )}
+                              </>
                             )}
                             {characterData.claimedBy === playerId && (
                               <button
@@ -1522,9 +1539,28 @@ function App() {
                           </div>
                         )}
 
-                        {/* Merchant Mode Toggle (GM Only) */}
+                        {/* GM Token Controls */}
                         {playerRole === 'GM' && characterData && (
-                          <div style={{marginTop: '12px', textAlign: 'center'}}>
+                          <div style={{marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
+                            {/* Enable/Disable Claiming Toggle */}
+                            <button
+                              onClick={() => handleUpdateData({ claimingEnabled: !characterData.claimingEnabled })}
+                              style={{
+                                background: characterData.claimingEnabled ? 'rgba(0,255,0,0.2)' : 'rgba(128,128,128,0.2)',
+                                border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
+                                color: characterData.claimingEnabled ? '#0f0' : '#888',
+                                padding: '6px 16px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '11px',
+                                fontWeight: 'bold',
+                                width: '220px'
+                              }}
+                            >
+                              {characterData.claimingEnabled ? '🔓 CLAIMING ENABLED' : '🔒 CLAIMING DISABLED'}
+                            </button>
+
+                            {/* Merchant Mode Toggle */}
                             <button
                               onClick={handleToggleMerchantMode}
                               style={{
@@ -1535,7 +1571,8 @@ function App() {
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                                 fontSize: '12px',
-                                fontWeight: 'bold'
+                                fontWeight: 'bold',
+                                width: '220px'
                               }}
                             >
                               {characterData.merchantShop?.isActive ? 'DISABLE MERCHANT MODE' : 'ENABLE MERCHANT MODE'}

@@ -117,5 +117,6 @@ export interface CharacterData {
   gmNotes: string;
   condition: string;
   claimedBy?: string;    // Player ID who claimed this token
+  claimingEnabled?: boolean;  // GM controls if token can be claimed
   merchantShop?: MerchantShop;
 }

@@ -8,10 +8,11 @@ import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, PackType, StorageType, CharacterData, Vault, Currency } from './types';
+import type { Item, ItemCategory, PackType, StorageType, CharacterData, Vault, Currency, MerchantItem, ActiveTrade, TradeQueue } from './types';
+import { ACTIVE_TRADE_KEY, TRADE_QUEUES_KEY, DEFAULT_BUYBACK_RATE } from './constants';
 
 // Define the Tab types
-type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer';
+type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'Merchant' | 'Trade';
 
 // Helper function to convert hex to RGB
 function hexToRgb(hex: string): {r: number; g: number; b: number} | null {
@@ -34,7 +35,12 @@ function App() {
   const [viewingFavorites, setViewingFavorites] = useState(false);
 
   // 1. Load Inventory Data
-  const { tokenId, tokenName, tokenImage, characterData, updateData, loading, favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme, updateOverburdenedEffect } = useInventory();
+  const {
+    tokenId, tokenName, tokenImage, characterData, updateData, loading,
+    favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme,
+    updateOverburdenedEffect, playerId, playerRole, claimToken, unclaimToken,
+    canEditToken, checkProximity
+  } = useInventory();
 
   // Apply theme colors to CSS variables
   useEffect(() => {
@@ -111,9 +117,61 @@ function App() {
   // Edit item state
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
+  // Merchant mode state
+  const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
+  const [tradeQueues, setTradeQueues] = useState<Record<string, TradeQueue>>({});
+  const [selectedMerchantItems, setSelectedMerchantItems] = useState<MerchantItem[]>([]);
+  const [selectedPlayerItems, setSelectedPlayerItems] = useState<Item[]>([]);
+  const [merchantShopData, setMerchantShopData] = useState<MerchantItem[] | null>(null);
+
   useEffect(() => {
     OBR.onReady(() => setReady(true));
   }, []);
+
+  // Load active trade and trade queues from room metadata
+  useEffect(() => {
+    if (!ready) return;
+
+    const loadTradeData = async () => {
+      const metadata = await OBR.room.getMetadata();
+      const trade = metadata[ACTIVE_TRADE_KEY] as ActiveTrade | undefined;
+      const queues = metadata[TRADE_QUEUES_KEY] as Record<string, TradeQueue> | undefined;
+
+      setActiveTrade(trade || null);
+      setTradeQueues(queues || {});
+    };
+
+    loadTradeData();
+
+    // Poll for changes to trade data every 2 seconds
+    const interval = setInterval(loadTradeData, 2000);
+
+    return () => clearInterval(interval);
+  }, [ready]);
+
+  // Load merchant shop data when trade starts
+  useEffect(() => {
+    if (!activeTrade || !activeTrade.merchantTokenId) {
+      setMerchantShopData(null);
+      return;
+    }
+
+    const loadMerchantShop = async () => {
+      try {
+        const tokens = await OBR.scene.items.getItems([activeTrade.merchantTokenId!]);
+        if (tokens.length > 0) {
+          const merchantData = tokens[0].metadata['com.weighted-inventory/data'] as CharacterData;
+          if (merchantData?.merchantShop) {
+            setMerchantShopData(merchantData.merchantShop.inventory);
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load merchant shop:', err);
+      }
+    };
+
+    loadMerchantShop();
+  }, [activeTrade]);
 
   // Debug functions
   const loadDebugInfo = async () => {
@@ -746,11 +804,346 @@ function App() {
     );
   }
 
+  // ===== MERCHANT MODE & TRADING HELPER FUNCTIONS =====
+
+  // Parse currency value from string (e.g., "50 gp" -> {amount: 50, type: 'gp'})
+  const parseCurrency = (valueStr: string): {amount: number; type: 'cp' | 'sp' | 'gp' | 'pp'} => {
+    const lower = valueStr.toLowerCase().trim();
+    let type: 'cp' | 'sp' | 'gp' | 'pp' = 'gp';
+
+    if (lower.includes('pp')) type = 'pp';
+    else if (lower.includes('sp')) type = 'sp';
+    else if (lower.includes('cp')) type = 'cp';
+    else if (lower.includes('gp')) type = 'gp';
+
+    const amount = parseFloat(lower.replace(/[^0-9.]/g, '')) || 0;
+    return { amount, type };
+  };
+
+  // Convert all currency to copper pieces for comparison
+  const toCopperPieces = (amount: number, type: 'cp' | 'sp' | 'gp' | 'pp'): number => {
+    const rates = { cp: 1, sp: 10, gp: 100, pp: 1000 };
+    return amount * rates[type];
+  };
+
+  // Convert copper pieces to best currency denomination
+  const fromCopperPieces = (cp: number): {amount: number; type: 'cp' | 'sp' | 'gp' | 'pp'} => {
+    if (cp >= 1000 && cp % 1000 === 0) return { amount: cp / 1000, type: 'pp' };
+    if (cp >= 100 && cp % 100 === 0) return { amount: cp / 100, type: 'gp' };
+    if (cp >= 10 && cp % 10 === 0) return { amount: cp / 10, type: 'sp' };
+    return { amount: cp, type: 'cp' };
+  };
+
+  // Calculate buyback price (80% rounded up)
+  const calculateBuyback = (sellPrice: string, rate: number = DEFAULT_BUYBACK_RATE): string => {
+    const { amount, type } = parseCurrency(sellPrice);
+    const buybackAmount = Math.ceil(amount * rate);
+    return `${buybackAmount} ${type}`;
+  };
+
+  // Toggle merchant mode on current token
+  const handleToggleMerchantMode = () => {
+    if (!characterData || playerRole !== 'GM') return;
+
+    if (characterData.merchantShop?.isActive) {
+      // Disable merchant mode
+      handleUpdateData({ merchantShop: undefined });
+    } else {
+      // Enable merchant mode
+      handleUpdateData({
+        merchantShop: {
+          isActive: true,
+          buybackRate: DEFAULT_BUYBACK_RATE,
+          inventory: []
+        }
+      });
+    }
+  };
+
+  // Add item to merchant shop from repository
+  const handleAddToMerchantShop = (repoItem: {name: string; value: string; weight: number; type: string; category: ItemCategory; ac?: number; damage?: string; properties?: string; requiresAttunement?: boolean}) => {
+    if (!characterData?.merchantShop || playerRole !== 'GM') return;
+
+    const merchantItem: MerchantItem = {
+      id: uuidv4(),
+      name: repoItem.name,
+      value: repoItem.value,
+      weight: repoItem.weight,
+      type: repoItem.type,
+      category: repoItem.category,
+      qty: 1,
+      ac: repoItem.ac,
+      damage: repoItem.damage,
+      properties: repoItem.properties || '',
+      requiresAttunement: repoItem.requiresAttunement || false,
+      isAttuned: false,
+      equippedSlot: null,
+      sellPrice: repoItem.value,
+      buyPrice: calculateBuyback(repoItem.value, characterData.merchantShop.buybackRate)
+    };
+
+    const updatedShop = {
+      ...characterData.merchantShop,
+      inventory: [...characterData.merchantShop.inventory, merchantItem]
+    };
+
+    handleUpdateData({ merchantShop: updatedShop });
+  };
+
+  // Remove item from merchant shop
+  const handleRemoveFromMerchantShop = (itemId: string) => {
+    if (!characterData?.merchantShop || playerRole !== 'GM') return;
+
+    const updatedShop = {
+      ...characterData.merchantShop,
+      inventory: characterData.merchantShop.inventory.filter(i => i.id !== itemId)
+    };
+
+    handleUpdateData({ merchantShop: updatedShop });
+  };
+
+  // Update merchant item price (GM override)
+  const handleUpdateMerchantPrice = (itemId: string, newPrice: string) => {
+    if (!characterData?.merchantShop || playerRole !== 'GM') return;
+
+    const updatedShop = {
+      ...characterData.merchantShop,
+      inventory: characterData.merchantShop.inventory.map(item =>
+        item.id === itemId
+          ? { ...item, sellPrice: newPrice, buyPrice: calculateBuyback(newPrice, characterData.merchantShop!.buybackRate) }
+          : item
+      )
+    };
+
+    handleUpdateData({ merchantShop: updatedShop });
+  };
+
+  // Calculate net cost of trade
+  const calculateTradeCost = (
+    itemsToBuy: MerchantItem[],
+    itemsToSell: Item[]
+  ): { amount: number; currency: 'cp' | 'sp' | 'gp' | 'pp'; owedTo: 'merchant' | 'player' | 'even' } => {
+    // Calculate total cost to buy from merchant
+    const buyTotal = itemsToBuy.reduce((sum, item) => {
+      const { amount, type } = parseCurrency(item.sellPrice || item.value);
+      return sum + (toCopperPieces(amount, type) * item.qty);
+    }, 0);
+
+    // Calculate total value selling to merchant (at buyback rate)
+    const sellTotal = itemsToSell.reduce((sum, item) => {
+      const { amount, type } = parseCurrency(item.value);
+      const buybackPrice = toCopperPieces(amount, type) * DEFAULT_BUYBACK_RATE;
+      return sum + (buybackPrice * item.qty);
+    }, 0);
+
+    const netCp = buyTotal - sellTotal;
+    const netAbs = Math.abs(netCp);
+    const converted = fromCopperPieces(Math.ceil(netAbs));
+
+    return {
+      amount: converted.amount,
+      currency: converted.type,
+      owedTo: netCp > 0 ? 'merchant' : netCp < 0 ? 'player' : 'even'
+    };
+  };
+
+  // Start a new trade session
+  const handleStartTrade = async (merchantTokenId: string) => {
+    if (!tokenId || !playerId || !tokenName) return;
+
+    // Check proximity
+    const isNear = await checkProximity(tokenId, merchantTokenId);
+    if (!isNear) {
+      alert('You must be near the merchant token to trade!');
+      return;
+    }
+
+    // Check if merchant is already in a trade
+    if (activeTrade && activeTrade.merchantTokenId === merchantTokenId) {
+      alert('This merchant is already in a trade!');
+      return;
+    }
+
+    // Check/join queue
+    const queue = tradeQueues[merchantTokenId];
+    if (queue) {
+      if (queue.current && queue.current !== playerId) {
+        // Someone else is trading, join queue
+        if (!queue.queue.includes(playerId)) {
+          const updatedQueues = {
+            ...tradeQueues,
+            [merchantTokenId]: {
+              ...queue,
+              queue: [...queue.queue, playerId]
+            }
+          };
+          await OBR.room.setMetadata({ [TRADE_QUEUES_KEY]: updatedQueues });
+        }
+        return;
+      }
+    } else {
+      // Create new queue with this player as current
+      const newQueue: TradeQueue = {
+        merchantTokenId,
+        current: playerId,
+        queue: []
+      };
+      await OBR.room.setMetadata({
+        [TRADE_QUEUES_KEY]: { ...tradeQueues, [merchantTokenId]: newQueue }
+      });
+    }
+
+    // Start trade
+    const trade: ActiveTrade = {
+      id: uuidv4(),
+      type: 'merchant',
+      merchantTokenId,
+      player1TokenId: tokenId,
+      player1Id: playerId,
+      player1Name: tokenName,
+      itemsToTrade: [],
+      netCost: { amount: 0, currency: 'gp', owedTo: 'even' },
+      status: 'proposing',
+      timestamp: Date.now()
+    };
+
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: trade });
+    setActiveTab('Trade');
+  };
+
+  // Cancel active trade
+  const handleCancelTrade = async () => {
+    if (!activeTrade) return;
+
+    // Check if current player can cancel
+    if (activeTrade.player1Id !== playerId && playerRole !== 'GM') {
+      alert('Only the trading player or GM can cancel this trade.');
+      return;
+    }
+
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
+
+    // Advance queue if applicable
+    if (activeTrade.merchantTokenId) {
+      const queue = tradeQueues[activeTrade.merchantTokenId];
+      if (queue && queue.queue.length > 0) {
+        const nextPlayer = queue.queue[0];
+        const updatedQueue = {
+          ...queue,
+          current: nextPlayer,
+          queue: queue.queue.slice(1)
+        };
+        await OBR.room.setMetadata({
+          [TRADE_QUEUES_KEY]: { ...tradeQueues, [activeTrade.merchantTokenId]: updatedQueue }
+        });
+      } else if (queue) {
+        const { [activeTrade.merchantTokenId]: _, ...remainingQueues } = tradeQueues;
+        await OBR.room.setMetadata({ [TRADE_QUEUES_KEY]: remainingQueues });
+      }
+    }
+
+    setSelectedMerchantItems([]);
+    setSelectedPlayerItems([]);
+  };
+
+  // Approve and execute trade (GM for merchant trades, both players for P2P)
+  const handleApproveTrade = async () => {
+    if (!activeTrade || !characterData) return;
+
+    // For merchant trades, only GM can approve
+    if (activeTrade.type === 'merchant' && playerRole !== 'GM') {
+      alert('Only the GM can approve merchant trades.');
+      return;
+    }
+
+    // Execute the trade - transfer items and currency between tokens
+    try {
+      // Get all involved tokens
+      const tokenIds = [activeTrade.player1TokenId];
+      if (activeTrade.merchantTokenId) tokenIds.push(activeTrade.merchantTokenId);
+      if (activeTrade.player2TokenId) tokenIds.push(activeTrade.player2TokenId);
+
+      // Update tokens with new inventories and currency
+      await OBR.scene.items.updateItems(tokenIds, (items) => {
+        activeTrade.itemsToTrade.forEach(tradeItem => {
+          const sourceToken = items.find(t => {
+            if (tradeItem.source === 'merchant') return t.id === activeTrade.merchantTokenId;
+            if (tradeItem.source === 'player1') return t.id === activeTrade.player1TokenId;
+            if (tradeItem.source === 'player2') return t.id === activeTrade.player2TokenId;
+            return false;
+          });
+
+          const destToken = items.find(t => {
+            if (tradeItem.destination === 'merchant') return t.id === activeTrade.merchantTokenId;
+            if (tradeItem.destination === 'player1') return t.id === activeTrade.player1TokenId;
+            if (tradeItem.destination === 'player2') return t.id === activeTrade.player2TokenId;
+            return false;
+          });
+
+          if (sourceToken && destToken) {
+            const sourceData = sourceToken.metadata['com.weighted-inventory/data'] as CharacterData;
+            const destData = destToken.metadata['com.weighted-inventory/data'] as CharacterData;
+
+            // Remove from source
+            sourceData.inventory = sourceData.inventory.filter(i => i.id !== tradeItem.item.id);
+
+            // Add to destination
+            destData.inventory.push({ ...tradeItem.item, equippedSlot: null, isAttuned: false });
+
+            sourceToken.metadata['com.weighted-inventory/data'] = sourceData;
+            destToken.metadata['com.weighted-inventory/data'] = destData;
+          }
+        });
+
+        // Handle currency transfer
+        if (activeTrade.netCost.owedTo !== 'even') {
+          const payerToken = items.find(t =>
+            activeTrade.netCost.owedTo === 'merchant'
+              ? t.id === activeTrade.player1TokenId
+              : t.id === activeTrade.merchantTokenId
+          );
+          const receiverToken = items.find(t =>
+            activeTrade.netCost.owedTo === 'merchant'
+              ? t.id === activeTrade.merchantTokenId
+              : t.id === activeTrade.player1TokenId
+          );
+
+          if (payerToken && receiverToken) {
+            const payerData = payerToken.metadata['com.weighted-inventory/data'] as CharacterData;
+            const receiverData = receiverToken.metadata['com.weighted-inventory/data'] as CharacterData;
+
+            const coinType = activeTrade.netCost.currency;
+            payerData.currency[coinType] = (payerData.currency[coinType] || 0) - activeTrade.netCost.amount;
+            receiverData.currency[coinType] = (receiverData.currency[coinType] || 0) + activeTrade.netCost.amount;
+
+            payerToken.metadata['com.weighted-inventory/data'] = payerData;
+            receiverToken.metadata['com.weighted-inventory/data'] = receiverData;
+          }
+        }
+      });
+
+      // Clear trade
+      await handleCancelTrade();
+      alert('Trade completed successfully!');
+    } catch (err) {
+      console.error('Failed to execute trade:', err);
+      alert('Trade failed! Check console for details.');
+    }
+  };
+
   const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
     { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
     { id: 'Search', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> },
     { id: 'Create', label: 'CREATE' }, { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
   ];
+
+  // Add conditional tabs
+  if (characterData?.merchantShop?.isActive && playerRole === 'GM') {
+    baseTabs.push({ id: 'Merchant', label: 'SHOP' });
+  }
+  if (activeTrade && (activeTrade.player1Id === playerId || playerRole === 'GM')) {
+    baseTabs.push({ id: 'Trade', label: 'TRADE' });
+  }
 
   let visibleTabs = baseTabs;
   if (viewingStorageId) {
@@ -865,6 +1258,92 @@ function App() {
                                 </button>
                             )}
                         </div>
+
+                        {/* Token Claiming */}
+                        {characterData && (
+                          <div style={{marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
+                            {characterData.claimedBy && (
+                              <div style={{fontSize: '10px', color: '#aaa'}}>
+                                {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}
+                              </div>
+                            )}
+                            {canEditToken() && !characterData.claimedBy && (
+                              <button
+                                onClick={claimToken}
+                                style={{
+                                  background: 'rgba(0,255,0,0.1)',
+                                  border: '1px solid #0f0',
+                                  color: '#0f0',
+                                  padding: '6px 16px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '11px',
+                                  fontWeight: 'bold'
+                                }}
+                              >
+                                CLAIM TOKEN
+                              </button>
+                            )}
+                            {characterData.claimedBy === playerId && (
+                              <button
+                                onClick={unclaimToken}
+                                style={{
+                                  background: 'rgba(255,0,0,0.1)',
+                                  border: '1px solid #f00',
+                                  color: '#f00',
+                                  padding: '6px 16px',
+                                  borderRadius: '4px',
+                                  cursor: 'pointer',
+                                  fontSize: '11px'
+                                }}
+                              >
+                                UNCLAIM TOKEN
+                              </button>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Merchant Mode Toggle (GM Only) */}
+                        {playerRole === 'GM' && characterData && (
+                          <div style={{marginTop: '12px', textAlign: 'center'}}>
+                            <button
+                              onClick={handleToggleMerchantMode}
+                              style={{
+                                background: characterData.merchantShop?.isActive ? 'rgba(255,0,0,0.2)' : 'rgba(240,225,48,0.2)',
+                                border: '1px solid ' + (characterData.merchantShop?.isActive ? '#f00' : 'var(--accent-gold)'),
+                                color: characterData.merchantShop?.isActive ? '#f00' : 'var(--accent-gold)',
+                                padding: '8px 16px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '12px',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              {characterData.merchantShop?.isActive ? 'DISABLE MERCHANT MODE' : 'ENABLE MERCHANT MODE'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Start Trade Button (when viewing merchant) */}
+                        {characterData?.merchantShop?.isActive && !activeTrade && playerRole !== 'GM' && tokenId && (
+                          <div style={{marginTop: '12px', textAlign: 'center'}}>
+                            <button
+                              onClick={() => handleStartTrade(tokenId)}
+                              style={{
+                                background: 'var(--accent-gold)',
+                                border: 'none',
+                                color: 'black',
+                                padding: '10px 20px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '13px',
+                                fontWeight: 'bold'
+                              }}
+                            >
+                              START TRADE
+                            </button>
+                          </div>
+                        )}
                     </div>
                 )}
 
@@ -1767,6 +2246,282 @@ function App() {
                     </div>
                 </div>
             </div>
+        )}
+
+        {/* === MERCHANT TAB (GM only) === */}
+        {activeTab === 'Merchant' && characterData?.merchantShop && playerRole === 'GM' && (
+          <div className="section">
+            <h2>Merchant Shop Management</h2>
+
+            <div style={{background: 'rgba(240,225,48,0.1)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
+              <p style={{fontSize: '12px', margin: 0}}>
+                <strong>Buyback Rate:</strong> {(characterData.merchantShop.buybackRate * 100).toFixed(0)}% (Players sell items for {(characterData.merchantShop.buybackRate * 100).toFixed(0)}% of their value)
+              </p>
+            </div>
+
+            <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Shop Inventory</h3>
+            {characterData.merchantShop.inventory.length === 0 && (
+              <p style={{fontSize: '11px', color: '#666', marginBottom: '16px'}}>No items in shop. Add items from the repository below.</p>
+            )}
+
+            <div style={{marginBottom: '24px'}}>
+              {characterData.merchantShop.inventory.map(item => (
+                <div key={item.id} style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{flex: 1}}>
+                    <div style={{fontWeight: 'bold', fontSize: '13px'}}>{item.name}</div>
+                    <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
+                      Qty: {item.qty} | Category: {item.category}
+                    </div>
+                  </div>
+                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                    <div style={{textAlign: 'right'}}>
+                      <div style={{fontSize: '11px', color: 'var(--accent-gold)'}}>
+                        Sell: {item.sellPrice || item.value}
+                      </div>
+                      <div style={{fontSize: '10px', color: '#aaa'}}>
+                        Buy: {item.buyPrice}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const newPrice = prompt('Enter new sell price (e.g., "50 gp"):', item.sellPrice || item.value);
+                        if (newPrice) handleUpdateMerchantPrice(item.id, newPrice);
+                      }}
+                      style={{background: '#333', border: 'none', color: 'white', fontSize: '10px', padding: '4px 8px', borderRadius: '2px', cursor: 'pointer'}}
+                    >
+                      EDIT
+                    </button>
+                    <button
+                      onClick={() => handleRemoveFromMerchantShop(item.id)}
+                      style={{background: '#333', border: 'none', color: 'var(--danger)', fontSize: '10px', padding: '4px 8px', borderRadius: '2px', cursor: 'pointer'}}
+                    >
+                      X
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Add Items from Repository</h3>
+            <input
+              className="search-input"
+              placeholder="Search repository..."
+              value={repoSearch}
+              onChange={(e) => setRepoSearch(e.target.value)}
+              style={{marginBottom: '12px'}}
+            />
+
+            <div style={{maxHeight: '300px', overflowY: 'auto'}}>
+              {ITEM_REPOSITORY
+                .filter(item => !repoSearch || item.name.toLowerCase().includes(repoSearch.toLowerCase()) || item.category.toLowerCase().includes(repoSearch.toLowerCase()))
+                .slice(0, 20)
+                .map((item, idx) => (
+                  <div key={idx} style={{
+                    background: 'rgba(0,0,0,0.2)',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    marginBottom: '4px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <div>
+                      <div style={{fontSize: '12px', fontWeight: 'bold'}}>{item.name}</div>
+                      <div style={{fontSize: '10px', color: '#aaa'}}>
+                        {item.category} | {item.value} | {item.weight}u
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleAddToMerchantShop(item)}
+                      style={{background: 'var(--accent-gold)', color: 'black', border: 'none', fontSize: '10px', padding: '4px 8px', borderRadius: '2px', cursor: 'pointer', fontWeight: 'bold'}}
+                    >
+                      ADD
+                    </button>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* === TRADE TAB === */}
+        {activeTab === 'Trade' && activeTrade && (
+          <div className="section">
+            <h2>Trade Session</h2>
+
+            {activeTrade.type === 'merchant' && (
+              <div style={{background: 'rgba(240,225,48,0.1)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
+                <p style={{fontSize: '12px', margin: 0}}>
+                  <strong>Trading with:</strong> Merchant | <strong>Player:</strong> {activeTrade.player1Name}
+                </p>
+              </div>
+            )}
+
+            {/* Queue indicator */}
+            {activeTrade.merchantTokenId && tradeQueues[activeTrade.merchantTokenId] && (
+              <div style={{background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', marginBottom: '16px', fontSize: '11px'}}>
+                {tradeQueues[activeTrade.merchantTokenId].queue.length > 0 && (
+                  <p style={{margin: 0}}>
+                    <strong>{tradeQueues[activeTrade.merchantTokenId].queue.length}</strong> player(s) waiting in queue
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Browse Merchant Shop (if player is trading) */}
+            {activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && merchantShopData && (
+              <div style={{marginBottom: '24px'}}>
+                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Merchant's Wares</h3>
+                <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Click items to add to your purchase cart</p>
+                <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+                  {merchantShopData.map(item => {
+                    const isSelected = selectedMerchantItems.some(si => si.id === item.id);
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedMerchantItems(selectedMerchantItems.filter(i => i.id !== item.id));
+                          } else {
+                            setSelectedMerchantItems([...selectedMerchantItems, item]);
+                          }
+                        }}
+                        style={{
+                          background: isSelected ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.2)',
+                          padding: '8px',
+                          borderRadius: '4px',
+                          marginBottom: '4px',
+                          cursor: 'pointer',
+                          border: isSelected ? '1px solid #0f0' : '1px solid transparent',
+                          fontSize: '11px'
+                        }}
+                      >
+                        <div style={{fontWeight: 'bold'}}>{item.name}</div>
+                        <div style={{color: '#aaa', fontSize: '10px'}}>
+                          Price: {item.sellPrice || item.value} | Qty: {item.qty}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Browse Player Inventory (if player is trading) */}
+            {activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && characterData && (
+              <div style={{marginBottom: '24px'}}>
+                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Your Items to Sell</h3>
+                <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Click items to add to your sell list (buyback at 80%)</p>
+                <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+                  {characterData.inventory.map(item => {
+                    const isSelected = selectedPlayerItems.some(si => si.id === item.id);
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedPlayerItems(selectedPlayerItems.filter(i => i.id !== item.id));
+                          } else {
+                            setSelectedPlayerItems([...selectedPlayerItems, item]);
+                          }
+                        }}
+                        style={{
+                          background: isSelected ? 'rgba(255,0,0,0.2)' : 'rgba(0,0,0,0.2)',
+                          padding: '8px',
+                          borderRadius: '4px',
+                          marginBottom: '4px',
+                          cursor: 'pointer',
+                          border: isSelected ? '1px solid #f00' : '1px solid transparent',
+                          fontSize: '11px'
+                        }}
+                      >
+                        <div style={{fontWeight: 'bold'}}>{item.name}</div>
+                        <div style={{color: '#aaa', fontSize: '10px'}}>
+                          Value: {item.value} | Buyback: {calculateBuyback(item.value)} | Qty: {item.qty}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Selected Items</h3>
+
+            <div style={{marginBottom: '16px'}}>
+              <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>To Buy from Merchant:</h4>
+              {selectedMerchantItems.length === 0 && (
+                <p style={{fontSize: '10px', color: '#666'}}>No items selected</p>
+              )}
+              {selectedMerchantItems.map(item => (
+                <div key={item.id} style={{background: 'rgba(0,255,0,0.1)', padding: '8px', borderRadius: '4px', marginBottom: '4px', fontSize: '11px'}}>
+                  {item.name} x{item.qty} - {item.sellPrice || item.value}
+                </div>
+              ))}
+            </div>
+
+            <div style={{marginBottom: '16px'}}>
+              <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>To Sell to Merchant:</h4>
+              {selectedPlayerItems.length === 0 && (
+                <p style={{fontSize: '10px', color: '#666'}}>No items selected</p>
+              )}
+              {selectedPlayerItems.map(item => (
+                <div key={item.id} style={{background: 'rgba(255,0,0,0.1)', padding: '8px', borderRadius: '4px', marginBottom: '4px', fontSize: '11px'}}>
+                  {item.name} x{item.qty} - {calculateBuyback(item.value)}
+                </div>
+              ))}
+            </div>
+
+            {/* Net cost calculation */}
+            {(selectedMerchantItems.length > 0 || selectedPlayerItems.length > 0) && (() => {
+              const cost = calculateTradeCost(selectedMerchantItems, selectedPlayerItems);
+              return (
+                <div style={{
+                  background: cost.owedTo === 'merchant' ? 'rgba(255,0,0,0.2)' : cost.owedTo === 'player' ? 'rgba(0,255,0,0.2)' : 'rgba(255,255,255,0.1)',
+                  padding: '16px',
+                  borderRadius: '6px',
+                  marginBottom: '16px',
+                  textAlign: 'center'
+                }}>
+                  <div style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '4px'}}>
+                    {cost.owedTo === 'even' ? 'Trade is Even' : `${cost.amount} ${cost.currency.toUpperCase()}`}
+                  </div>
+                  <div style={{fontSize: '11px', color: '#aaa'}}>
+                    {cost.owedTo === 'merchant' && 'Owed to Merchant'}
+                    {cost.owedTo === 'player' && 'Owed to Player'}
+                  </div>
+                </div>
+              );
+            })()}
+
+            <div style={{display: 'flex', gap: '8px', marginTop: '16px'}}>
+              {playerRole === 'GM' && (
+                <button
+                  onClick={handleApproveTrade}
+                  style={{flex: 1, background: 'var(--accent-gold)', color: 'black', border: 'none', padding: '12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}
+                >
+                  APPROVE TRADE
+                </button>
+              )}
+              <button
+                onClick={handleCancelTrade}
+                style={{flex: 1, background: 'var(--danger)', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}
+              >
+                CANCEL
+              </button>
+            </div>
+
+            <p style={{fontSize: '10px', color: '#666', marginTop: '12px', fontStyle: 'italic'}}>
+              * GM must approve the trade for items and currency to transfer automatically.
+            </p>
+          </div>
         )}
       </main>
 

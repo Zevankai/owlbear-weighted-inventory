@@ -37,6 +37,8 @@ export function useInventory() {
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<Array<{id: string; name: string; image?: string}>>([]);
   const [theme, setTheme] = useState<ThemeColors>(DEFAULT_THEME);
+  const [playerId, setPlayerId] = useState<string | null>(null);
+  const [playerRole, setPlayerRole] = useState<'GM' | 'PLAYER'>('PLAYER');
 
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
@@ -103,13 +105,18 @@ export function useInventory() {
     const init = async () => {
       // Load player favorites and theme from room metadata (using player-specific keys)
       console.log('[Init] Loading player data...');
-      const playerId = await OBR.player.getId();
-      console.log('[Init] Player ID:', playerId);
+      const currentPlayerId = await OBR.player.getId();
+      const currentPlayerRole = await OBR.player.getRole();
+      console.log('[Init] Player ID:', currentPlayerId);
+      console.log('[Init] Player Role:', currentPlayerRole);
+
+      setPlayerId(currentPlayerId);
+      setPlayerRole(currentPlayerRole === 'GM' ? 'GM' : 'PLAYER');
 
       const roomMetadata = await OBR.room.getMetadata();
 
       // Load favorites
-      const favoritesKey = getFavoritesKey(playerId);
+      const favoritesKey = getFavoritesKey(currentPlayerId);
       const savedFavorites = roomMetadata[favoritesKey] as Array<{id: string; name: string; image?: string}> | undefined;
       if (savedFavorites && mounted) {
         setFavorites(savedFavorites);
@@ -117,7 +124,7 @@ export function useInventory() {
       }
 
       // Load theme
-      const themeKey = getThemeKey(playerId);
+      const themeKey = getThemeKey(currentPlayerId);
       const savedTheme = roomMetadata[themeKey] as ThemeColors | undefined;
       if (savedTheme && mounted) {
         setTheme(savedTheme);
@@ -300,6 +307,60 @@ export function useInventory() {
     }
   }, [tokenId]);
 
+  // Claim a token (binds it to current player)
+  const claimToken = useCallback(async () => {
+    if (!tokenId || !playerId) return;
+
+    await updateData({ claimedBy: playerId });
+    console.log('[Claim] Token claimed by player:', playerId);
+  }, [tokenId, playerId, updateData]);
+
+  // Unclaim a token (removes claim)
+  const unclaimToken = useCallback(async () => {
+    if (!tokenId) return;
+
+    await updateData({ claimedBy: undefined });
+    console.log('[Claim] Token unclaimed');
+  }, [tokenId, updateData]);
+
+  // Check if current player can edit the token
+  const canEditToken = useCallback(() => {
+    if (!characterData || !playerId) return false;
+
+    // GM can always edit
+    if (playerRole === 'GM') return true;
+
+    // If token is unclaimed, anyone can edit
+    if (!characterData.claimedBy) return true;
+
+    // If claimed, only the claiming player can edit
+    return characterData.claimedBy === playerId;
+  }, [characterData, playerId, playerRole]);
+
+  // Check proximity between two tokens (within 5 grid units)
+  const checkProximity = useCallback(async (token1Id: string, token2Id: string): Promise<boolean> => {
+    try {
+      const items = await OBR.scene.items.getItems([token1Id, token2Id]);
+      if (items.length !== 2) return false;
+
+      const token1 = items[0] as any;
+      const token2 = items[1] as any;
+
+      const dx = token1.position.x - token2.position.x;
+      const dy = token1.position.y - token2.position.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      // Convert grid units to DPI (default 150 DPI, 5 grid units = 750 pixels)
+      const maxDistance = 750;
+
+      console.log('[Proximity] Distance between tokens:', distance, 'Max:', maxDistance);
+      return distance <= maxDistance;
+    } catch (err) {
+      console.error('[Proximity] Failed to check:', err);
+      return false;
+    }
+  }, []);
+
   return {
     tokenId,
     tokenName,
@@ -313,7 +374,13 @@ export function useInventory() {
     loadTokenById,
     theme,
     updateTheme,
-    updateOverburdenedEffect
+    updateOverburdenedEffect,
+    playerId,
+    playerRole,
+    claimToken,
+    unclaimToken,
+    canEditToken,
+    checkProximity
   };
 }
 

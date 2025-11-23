@@ -60,6 +60,53 @@ export interface ExternalStorage {
   isNearby: boolean;
 }
 
+export interface MerchantItem extends Item {
+  sellPrice?: string;  // Price merchant sells for (GM can override)
+  buyPrice?: string;   // Price merchant buys for (calculated at 80%)
+}
+
+export interface MerchantShop {
+  isActive: boolean;
+  buybackRate: number; // 0.8 = 80% buyback
+  inventory: MerchantItem[];
+}
+
+export type TradeItemSource = 'merchant' | 'player1' | 'player2';
+
+export interface TradeItem {
+  item: Item;
+  source: TradeItemSource;
+  destination: TradeItemSource;
+}
+
+export interface ActiveTrade {
+  id: string;
+  type: 'merchant' | 'player-to-player';
+  merchantTokenId?: string;     // For merchant trades
+  player1TokenId: string;
+  player1Id: string;
+  player1Name: string;
+  player2TokenId?: string;       // For P2P trades
+  player2Id?: string;
+  player2Name?: string;
+  itemsToTrade: TradeItem[];
+  netCost: {
+    amount: number;
+    currency: 'cp' | 'sp' | 'gp' | 'pp';
+    owedTo: 'merchant' | 'player1' | 'player2' | 'even';
+  };
+  status: 'proposing' | 'pending' | 'approved' | 'rejected';
+  player1Approved?: boolean;
+  player2Approved?: boolean;
+  timestamp: number;
+}
+
+export interface TradeQueue {
+  merchantTokenId: string;
+  current?: string;      // Player ID currently trading
+  queue: string[];       // Waiting player IDs
+}
+
 export interface CharacterData {
   packType: PackType;
   inventory: Item[];
@@ -69,4 +116,6 @@ export interface CharacterData {
   favorites: string[];
   gmNotes: string;
   condition: string;
+  claimedBy?: string;    // Player ID who claimed this token
+  merchantShop?: MerchantShop;
 }

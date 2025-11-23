@@ -8,11 +8,24 @@ import { DEFAULT_CHARACTER_DATA } from '../constants';
 const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
 // Player favorites (stored in room metadata with player-specific keys)
 const FAVORITES_KEY_PREFIX = 'com.weighted-inventory/favorites/';
+// Player theme (stored in room metadata with player-specific keys)
+const THEME_KEY_PREFIX = 'com.weighted-inventory/theme/';
 // Legacy keys for migration
 const LEGACY_ROOM_KEY = 'com.weighted-inventory/room-data';
 const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
 
 const getFavoritesKey = (playerId: string) => `${FAVORITES_KEY_PREFIX}${playerId}`;
+const getThemeKey = (playerId: string) => `${THEME_KEY_PREFIX}${playerId}`;
+
+interface ThemeColors {
+  accent: string;
+  background: string;
+}
+
+const DEFAULT_THEME: ThemeColors = {
+  accent: '#f0e130',
+  background: '#0f0f1e'
+};
 
 export function useInventory() {
   const [tokenId, setTokenId] = useState<string | null>(null);
@@ -21,6 +34,7 @@ export function useInventory() {
   const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [loading, setLoading] = useState(true);
   const [favorites, setFavorites] = useState<Array<{id: string; name: string; image?: string}>>([]);
+  const [theme, setTheme] = useState<ThemeColors>(DEFAULT_THEME);
 
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
@@ -85,22 +99,29 @@ export function useInventory() {
     let mounted = true;
 
     const init = async () => {
-      // Load player favorites from room metadata (using player-specific key)
-      console.log('[Favorites] Loading favorites...');
+      // Load player favorites and theme from room metadata (using player-specific keys)
+      console.log('[Init] Loading player data...');
       const playerId = await OBR.player.getId();
-      console.log('[Favorites] Player ID:', playerId);
+      console.log('[Init] Player ID:', playerId);
 
       const roomMetadata = await OBR.room.getMetadata();
-      const favoritesKey = getFavoritesKey(playerId);
-      console.log('[Favorites] Looking for key:', favoritesKey);
-      const savedFavorites = roomMetadata[favoritesKey] as Array<{id: string; name: string; image?: string}> | undefined;
-      console.log('[Favorites] Saved favorites:', savedFavorites);
 
+      // Load favorites
+      const favoritesKey = getFavoritesKey(playerId);
+      const savedFavorites = roomMetadata[favoritesKey] as Array<{id: string; name: string; image?: string}> | undefined;
       if (savedFavorites && mounted) {
         setFavorites(savedFavorites);
         console.log('[Favorites] Loaded', savedFavorites.length, 'favorites');
+      }
+
+      // Load theme
+      const themeKey = getThemeKey(playerId);
+      const savedTheme = roomMetadata[themeKey] as ThemeColors | undefined;
+      if (savedTheme && mounted) {
+        setTheme(savedTheme);
+        console.log('[Theme] Loaded theme:', savedTheme);
       } else {
-        console.log('[Favorites] No favorites found');
+        console.log('[Theme] Using default theme');
       }
 
       const selection = await OBR.player.getSelection();
@@ -221,6 +242,15 @@ export function useInventory() {
 
   const isFavorited = tokenId ? favorites.some(f => f.id === tokenId) : false;
 
+  // Update theme
+  const updateTheme = useCallback(async (newTheme: ThemeColors) => {
+    setTheme(newTheme);
+    const playerId = await OBR.player.getId();
+    const themeKey = getThemeKey(playerId);
+    await OBR.room.setMetadata({ [themeKey]: newTheme });
+    console.log('[Theme] Saved theme:', newTheme);
+  }, []);
+
   return {
     tokenId,
     tokenName,
@@ -231,6 +261,10 @@ export function useInventory() {
     favorites,
     isFavorited,
     toggleFavorite,
-    loadTokenById
+    loadTokenById,
+    theme,
+    updateTheme
   };
 }
+
+export type { ThemeColors };

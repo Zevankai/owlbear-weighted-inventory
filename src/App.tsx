@@ -1080,7 +1080,15 @@ function App() {
                 <h2>Equipped Weapons</h2>
                  {currentDisplayData.inventory.filter(i => i.equippedSlot === 'weapon').map(item => (
                     <div key={item.id} style={{background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '4px', display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px'}}>
-                        <div><div style={{fontWeight:'bold', color: 'var(--text-main)'}}>{item.name}</div><div style={{fontSize:'11px', color:'var(--accent-gold)'}}>{item.damage || 'No Damage'}</div><div style={{fontSize:'10px', color:'#888', fontStyle:'italic'}}>{item.properties || 'No properties'}</div></div>
+                        <div>
+                            <div style={{fontWeight:'bold', color: 'var(--text-main)'}}>{item.name}</div>
+                            <div style={{fontSize:'11px', color:'var(--accent-gold)'}}>
+                                {item.damage || 'No Damage'}
+                                {item.hitModifier && <span style={{marginLeft: '8px'}}>Hit: {item.hitModifier}</span>}
+                                {item.damageModifier && <span style={{marginLeft: '8px'}}>Dmg: {item.damageModifier}</span>}
+                            </div>
+                            <div style={{fontSize:'10px', color:'#888', fontStyle:'italic'}}>{item.properties || 'No properties'}</div>
+                        </div>
                         <button onClick={() => handleToggleEquip(item)} style={{background: '#333', color: '#888', border:'none', padding:'4px 8px', borderRadius:'4px', fontSize:'10px', cursor:'pointer'}}>UNEQUIP</button>
                     </div>
                  ))}
@@ -1129,6 +1137,7 @@ function App() {
                         <div key={item.id} style={{background: 'rgba(240, 225, 48, 0.05)', border:'1px solid rgba(240, 225, 48, 0.2)', padding: '8px', borderRadius: '4px', position:'relative'}}>
                             <div style={{fontWeight:'bold', fontSize:'12px', paddingRight:'20px'}}>{item.name}</div>
                             <div style={{fontSize:'10px', color:'#888'}}>{item.qty > 1 ? `Qty: ${item.qty}` : ''}</div>
+                            {item.properties && <div style={{fontSize:'10px', color:'var(--accent-gold)', marginTop: '4px', fontStyle:'italic'}}>{item.properties}</div>}
                             <button onClick={() => handleToggleEquip(item)} style={{position:'absolute', top:2, right:2, background:'none', border:'none', color:'#555', cursor:'pointer', fontSize:'10px'}}>X</button>
                         </div>
                     ))}

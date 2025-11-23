@@ -269,7 +269,7 @@ export function useInventory() {
         const items = await OBR.scene.items.getItems([tokenId]);
         if (items.length === 0) return;
 
-        const token = items[0];
+        const token = items[0] as any;
         const tokenWidth = token.image?.width || 200;
         const tokenHeight = token.image?.height || 200;
 

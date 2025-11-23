@@ -264,4 +264,62 @@ export const ITEM_REPOSITORY: RepoItem[] = [
   { name: "Giant's Barley Spirit (Cup)", value: "1 gp", weight: 1, type: "Alcoholic Beverage", category: "Consumable", properties: "Sold in small servings; meant for creatures much bigger than humans" },
   { name: "Nightshade Port (Glass)", value: "7 sp", weight: 1, type: "Alcoholic Beverage", category: "Consumable", properties: "Dark, thick, hauntingly aromatic; rumored aphrodisiac" },
   { name: "Wanderer's Trail Blend (Jug)", value: "6 sp", weight: 1, type: "Alcoholic Beverage", category: "Consumable", properties: "Harsh, cheap, widely available, burns like disappointment" },
+
+  // --- HOMEBREW WEAPONS ---
+  { name: "Hook Dagger", value: "4 gp", damage: "1d6 Piercing", weight: 3, type: "Light Weapon", category: "One-Handed Weapon", properties: "Light, Finesse. Curved blade designed to catch armor seams or snag shields" },
+  { name: "Stone-Edged Knife", value: "2 gp", damage: "1d4 Slashing", weight: 3, type: "Light Weapon", category: "One-Handed Weapon", properties: "Light, Finesse. Sharp obsidian piece lashed to a bone handle. Fragile but razor-cutting" },
+  { name: "Breaker's Mace", value: "8 gp", damage: "1d6 Bludgeoning", weight: 3, type: "One-Handed Weapon", category: "One-Handed Weapon", properties: "Ribbed head built to crush stone and metal. Deals +2 damage to objects and constructs" },
+  { name: "Recurve Hatchet", value: "5 gp", damage: "1d6 Slashing", weight: 3, type: "One-Handed Weapon", category: "One-Handed Weapon", properties: "Light. Compact side-axe with a hooked back edge. Often used for climbing or cutting footholds" },
+  { name: "Needle Rapier", value: "30 gp", damage: "1d6 Piercing", weight: 3, type: "Finesse Weapon", category: "One-Handed Weapon", properties: "Finesse. Thin, precise duelist's blade. Critical hits on 19–20, but breaks on a natural 1 to hit" },
+  { name: "Claw Kama", value: "6 gp", damage: "1d6 Slashing", weight: 3, type: "Finesse Weapon", category: "One-Handed Weapon", properties: "Light, Finesse. Agricultural tool turned agile weapon; ideal for hooking limbs or cutting vines" },
+  { name: "Grave Cleaver", value: "25 gp", damage: "1d12 Slashing", weight: 4, type: "Two-Handed Weapon", category: "Two-Handed Weapon", properties: "Heavy. A brutal, wide-bladed weapon originally used for clearing battlefield dead" },
+  { name: "Stone War Maul", value: "10 gp", damage: "2d6 Bludgeoning", weight: 4, type: "Two-Handed Weapon", category: "Two-Handed Weapon", properties: "Heavy. Heavy hammer with a volcanic stone head. Unwieldy, but devastating" },
+  { name: "Barbed Glaive", value: "20 gp", damage: "1d10 Slashing", weight: 4, type: "Polearm", category: "Two-Handed Weapon", properties: "Heavy, Reach. A serrated glaive that tears muscle. Reduces a target's speed by 5 ft when you hit once per turn" },
+  { name: "Forking Pike", value: "18 gp", damage: "1d10 Piercing", weight: 4, type: "Polearm", category: "Two-Handed Weapon", properties: "Heavy, Reach. Three-pronged spear designed to catch and unseat riders. Advantage on attacks vs mounted targets" },
+  { name: "Weighted Javelin", value: "3 gp", damage: "1d6 Piercing", weight: 3, type: "Thrown Weapon", category: "One-Handed Weapon", properties: "Thrown (40/120). Counterweighted for greater range" },
+  { name: "Tri-Point Dart", value: "5 sp", damage: "1d4 Piercing", weight: 3, type: "Thrown Weapon", category: "One-Handed Weapon", properties: "Thrown (20/60), Finesse. Triangular throwing wedge. On hit: DC 10 Con save or 1 bleeding damage next turn" },
+
+  // --- HOMEBREW SHIELDS ---
+  { name: "Reinforced Tower Shield", value: "40 gp", ac: 3, weight: 4, type: "Shield", category: "Shield", properties: "Massive metal-and-wood slab. Exceptional protection, but reduces speed by 10 ft" },
+  { name: "Sickle Shield", value: "18 gp", ac: 2, weight: 3, type: "Shield", category: "Shield", properties: "Curved outer rim sharpened into a slashing blade. On a missed melee attack against you, make a 1d4 slashing reaction attack" },
+  { name: "Spike-Boss Shield", value: "15 gp", ac: 2, weight: 3, type: "Shield", category: "Shield", properties: "Studded boss ideal for shield bashes. Bash deals 1d6 piercing instead of bludgeoning" },
+  { name: "Mirror-Bright Shield", value: "22 gp", ac: 2, weight: 3, type: "Shield", category: "Shield", properties: "Polished to a high shine. As a bonus action (3/day), impose disadvantage on a ranged attack targeting you" },
+
+  // --- HOMEBREW ARMOR ---
+  { name: "Woven Reed Jerkin", value: "8 gp", ac: 12, weight: 5, type: "Light Armor", category: "Light Armor", properties: "Floats on water and remains light even when soaked. Favored in swamplands" },
+  { name: "Layered Silk Vest", value: "20 gp", ac: 12, weight: 5, type: "Light Armor", category: "Light Armor", properties: "Treated, layered silk that resists cuts. +2 bonus to checks resisting slashing damage" },
+  { name: "Boiled Ox-Hide Coat", value: "35 gp", ac: 14, weight: 8, type: "Medium Armor", category: "Medium Armor", properties: "Hardened leather reinforced with horn plates. Traditional among border tribes" },
+  { name: "Chain-Ribbon Hauberk", value: "60 gp", ac: 15, weight: 8, type: "Medium Armor", category: "Medium Armor", properties: "Interlinked ribbon-like chains grant improved flexibility. Advantage on checks to resist grapples" },
+  { name: "Sculpted Bronze Plate", value: "1200 gp", ac: 18, weight: 12, type: "Heavy Armor", category: "Heavy Armor", properties: "Ancient heavy armor with etched patterns. Heavier than steel, often ceremonial" },
+  { name: "Dragonscale Plate (Nonmagical)", value: "900 gp", ac: 17, weight: 12, type: "Heavy Armor", category: "Heavy Armor", properties: "Made from harvested scales. Choose fire, cold, or lightning when crafted: reduces that damage by 2" },
+
+  // --- HOMEBREW CLOTHING ---
+  { name: "Sand-Warden Wraps", value: "5 gp", weight: 3, type: "Special Clothing", category: "Clothing", properties: "Layered desert garments. Grants advantage on exhaustion rolls due to heat" },
+  { name: "Frost-Lined Cloak", value: "8 gp", weight: 3, type: "Special Clothing", category: "Clothing", properties: "Thick fur and wool. Grants advantage on cold-exhaustion rolls" },
+  { name: "River-Runner Outfit", value: "6 gp", weight: 3, type: "Special Clothing", category: "Clothing", properties: "Waterproof outfit built for swimming. Grants advantage on Swim checks" },
+  { name: "Merchant's Weighted Coat", value: "15 gp", weight: 3, type: "Special Clothing", category: "Clothing", properties: "Lined with hidden pockets and balancing weights. +5 to Sleight of Hand checks to conceal items" },
+  { name: "Stormrider's Mantle", value: "10 gp", weight: 3, type: "Special Clothing", category: "Clothing", properties: "Oil-soaked cloak that channels static. Reduces lightning damage taken by 1 (to a minimum of 0)" },
+  { name: "Pilgrim's Patchwork Robe", value: "12 gp", weight: 3, type: "Special Clothing", category: "Clothing", properties: "Colorful robe full of spiritual symbols. +1 to Persuasion checks with religious orders or clergy" },
+
+  // --- MECHANICAL JEWELRY ---
+  { name: "Blood-Marker Ring", value: "25 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Assists hunters. Advantage on Survival to track a creature you've damaged within 1 hour" },
+  { name: "Navigator's Earring", value: "15 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Always rotates to face north (nonmagical needle trick). +2 to navigation-related checks" },
+  { name: "Binding Wrist Torc", value: "10 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Sturdy bronze band. Increases DC to break your restraints by +5" },
+  { name: "Sifter's Nose Stud", value: "12 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Contains powdered silver inside; +2 to checks to detect or identify poisons" },
+  { name: "Mercenary's Split Band (pair)", value: "30 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Two rings vibrate faintly when within 60 feet of each other. Used by squadmates" },
+  { name: "Truth-Keeper Choker", value: "8 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Cloth or leather choker that subtly tightens when the wearer lies. No damage—roleplay tool" },
+  { name: "Runebent Bracelet", value: "20 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Curved metal ring shaped to absorb impact. Reduces fall damage by 1d4" },
+  { name: "Drift-Shell Pendant", value: "5 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Seashell designed to trap buoyant oil. Lets you float effortlessly on water" },
+  { name: "Haggler's Thumb Ring", value: "12 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Traders use it as a subtle hand signal. +1 to Persuasion checks during negotiations" },
+  { name: "Keen-Sight Brow Chain", value: "10 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Keeps sweat and hair from the eyes. +1 to Perception checks relying on sight" },
+  { name: "Whisper-Stone Amulet", value: "3 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Contains a tiny chime. When tapped, makes a soft clicking sound audible up to 60 ft" },
+  { name: "Soldier's Memory Locket", value: "25 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Holding it reminds you of home. Advantage once per short rest vs being frightened" },
+  { name: "Brawler's Knuckle Band", value: "5 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Metal finger ring worn across one knuckle. Unarmed strikes deal +1 damage" },
+  { name: "Seafarer's Pearl Stud", value: "20 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Treated to steady inner-ear pressure. Advantage on checks to resist nausea/sea sickness" },
+  { name: "Moonlit Teardrop", value: "18 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Highly reflective glass bead. +2 to Stealth in darkness due to light trickery and shadow distortion" },
+  { name: "Blade-Denial Wristchain", value: "25 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "A chain designed to catch incoming blades. Reduce slashing damage taken by 1" },
+  { name: "Herbalist's Leaf Pin", value: "4 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Holds a single herb dose safely. +2 to Medicine checks when stabilizing a creature" },
+  { name: "Scavenger's Trinket Coil", value: "8 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Copper coil used to 'ping' debris for hollows. +2 Investigation in ruins or debris fields" },
+  { name: "Warding Knot Pendant", value: "6 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Traditional charm against misfortune. +1 to saving throws vs curses or superstition effects (DM discretion)" },
+  { name: "Ash-Stained Mourning Ring", value: "10 gp", weight: 1, type: "Mechanical Jewelry", category: "Jewelry", properties: "Worn by widows and warriors alike. Advantage on Intimidation when invoking tragedy or loss" },
 ];

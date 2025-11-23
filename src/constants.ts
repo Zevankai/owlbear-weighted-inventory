@@ -146,6 +146,7 @@ export const DEFAULT_CHARACTER_DATA: CharacterData = {
   gmNotes: '',
   condition: '',
   claimedBy: undefined,
+  claimingEnabled: false,
   merchantShop: undefined,
 };
 

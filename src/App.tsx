@@ -13,6 +13,16 @@ import type { Item, ItemCategory, PackType, StorageType, CharacterData, Vault, C
 // Define the Tab types
 type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer';
 
+// Helper function to convert hex to RGB
+function hexToRgb(hex: string): {r: number; g: number; b: number} | null {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
   const [ready, setReady] = useState(false);
@@ -24,7 +34,22 @@ function App() {
   const [viewingFavorites, setViewingFavorites] = useState(false);
 
   // 1. Load Inventory Data
-  const { tokenId, tokenName, tokenImage, characterData, updateData, loading, favorites, isFavorited, toggleFavorite, loadTokenById } = useInventory();
+  const { tokenId, tokenName, tokenImage, characterData, updateData, loading, favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme } = useInventory();
+
+  // Apply theme colors to CSS variables
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent-gold', theme.accent);
+    document.documentElement.style.setProperty('--bg-dark', theme.background);
+    // Calculate lighter/darker variants
+    const accentRgb = hexToRgb(theme.accent);
+    const bgRgb = hexToRgb(theme.background);
+    if (accentRgb) {
+      document.documentElement.style.setProperty('--border-bright', `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.3)`);
+    }
+    if (bgRgb) {
+      document.documentElement.style.setProperty('--bg-panel', `rgba(${Math.min(bgRgb.r + 20, 255)}, ${Math.min(bgRgb.g + 20, 255)}, ${Math.min(bgRgb.b + 20, 255)}, 0.7)`);
+    }
+  }, [theme]);
 
   // --- VIRTUAL CONTEXT SWITCHING ---
   // Determine which data object we are currently viewing (Player or a specific Storage)
@@ -799,12 +824,72 @@ function App() {
                 )}
 
                 {!viewingStorageId ? (
-                    <div style={{marginBottom: '16px'}}>
-                        <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
-                        <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
-                            {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
-                        </select>
-                    </div>
+                    <>
+                        <div style={{marginBottom: '16px'}}>
+                            <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
+                            <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
+                                {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
+                            </select>
+                        </div>
+
+                        {/* Theme Customization */}
+                        <div style={{marginBottom: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
+                            <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '12px'}}>🎨 Theme Colors</label>
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                                <div>
+                                    <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Accent</label>
+                                    <input
+                                        type="color"
+                                        value={theme.accent}
+                                        onChange={(e) => updateTheme({ ...theme, accent: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            height: '40px',
+                                            border: '1px solid var(--glass-border)',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            background: 'transparent'
+                                        }}
+                                    />
+                                </div>
+                                <div>
+                                    <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Background</label>
+                                    <input
+                                        type="color"
+                                        value={theme.background}
+                                        onChange={(e) => updateTheme({ ...theme, background: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            height: '40px',
+                                            border: '1px solid var(--glass-border)',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            background: 'transparent'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => updateTheme({ accent: '#f0e130', background: '#0f0f1e' })}
+                                style={{
+                                    marginTop: '8px',
+                                    width: '100%',
+                                    padding: '6px',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    border: '1px solid var(--glass-border)',
+                                    borderRadius: '4px',
+                                    color: 'var(--text-muted)',
+                                    fontSize: '10px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            >
+                                Reset to Default
+                            </button>
+                        </div>
+                    </>
                 ) : (
                     <div style={{marginBottom: '16px'}}>
                          <div style={{color: '#888', fontSize: '12px'}}>Type: {characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}</div>

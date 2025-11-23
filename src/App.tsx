@@ -1235,9 +1235,9 @@ function App() {
                 {/* REPOSITORY SEARCH BAR */}
                 <div style={{ position: 'relative', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px dashed var(--border)' }}>
                     <label style={{display:'block', fontSize:'11px', color:'var(--accent-gold)', fontWeight:'bold'}}>SEARCH REPOSITORY</label>
-                    <input 
+                    <input
                         className="search-input"
-                        placeholder="Type to find item (e.g. 'Dagger')"
+                        placeholder="Search by name, category, or type (e.g. 'Dagger', 'Consumable', 'Weapon')"
                         value={repoSearch}
                         onChange={(e) => {
                             setRepoSearch(e.target.value);
@@ -1247,7 +1247,7 @@ function App() {
                             if (repoSearch.length > 1) setShowRepo(true);
                         }}
                     />
-                    
+
                     {/* Dropdown Results */}
                     {showRepo && repoSearch.length > 1 && (
                         <div style={{
@@ -1257,18 +1257,26 @@ function App() {
                             right: 0,
                             background: '#222',
                             border: '1px solid var(--accent-gold)',
-                            maxHeight: '200px',
+                            maxHeight: '300px',
                             overflowY: 'auto',
                             zIndex: 100,
                             borderRadius: '0 0 4px 4px'
                         }}>
                             {ITEM_REPOSITORY
-                                .filter(i => i.name.toLowerCase().includes(repoSearch.toLowerCase()))
+                                .filter(i => {
+                                    const search = repoSearch.toLowerCase();
+                                    return i.name.toLowerCase().includes(search) ||
+                                           i.category.toLowerCase().includes(search) ||
+                                           i.type.toLowerCase().includes(search);
+                                })
                                 .map((repoItem, idx) => (
-                                    <div 
+                                    <div
                                         key={idx}
-                                        style={{padding: '8px', cursor: 'pointer', borderBottom:'1px solid #333'}}
-                                        onClick={() => {
+                                        style={{padding: '8px', cursor: 'pointer', borderBottom:'1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}
+                                        onMouseEnter={(e) => e.currentTarget.style.background = '#444'}
+                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                                    >
+                                        <div style={{flex: 1}} onClick={() => {
                                             // Auto-fill the form
                                             setNewItem({
                                                 name: repoItem.name,
@@ -1284,14 +1292,50 @@ function App() {
                                             });
                                             setRepoSearch('');
                                             setShowRepo(false);
-                                        }}
-                                        onMouseEnter={(e) => e.currentTarget.style.background = '#444'}
-                                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                                    >
-                                        <div style={{fontWeight:'bold', color:'var(--text-main)'}}>{repoItem.name}</div>
-                                        <div style={{fontSize:'10px', color:'#888'}}>
-                                            {repoItem.type} | {repoItem.weight}u {repoItem.damage ? `| ${repoItem.damage}` : ''}
+                                        }}>
+                                            <div style={{fontWeight:'bold', color:'var(--text-main)'}}>{repoItem.name}</div>
+                                            <div style={{fontSize:'10px', color:'#888'}}>
+                                                {repoItem.type} | {repoItem.weight}u {repoItem.damage ? `| ${repoItem.damage}` : ''}
+                                            </div>
                                         </div>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (!currentDisplayData) return;
+                                                const createdItem: Item = {
+                                                    id: uuidv4(),
+                                                    name: repoItem.name,
+                                                    category: repoItem.category,
+                                                    type: repoItem.type,
+                                                    weight: repoItem.weight,
+                                                    qty: 1,
+                                                    value: repoItem.value,
+                                                    properties: repoItem.properties || '',
+                                                    requiresAttunement: repoItem.requiresAttunement || false,
+                                                    isAttuned: false,
+                                                    notes: '',
+                                                    ac: repoItem.ac,
+                                                    damage: repoItem.damage,
+                                                    damageModifier: '',
+                                                    hitModifier: '',
+                                                    equippedSlot: null
+                                                };
+                                                handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] });
+                                            }}
+                                            style={{
+                                                background: 'var(--accent-gold)',
+                                                color: 'black',
+                                                border: 'none',
+                                                padding: '4px 12px',
+                                                borderRadius: '4px',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                marginLeft: '8px'
+                                            }}
+                                        >
+                                            ADD
+                                        </button>
                                     </div>
                                 ))
                             }

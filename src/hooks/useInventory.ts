@@ -270,8 +270,8 @@ export function useInventory() {
         if (items.length === 0) return;
 
         const token = items[0] as any;
-        const tokenWidth = token.image?.width || 200;
-        const tokenHeight = token.image?.height || 200;
+        const tokenWidth = token.image?.width || 10;
+        const tokenHeight = token.image?.height || 10;
 
         const ring = buildShape()
           .id(OVERBURDENED_ATTACHMENT_ID)

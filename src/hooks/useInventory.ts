@@ -87,7 +87,6 @@ export function useInventory() {
     const init = async () => {
       // Load player favorites from room metadata (using player-specific key)
       console.log('[Favorites] Loading favorites...');
-      const player = await OBR.player.getRole();
       const playerId = await OBR.player.getId();
       console.log('[Favorites] Player ID:', playerId);
 

@@ -1631,8 +1631,8 @@ function App() {
                 
                 {/* --- TOKEN PROFILE (Player Only) --- */}
                 {!viewingStorageId && (characterData?.merchantShop?.isActive && playerRole !== 'GM' && (!characterData.claimedBy || characterData.claimedBy !== playerId) ? (
-                    // Merchant view - full width layout
-                    <div style={{marginBottom: '20px', width: '100%'}}>
+                    // Merchant view - full width layout (no wrapper, elements are direct children of .section)
+                    <>
                         {tokenImage && (
                             <div style={{
                                 width: '80px',
@@ -1651,10 +1651,10 @@ function App() {
                                 />
                             </div>
                         )}
-                        <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
+                        <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center', marginBottom: '8px'}}>
                             {tokenName || 'Unknown Character'}
                         </div>
-                        <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
+                        <div style={{display: 'flex', gap: '8px', marginBottom: '12px'}}>
                             <button
                                 onClick={toggleFavorite}
                                 style={{
@@ -1707,7 +1707,7 @@ function App() {
                             }}
                             style={{
                               width: '100%',
-                              marginTop: '12px',
+                              marginBottom: '20px',
                               background: 'var(--accent-gold)',
                               border: 'none',
                               color: 'black',
@@ -1721,7 +1721,7 @@ function App() {
                             TRADE WITH MERCHANT
                           </button>
                         )}
-                    </div>
+                    </>
                 ) : (
                     // Normal view - centered layout
                     <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>

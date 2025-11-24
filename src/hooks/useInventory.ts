@@ -39,6 +39,7 @@ export function useInventory() {
   const [theme, setTheme] = useState<ThemeColors>(DEFAULT_THEME);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [playerRole, setPlayerRole] = useState<'GM' | 'PLAYER'>('PLAYER');
+  const [playerClaimedTokenId, setPlayerClaimedTokenId] = useState<string | null>(null);
 
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
@@ -112,6 +113,21 @@ export function useInventory() {
 
       setPlayerId(currentPlayerId);
       setPlayerRole(currentPlayerRole === 'GM' ? 'GM' : 'PLAYER');
+
+      // Find the player's claimed token (if any)
+      try {
+        const allTokens = await OBR.scene.items.getItems();
+        const claimedToken = allTokens.find(token => {
+          const data = token.metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
+          return data?.claimedBy === currentPlayerId;
+        });
+        if (claimedToken && mounted) {
+          setPlayerClaimedTokenId(claimedToken.id);
+          console.log('[Init] Found player claimed token:', claimedToken.name);
+        }
+      } catch (err) {
+        console.error('[Init] Failed to find claimed token:', err);
+      }
 
       const roomMetadata = await OBR.room.getMetadata();
 
@@ -318,6 +334,7 @@ export function useInventory() {
     }
 
     await updateData({ claimedBy: playerId });
+    setPlayerClaimedTokenId(tokenId);
     console.log('[Claim] Token claimed by player:', playerId);
     return true;
   }, [tokenId, playerId, characterData, updateData]);
@@ -327,6 +344,7 @@ export function useInventory() {
     if (!tokenId) return;
 
     await updateData({ claimedBy: undefined });
+    setPlayerClaimedTokenId(null);
     console.log('[Claim] Token unclaimed');
   }, [tokenId, updateData]);
 
@@ -384,6 +402,7 @@ export function useInventory() {
     updateOverburdenedEffect,
     playerId,
     playerRole,
+    playerClaimedTokenId,
     claimToken,
     unclaimToken,
     canEditToken,

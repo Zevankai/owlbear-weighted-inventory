@@ -12,7 +12,7 @@ import type { Item, ItemCategory, PackType, StorageType, CharacterData, Vault, C
 import { ACTIVE_TRADE_KEY, TRADE_QUEUES_KEY, DEFAULT_BUYBACK_RATE } from './constants';
 
 // Define the Tab types
-type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'Merchant' | 'Trade';
+type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'Merchant' | 'Trade' | 'GM';
 
 // Helper function to convert hex to RGB
 function hexToRgb(hex: string): {r: number; g: number; b: number} | null {
@@ -129,6 +129,8 @@ function App() {
   const [player2Data, setPlayer2Data] = useState<CharacterData | null>(null);
   // Player's claimed token info
   const [playerClaimedTokenName, setPlayerClaimedTokenName] = useState<string | null>(null);
+  // GM overview data
+  const [allMerchants, setAllMerchants] = useState<Array<{id: string; name: string; itemCount: number}>>([]);
 
   useEffect(() => {
     OBR.onReady(() => setReady(true));
@@ -199,6 +201,39 @@ function App() {
 
     loadClaimedTokenName();
   }, [playerClaimedTokenId]);
+
+  // Load all merchants for GM overview
+  useEffect(() => {
+    if (!ready || playerRole !== 'GM') return;
+
+    const loadAllMerchants = async () => {
+      try {
+        const allTokens = await OBR.scene.items.getItems();
+        const merchants = allTokens
+          .filter(token => {
+            const data = token.metadata['com.weighted-inventory/data'] as CharacterData | undefined;
+            return data?.merchantShop?.isActive;
+          })
+          .map(token => {
+            const data = token.metadata['com.weighted-inventory/data'] as CharacterData;
+            return {
+              id: token.id,
+              name: token.name || 'Unnamed Merchant',
+              itemCount: data.merchantShop?.inventory.length || 0
+            };
+          });
+        setAllMerchants(merchants);
+      } catch (err) {
+        console.error('Failed to load merchants:', err);
+      }
+    };
+
+    loadAllMerchants();
+
+    // Refresh every 5 seconds
+    const interval = setInterval(loadAllMerchants, 5000);
+    return () => clearInterval(interval);
+  }, [ready, playerRole]);
 
   // Load player2 data for P2P trades
   useEffect(() => {
@@ -1386,6 +1421,11 @@ function App() {
     { id: 'Search', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> },
     { id: 'Create', label: 'CREATE' }, { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
   ];
+
+  // Add GM tab first (always visible to GMs)
+  if (playerRole === 'GM') {
+    baseTabs.push({ id: 'GM', label: 'GM' });
+  }
 
   // Add conditional tabs
   if (characterData?.merchantShop?.isActive) {
@@ -3013,6 +3053,173 @@ function App() {
               {activeTrade.type === 'merchant' && '* GM must approve the trade for items and currency to transfer automatically.'}
               {activeTrade.type === 'player-to-player' && '* Both players must approve for the trade to execute automatically.'}
             </p>
+          </div>
+        )}
+
+        {/* === GM OVERVIEW TAB === */}
+        {activeTab === 'GM' && playerRole === 'GM' && (
+          <div className="section">
+            <h2>GM Overview</h2>
+
+            {/* Active Trade Section */}
+            <div style={{marginBottom: '24px'}}>
+              <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Active Trade</h3>
+              {activeTrade ? (
+                <div style={{
+                  background: 'rgba(240,225,48,0.1)',
+                  padding: '12px',
+                  borderRadius: '6px',
+                  border: '1px solid var(--accent-gold)'
+                }}>
+                  <div style={{fontSize: '12px', marginBottom: '8px'}}>
+                    <strong>Type:</strong> {activeTrade.type === 'merchant' ? 'Merchant Trade' : 'Player-to-Player'}
+                  </div>
+                  {activeTrade.type === 'merchant' && (
+                    <>
+                      <div style={{fontSize: '12px', marginBottom: '4px'}}>
+                        <strong>Player:</strong> {activeTrade.player1Name}
+                      </div>
+                      <div style={{fontSize: '12px', marginBottom: '8px'}}>
+                        <strong>Merchant Token:</strong> {(() => {
+                          const merchant = allMerchants.find(m => m.id === activeTrade.merchantTokenId);
+                          return merchant?.name || 'Unknown';
+                        })()}
+                      </div>
+                    </>
+                  )}
+                  {activeTrade.type === 'player-to-player' && (
+                    <>
+                      <div style={{fontSize: '12px', marginBottom: '4px'}}>
+                        <strong>{activeTrade.player1Name}</strong> ↔ <strong>{activeTrade.player2Name}</strong>
+                      </div>
+                      <div style={{fontSize: '11px', color: '#aaa', marginBottom: '8px'}}>
+                        {activeTrade.player1Approved && <span style={{color: '#0f0'}}>✓ {activeTrade.player1Name}</span>}
+                        {!activeTrade.player1Approved && <span>○ {activeTrade.player1Name}</span>}
+                        <span style={{margin: '0 8px'}}>|</span>
+                        {activeTrade.player2Approved && <span style={{color: '#0f0'}}>✓ {activeTrade.player2Name}</span>}
+                        {!activeTrade.player2Approved && <span>○ {activeTrade.player2Name}</span>}
+                      </div>
+                    </>
+                  )}
+                  <div style={{fontSize: '12px', marginBottom: '12px'}}>
+                    <strong>Status:</strong> {activeTrade.status}
+                  </div>
+                  <div style={{display: 'flex', gap: '8px'}}>
+                    {activeTrade.type === 'merchant' && (
+                      <button
+                        onClick={() => {
+                          // Load the merchant token
+                          if (activeTrade.merchantTokenId) {
+                            loadTokenById(activeTrade.merchantTokenId);
+                            setActiveTab('Trade');
+                          }
+                        }}
+                        style={{
+                          background: 'var(--accent-gold)',
+                          color: 'black',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 'bold'
+                        }}
+                      >
+                        VIEW TRADE
+                      </button>
+                    )}
+                    <button
+                      onClick={handleCancelTrade}
+                      style={{
+                        background: 'var(--danger)',
+                        color: 'white',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      CANCEL TRADE
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p style={{fontSize: '11px', color: '#666'}}>No active trade</p>
+              )}
+            </div>
+
+            {/* Trade Queues Section */}
+            {Object.keys(tradeQueues).length > 0 && (
+              <div style={{marginBottom: '24px'}}>
+                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Trade Queues</h3>
+                {Object.entries(tradeQueues).map(([merchantId, queue]) => {
+                  const merchant = allMerchants.find(m => m.id === merchantId);
+                  return (
+                    <div key={merchantId} style={{
+                      background: 'rgba(0,0,0,0.2)',
+                      padding: '10px',
+                      borderRadius: '4px',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{fontSize: '12px', fontWeight: 'bold', marginBottom: '4px'}}>
+                        {merchant?.name || 'Unknown Merchant'}
+                      </div>
+                      <div style={{fontSize: '11px', color: '#aaa'}}>
+                        {queue.queue.length} player(s) waiting
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* All Merchants Section */}
+            <div>
+              <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>
+                Active Merchants ({allMerchants.length})
+              </h3>
+              {allMerchants.length === 0 && (
+                <p style={{fontSize: '11px', color: '#666'}}>No active merchants</p>
+              )}
+              {allMerchants.map(merchant => (
+                <div key={merchant.id} style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  padding: '12px',
+                  borderRadius: '4px',
+                  marginBottom: '8px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center'
+                }}>
+                  <div style={{flex: 1}}>
+                    <div style={{fontWeight: 'bold', fontSize: '13px'}}>{merchant.name}</div>
+                    <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
+                      {merchant.itemCount} items in shop
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      loadTokenById(merchant.id);
+                      setActiveTab('Home');
+                    }}
+                    style={{
+                      background: 'var(--accent-gold)',
+                      color: 'black',
+                      border: 'none',
+                      fontSize: '10px',
+                      padding: '6px 12px',
+                      borderRadius: '2px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold'
+                    }}
+                  >
+                    VIEW
+                  </button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </main>

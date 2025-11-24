@@ -1960,7 +1960,7 @@ function App() {
                 {/* Show description - editable if can edit, read-only otherwise */}
                 <div style={{marginTop: '20px'}}>
                     <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
-                      {viewingStorageId ? 'Description' : 'Merchant Description'}
+                      Description
                     </label>
                     <textarea
                       value={currentDisplayData.condition}

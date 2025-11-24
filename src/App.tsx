@@ -1097,14 +1097,22 @@ function App() {
 
   // Start a new trade session
   const handleStartTrade = async (merchantTokenId: string) => {
+    console.log('[START TRADE] Function called with merchantTokenId:', merchantTokenId);
+    console.log('[START TRADE] playerClaimedTokenId:', playerClaimedTokenId);
+    console.log('[START TRADE] playerId:', playerId);
+    console.log('[START TRADE] playerClaimedTokenName:', playerClaimedTokenName);
+
     // Check if player has a claimed token
     if (!playerClaimedTokenId || !playerId || !playerClaimedTokenName) {
+      console.log('[START TRADE] Missing player data, showing alert');
       alert('You must claim a token before you can trade! Select your character token and click "CLAIM TOKEN".');
       return;
     }
 
+    console.log('[START TRADE] Checking proximity...');
     // Check proximity between player's claimed token and merchant
     const isNear = await checkProximity(playerClaimedTokenId, merchantTokenId);
+    console.log('[START TRADE] Proximity check result:', isNear);
     if (!isNear) {
       alert('Your character must be near the merchant token to trade!');
       return;
@@ -1760,7 +1768,10 @@ function App() {
                         {characterData?.merchantShop?.isActive && !activeTrade && playerRole !== 'GM' && tokenId && (
                           <div style={{marginTop: '12px', textAlign: 'center'}}>
                             <button
-                              onClick={() => handleStartTrade(tokenId)}
+                              onClick={() => {
+                                console.log('[START TRADE] Button clicked, merchantTokenId:', tokenId);
+                                handleStartTrade(tokenId);
+                              }}
                               style={{
                                 background: 'var(--accent-gold)',
                                 border: 'none',
@@ -1803,70 +1814,75 @@ function App() {
 
                 {!viewingStorageId ? (
                     <>
-                        <div style={{marginBottom: '16px'}}>
-                            <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
-                            <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
-                                {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
-                            </select>
-                        </div>
-
-                        {/* Theme Customization */}
-                        <div style={{marginBottom: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
-                            <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '12px'}}>🎨 Theme Colors</label>
-                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                                <div>
-                                    <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Accent</label>
-                                    <input
-                                        type="color"
-                                        value={theme.accent}
-                                        onChange={(e) => updateTheme({ ...theme, accent: e.target.value })}
-                                        style={{
-                                            width: '100%',
-                                            height: '40px',
-                                            border: '1px solid var(--glass-border)',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            background: 'transparent'
-                                        }}
-                                    />
-                                </div>
-                                <div>
-                                    <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Background</label>
-                                    <input
-                                        type="color"
-                                        value={theme.background}
-                                        onChange={(e) => updateTheme({ ...theme, background: e.target.value })}
-                                        style={{
-                                            width: '100%',
-                                            height: '40px',
-                                            border: '1px solid var(--glass-border)',
-                                            borderRadius: '6px',
-                                            cursor: 'pointer',
-                                            background: 'transparent'
-                                        }}
-                                    />
-                                </div>
+                        {/* Only show edit controls if player can edit this token */}
+                        {canEditToken() && (
+                          <>
+                            <div style={{marginBottom: '16px'}}>
+                                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
+                                <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
+                                    {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
+                                </select>
                             </div>
-                            <button
-                                onClick={() => updateTheme({ accent: '#f0e130', background: '#0f0f1e' })}
-                                style={{
-                                    marginTop: '8px',
-                                    width: '100%',
-                                    padding: '6px',
-                                    background: 'rgba(255,255,255,0.05)',
-                                    border: '1px solid var(--glass-border)',
-                                    borderRadius: '4px',
-                                    color: 'var(--text-muted)',
-                                    fontSize: '10px',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.2s'
-                                }}
-                                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                            >
-                                Reset to Default
-                            </button>
-                        </div>
+
+                            {/* Theme Customization */}
+                            <div style={{marginBottom: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
+                                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '12px'}}>🎨 Theme Colors</label>
+                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                                    <div>
+                                        <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Accent</label>
+                                        <input
+                                            type="color"
+                                            value={theme.accent}
+                                            onChange={(e) => updateTheme({ ...theme, accent: e.target.value })}
+                                            style={{
+                                                width: '100%',
+                                                height: '40px',
+                                                border: '1px solid var(--glass-border)',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                background: 'transparent'
+                                            }}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Background</label>
+                                        <input
+                                            type="color"
+                                            value={theme.background}
+                                            onChange={(e) => updateTheme({ ...theme, background: e.target.value })}
+                                            style={{
+                                                width: '100%',
+                                                height: '40px',
+                                                border: '1px solid var(--glass-border)',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                background: 'transparent'
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => updateTheme({ accent: '#f0e130', background: '#0f0f1e' })}
+                                    style={{
+                                        marginTop: '8px',
+                                        width: '100%',
+                                        padding: '6px',
+                                        background: 'rgba(255,255,255,0.05)',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: '4px',
+                                        color: 'var(--text-muted)',
+                                        fontSize: '10px',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                                >
+                                    Reset to Default
+                                </button>
+                            </div>
+                          </>
+                        )}
                     </>
                 ) : (
                     <div style={{marginBottom: '16px'}}>
@@ -2613,25 +2629,28 @@ function App() {
                     return (
                       <div key={key} style={{ background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '4px' }}>
                         <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>{labels[key]}</label>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           min="0"
-                          value={displayCurrency[key]} 
+                          value={displayCurrency[key]}
                           onChange={(e) => {
                             const val = parseInt(e.target.value) || 0;
-                            handleUpdateData({ 
-                              currency: { ...displayCurrency, [key]: val } 
+                            handleUpdateData({
+                              currency: { ...displayCurrency, [key]: val }
                             });
                           }}
-                          onFocus={(e) => e.target.select()} 
-                          style={{ 
-                            width: '100%', 
-                            background: 'transparent', 
-                            border: 'none', 
-                            borderBottom: '1px solid var(--border)', 
-                            color: 'var(--text-main)', 
+                          onFocus={(e) => e.target.select()}
+                          disabled={!canEditToken()}
+                          style={{
+                            width: '100%',
+                            background: 'transparent',
+                            border: 'none',
+                            borderBottom: '1px solid var(--border)',
+                            color: 'var(--text-main)',
                             fontSize: '18px',
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            cursor: canEditToken() ? 'text' : 'not-allowed',
+                            opacity: canEditToken() ? 1 : 0.5
                           }}
                         />
                       </div>

@@ -1958,7 +1958,7 @@ function App() {
                 )}
 
                 {/* Show description - editable if can edit, read-only otherwise */}
-                <div style={{marginTop: '20px'}}>
+                <div style={{marginTop: '20px', width: '100%'}}>
                     <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
                       Description
                     </label>
@@ -1979,7 +1979,7 @@ function App() {
 
                 {/* GM Notes - only show if can edit */}
                 {canEditToken() && (
-                  <div style={{marginTop: '10px'}}>
+                  <div style={{marginTop: '10px', width: '100%'}}>
                       <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>{viewingStorageId ? 'Notes' : 'GM Notes'}</label>
                       <textarea value={viewingStorageId ? characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes : currentDisplayData.gmNotes} onChange={(e) => {
                            if(viewingStorageId) {
@@ -2806,7 +2806,7 @@ function App() {
                   // Not trading - show info
                   <div style={{marginBottom: '16px'}}>
                     <p style={{fontSize: '12px', color: '#aaa', marginBottom: '12px'}}>
-                      Browse the merchant's wares below. Click "START TRADE" on the Home tab to begin trading!
+                      Browse the merchant's wares below. Click "TRADE WITH MERCHANT" on the Home tab to begin trading!
                     </p>
                   </div>
                 )}

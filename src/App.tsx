@@ -1130,8 +1130,17 @@ function App() {
     // Check/join queue
     console.log('[START TRADE] Checking trade queue...');
     console.log('[START TRADE] tradeQueues:', tradeQueues);
-    const queue = tradeQueues[merchantTokenId];
+    let queue: TradeQueue | null = tradeQueues[merchantTokenId] || null;
     console.log('[START TRADE] Queue for this merchant:', queue);
+
+    // If there's a queue but no active trade, it's stale - clear it
+    if (queue && !activeTrade) {
+      console.log('[START TRADE] Found stale queue (no active trade), clearing it...');
+      const { [merchantTokenId]: _, ...remainingQueues } = tradeQueues;
+      await OBR.room.setMetadata({ [TRADE_QUEUES_KEY]: remainingQueues });
+      queue = null; // Treat as if no queue exists
+    }
+
     if (queue) {
       if (queue.current && queue.current !== playerId) {
         console.log('[START TRADE] Someone else trading, joining queue...');
@@ -1146,12 +1155,19 @@ function App() {
           };
           await OBR.room.setMetadata({ [TRADE_QUEUES_KEY]: updatedQueues });
           console.log('[START TRADE] Added to queue, returning');
+          const position = queue.queue.length + 1; // +1 because current player counts
+          alert(`Someone is already trading with this merchant. You have been added to the queue.\n\nYour position: ${position}`);
+        } else {
+          const position = queue.queue.indexOf(playerId) + 1;
+          alert(`You are already in the queue for this merchant.\n\nYour position: ${position}`);
         }
         return;
       }
-    } else {
+    }
+
+    // Create new queue with this player as current (if no queue exists or stale was cleared)
+    if (!queue) {
       console.log('[START TRADE] No queue exists, creating new queue...');
-      // Create new queue with this player as current
       const newQueue: TradeQueue = {
         merchantTokenId,
         current: playerId,
@@ -1941,24 +1957,37 @@ function App() {
                     </>
                 )}
 
+                {/* Show description - editable if can edit, read-only otherwise */}
+                <div style={{marginTop: '20px'}}>
+                    <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
+                      {viewingStorageId ? 'Description' : 'Merchant Description'}
+                    </label>
+                    <textarea
+                      value={currentDisplayData.condition}
+                      onChange={(e) => canEditToken() && handleUpdateData({ condition: e.target.value })}
+                      className="search-input"
+                      rows={2}
+                      disabled={!canEditToken()}
+                      style={{
+                        opacity: canEditToken() ? 1 : 0.8,
+                        cursor: canEditToken() ? 'text' : 'default'
+                      }}
+                    />
+                </div>
+
+                {/* GM Notes - only show if can edit */}
                 {canEditToken() && (
-                  <>
-                    <div style={{marginTop: '20px'}}>
-                        <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>{viewingStorageId ? 'Description' : 'Condition'}</label>
-                        <textarea value={currentDisplayData.condition} onChange={(e) => handleUpdateData({ condition: e.target.value })} className="search-input" rows={2} />
-                    </div>
-                    <div style={{marginTop: '10px'}}>
-                        <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>{viewingStorageId ? 'Notes' : 'GM Notes'}</label>
-                        <textarea value={viewingStorageId ? characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes : currentDisplayData.gmNotes} onChange={(e) => {
-                             if(viewingStorageId) {
-                                const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
-                                updateData({ externalStorages: newStorages });
-                             } else {
-                                 handleUpdateData({ gmNotes: e.target.value });
-                             }
-                        }} className="search-input" rows={3} />
-                    </div>
-                  </>
+                  <div style={{marginTop: '10px'}}>
+                      <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>{viewingStorageId ? 'Notes' : 'GM Notes'}</label>
+                      <textarea value={viewingStorageId ? characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes : currentDisplayData.gmNotes} onChange={(e) => {
+                           if(viewingStorageId) {
+                              const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
+                              updateData({ externalStorages: newStorages });
+                           } else {
+                               handleUpdateData({ gmNotes: e.target.value });
+                           }
+                      }} className="search-input" rows={3} />
+                  </div>
                 )}
             </div>
         )}

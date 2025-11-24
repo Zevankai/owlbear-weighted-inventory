@@ -7,7 +7,7 @@
     "title": "Inventory",
     "icon": "/vite.svg",
     "popover": "/",
-    "width": 400,
+    "width": 450,
     "height": 700
   },
   "background_url": "/"

@@ -1649,13 +1649,14 @@ function App() {
                                 />
                             </div>
                         )}
-                        <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)'}}>
+                        <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
                             {tokenName || 'Unknown Character'}
                         </div>
-                        <div style={{display: 'flex', gap: '8px', marginTop: '8px'}}>
+                        <div style={{display: 'flex', gap: '8px', marginTop: '8px', width: characterData?.merchantShop?.isActive && !canEditToken() ? '100%' : 'auto', justifyContent: 'center'}}>
                             <button
                                 onClick={toggleFavorite}
                                 style={{
+                                    flex: characterData?.merchantShop?.isActive && !canEditToken() ? 1 : 'none',
                                     background: 'transparent',
                                     border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
                                     color: isFavorited ? 'var(--accent-gold)' : '#666',
@@ -1665,6 +1666,7 @@ function App() {
                                     fontSize: '11px',
                                     display: 'flex',
                                     alignItems: 'center',
+                                    justifyContent: 'center',
                                     gap: '4px'
                                 }}
                                 title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
@@ -1675,6 +1677,7 @@ function App() {
                                 <button
                                     onClick={() => setViewingFavorites(true)}
                                     style={{
+                                        flex: characterData?.merchantShop?.isActive && !canEditToken() ? 1 : 'none',
                                         background: 'rgba(240, 225, 48, 0.1)',
                                         border: '1px solid var(--accent-gold)',
                                         color: 'var(--accent-gold)',
@@ -1684,6 +1687,7 @@ function App() {
                                         fontSize: '11px',
                                         display: 'flex',
                                         alignItems: 'center',
+                                        justifyContent: 'center',
                                         gap: '4px'
                                     }}
                                     title="View all favorite tokens"
@@ -1797,17 +1801,18 @@ function App() {
 
                         {/* Start Merchant Trade Button */}
                         {characterData?.merchantShop?.isActive && !activeTrade && playerRole !== 'GM' && tokenId && (
-                          <div style={{marginTop: '12px', textAlign: 'center'}}>
+                          <div style={{marginTop: '12px', width: '100%'}}>
                             <button
                               onClick={() => {
                                 console.log('[START TRADE] Button clicked, merchantTokenId:', tokenId);
                                 handleStartTrade(tokenId);
                               }}
                               style={{
+                                width: '100%',
                                 background: 'var(--accent-gold)',
                                 border: 'none',
                                 color: 'black',
-                                padding: '10px 20px',
+                                padding: '12px 20px',
                                 borderRadius: '4px',
                                 cursor: 'pointer',
                                 fontSize: '13px',

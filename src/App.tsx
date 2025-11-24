@@ -1631,16 +1631,23 @@ function App() {
                 
                 {/* --- TOKEN PROFILE (Player Only) --- */}
                 {!viewingStorageId && (
-                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: characterData?.merchantShop?.isActive && !canEditToken() ? 'stretch' : 'center',
+                      marginBottom: '20px',
+                      width: '100%'
+                    }}>
                         {tokenImage && (
                             <div style={{
-                                width: '80px', 
-                                height: '80px', 
-                                borderRadius: '50%', 
-                                overflow: 'hidden', 
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
                                 border: '3px solid var(--accent-gold)',
                                 background: 'transparent', // Clear background
-                                marginBottom: '8px'
+                                marginBottom: '8px',
+                                alignSelf: 'center'
                             }}>
                                 <img 
                                 src={tokenImage} 

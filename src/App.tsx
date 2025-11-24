@@ -145,6 +145,7 @@ function App() {
       const trade = metadata[ACTIVE_TRADE_KEY] as ActiveTrade | undefined;
       const queues = metadata[TRADE_QUEUES_KEY] as Record<string, TradeQueue> | undefined;
 
+      console.log('[TRADE POLL] Active trade:', trade ? `${trade.type} (${trade.status})` : 'null');
       setActiveTrade(trade || null);
       setTradeQueues(queues || {});
     };
@@ -1224,7 +1225,9 @@ function App() {
       return;
     }
 
+    console.log('[TRADE] Clearing active trade from room metadata');
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
+    console.log('[TRADE] Active trade cleared');
 
     // Advance queue if applicable
     if (activeTrade.merchantTokenId) {
@@ -1483,8 +1486,10 @@ function App() {
         }
       });
 
+      console.log('[TRADE] Trade execution complete, clearing trade metadata...');
       // Clear trade
       await handleCancelTrade();
+      console.log('[TRADE] Trade cleared, showing success alert');
       alert('Trade completed successfully!');
     } catch (err) {
       console.error('Failed to execute trade:', err);

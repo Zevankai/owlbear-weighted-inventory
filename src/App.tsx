@@ -1631,16 +1631,23 @@ function App() {
                 
                 {/* --- TOKEN PROFILE (Player Only) --- */}
                 {!viewingStorageId && (
-                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>
+                    <div style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: characterData?.merchantShop?.isActive && !canEditToken() ? 'stretch' : 'center',
+                      marginBottom: '20px',
+                      width: '100%'
+                    }}>
                         {tokenImage && (
                             <div style={{
-                                width: '80px', 
-                                height: '80px', 
-                                borderRadius: '50%', 
-                                overflow: 'hidden', 
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
                                 border: '3px solid var(--accent-gold)',
                                 background: 'transparent', // Clear background
-                                marginBottom: '8px'
+                                marginBottom: '8px',
+                                alignSelf: 'center'
                             }}>
                                 <img 
                                 src={tokenImage} 
@@ -1652,7 +1659,14 @@ function App() {
                         <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
                             {tokenName || 'Unknown Character'}
                         </div>
-                        <div style={{display: 'flex', gap: '8px', marginTop: '8px', width: characterData?.merchantShop?.isActive && !canEditToken() ? '100%' : 'auto', justifyContent: 'center'}}>
+                        <div style={{
+                          display: 'flex',
+                          gap: '8px',
+                          marginTop: '8px',
+                          width: characterData?.merchantShop?.isActive && !canEditToken() ? '100%' : 'auto',
+                          alignSelf: characterData?.merchantShop?.isActive && !canEditToken() ? 'stretch' : 'auto',
+                          justifyContent: 'center'
+                        }}>
                             <button
                                 onClick={toggleFavorite}
                                 style={{
@@ -1801,27 +1815,27 @@ function App() {
 
                         {/* Start Merchant Trade Button */}
                         {characterData?.merchantShop?.isActive && !activeTrade && playerRole !== 'GM' && tokenId && (
-                          <div style={{marginTop: '12px', width: '100%'}}>
-                            <button
-                              onClick={() => {
-                                console.log('[START TRADE] Button clicked, merchantTokenId:', tokenId);
-                                handleStartTrade(tokenId);
-                              }}
-                              style={{
-                                width: '100%',
-                                background: 'var(--accent-gold)',
-                                border: 'none',
-                                color: 'black',
-                                padding: '12px 20px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              TRADE WITH MERCHANT
-                            </button>
-                          </div>
+                          <button
+                            onClick={() => {
+                              console.log('[START TRADE] Button clicked, merchantTokenId:', tokenId);
+                              handleStartTrade(tokenId);
+                            }}
+                            style={{
+                              width: '100%',
+                              alignSelf: 'stretch',
+                              marginTop: '12px',
+                              background: 'var(--accent-gold)',
+                              border: 'none',
+                              color: 'black',
+                              padding: '12px 20px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            TRADE WITH MERCHANT
+                          </button>
                         )}
 
                         {/* Start P2P Trade Button */}
@@ -1963,7 +1977,7 @@ function App() {
                 )}
 
                 {/* Show description - editable if can edit, read-only otherwise */}
-                <div style={{marginTop: '20px', width: '100%'}}>
+                <div style={{marginTop: '20px', width: '100%', alignSelf: 'stretch'}}>
                     <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
                       Description
                     </label>
@@ -1984,7 +1998,7 @@ function App() {
 
                 {/* GM Notes - only show if can edit */}
                 {canEditToken() && (
-                  <div style={{marginTop: '10px', width: '100%'}}>
+                  <div style={{marginTop: '10px', width: '100%', alignSelf: 'stretch'}}>
                       <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>{viewingStorageId ? 'Notes' : 'GM Notes'}</label>
                       <textarea value={viewingStorageId ? characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes : currentDisplayData.gmNotes} onChange={(e) => {
                            if(viewingStorageId) {

@@ -123,6 +123,7 @@ function App() {
   const [selectedMerchantItems, setSelectedMerchantItems] = useState<MerchantItem[]>([]);
   const [selectedPlayerItems, setSelectedPlayerItems] = useState<Item[]>([]);
   const [merchantShopData, setMerchantShopData] = useState<MerchantItem[] | null>(null);
+  const [playerOwnInventory, setPlayerOwnInventory] = useState<Item[]>([]); // Player's own inventory from their claimed token
   // P2P trading state
   const [player1Items, setPlayer1Items] = useState<Item[]>([]);
   const [player2Items, setPlayer2Items] = useState<Item[]>([]);
@@ -206,25 +207,33 @@ function App() {
     setSelectedPlayerItems(playerItems);
   }, [activeTrade]);
 
-  // Load player's claimed token name
+  // Load player's claimed token name and inventory
   useEffect(() => {
     if (!playerClaimedTokenId) {
       setPlayerClaimedTokenName(null);
+      setPlayerOwnInventory([]);
       return;
     }
 
-    const loadClaimedTokenName = async () => {
+    const loadClaimedTokenData = async () => {
       try {
         const tokens = await OBR.scene.items.getItems([playerClaimedTokenId]);
         if (tokens.length > 0) {
           setPlayerClaimedTokenName(tokens[0].name || 'My Token');
+          const tokenData = tokens[0].metadata['com.weighted-inventory/data'] as CharacterData | undefined;
+          setPlayerOwnInventory(tokenData?.inventory || []);
+          console.log('[PLAYER INVENTORY] Loaded player inventory:', tokenData?.inventory?.length || 0, 'items');
         }
       } catch (err) {
-        console.error('Failed to load claimed token name:', err);
+        console.error('Failed to load claimed token data:', err);
       }
     };
 
-    loadClaimedTokenName();
+    loadClaimedTokenData();
+
+    // Refresh every 2 seconds to catch inventory changes
+    const interval = setInterval(loadClaimedTokenData, 2000);
+    return () => clearInterval(interval);
   }, [playerClaimedTokenId]);
 
   // Load all merchants for GM overview
@@ -2812,17 +2821,17 @@ function App() {
             </div>
 
             {/* Player's Inventory (if actively trading) */}
-            {activeTrade && activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && characterData && (
+            {activeTrade && activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && (
               <div style={{marginBottom: '24px'}}>
                 <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Your Items to Sell</h3>
                 <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>
                   Click items you want to sell to the merchant (buyback at 80%)
                 </p>
-                {characterData.inventory.length === 0 ? (
+                {playerOwnInventory.length === 0 ? (
                   <p style={{fontSize: '10px', color: '#666'}}>Your inventory is empty</p>
                 ) : (
                   <div style={{maxHeight: '200px', overflowY: 'auto'}}>
-                    {characterData.inventory.map(item => {
+                    {playerOwnInventory.map(item => {
                       const isSelected = selectedPlayerItems.some(si => si.id === item.id);
                       return (
                         <div
@@ -3076,12 +3085,15 @@ function App() {
             )}
 
             {/* Browse Player Inventory (if player is trading) */}
-            {activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && characterData && (
+            {activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && (
               <div style={{marginBottom: '24px'}}>
                 <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Your Items to Sell</h3>
                 <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Click items to add to your sell list (buyback at 80%)</p>
-                <div style={{maxHeight: '200px', overflowY: 'auto'}}>
-                  {characterData.inventory.map(item => {
+                {playerOwnInventory.length === 0 ? (
+                  <p style={{fontSize: '10px', color: '#666'}}>Your inventory is empty</p>
+                ) : (
+                  <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+                    {playerOwnInventory.map(item => {
                     const isSelected = selectedPlayerItems.some(si => si.id === item.id);
                     return (
                       <div
@@ -3104,7 +3116,8 @@ function App() {
                       </div>
                     );
                   })}
-                </div>
+                  </div>
+                )}
               </div>
             )}
 

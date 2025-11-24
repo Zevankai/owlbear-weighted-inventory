@@ -1966,11 +1966,13 @@ function App() {
                       value={currentDisplayData.condition}
                       onChange={(e) => canEditToken() && handleUpdateData({ condition: e.target.value })}
                       className="search-input"
-                      rows={2}
+                      rows={canEditToken() ? 2 : 4}
                       disabled={!canEditToken()}
                       style={{
                         opacity: canEditToken() ? 1 : 0.8,
-                        cursor: canEditToken() ? 'text' : 'default'
+                        cursor: canEditToken() ? 'text' : 'default',
+                        fontSize: canEditToken() ? '14px' : '13px',
+                        minHeight: canEditToken() ? 'auto' : '100px'
                       }}
                     />
                 </div>

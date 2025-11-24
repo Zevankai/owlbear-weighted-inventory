@@ -1521,7 +1521,10 @@ function App() {
 
   // If player is viewing a merchant token they don't own, hide most tabs
   if (characterData?.merchantShop?.isActive && !canEditToken()) {
+    console.log('[MERCHANT MODE] Filtering tabs - merchant mode active, player cannot edit');
+    console.log('[MERCHANT MODE] Before filter:', visibleTabs.map(t => t.id));
     visibleTabs = visibleTabs.filter(t => ['Home', 'Merchant'].includes(t.id));
+    console.log('[MERCHANT MODE] After filter:', visibleTabs.map(t => t.id));
   }
 
   if (viewingStorageId) {

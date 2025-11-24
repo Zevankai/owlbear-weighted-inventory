@@ -1630,7 +1630,7 @@ function App() {
                 </div>
                 
                 {/* --- TOKEN PROFILE (Player Only) --- */}
-                {!viewingStorageId && (characterData?.merchantShop?.isActive && !canEditToken() ? (
+                {!viewingStorageId && (characterData?.merchantShop?.isActive && playerRole !== 'GM' && (!characterData.claimedBy || characterData.claimedBy !== playerId) ? (
                     // Merchant view - full width layout
                     <div style={{marginBottom: '20px', width: '100%'}}>
                         {tokenImage && (

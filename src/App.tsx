@@ -1632,7 +1632,7 @@ function App() {
                 {/* --- TOKEN PROFILE (Player Only) --- */}
                 {!viewingStorageId && (characterData?.merchantShop?.isActive && !canEditToken() ? (
                     // Merchant view - full width layout
-                    <div style={{marginBottom: '20px'}}>
+                    <div style={{marginBottom: '20px', width: '100%'}}>
                         {tokenImage && (
                             <div style={{
                                 width: '80px',

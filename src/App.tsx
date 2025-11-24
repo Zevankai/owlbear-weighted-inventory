@@ -181,6 +181,30 @@ function App() {
     loadMerchantShop();
   }, [activeTrade]);
 
+  // Load selected items from activeTrade
+  useEffect(() => {
+    if (!activeTrade || activeTrade.type !== 'merchant') {
+      setSelectedMerchantItems([]);
+      setSelectedPlayerItems([]);
+      return;
+    }
+
+    // Extract selected items from itemsToTrade
+    const merchantItems: MerchantItem[] = [];
+    const playerItems: Item[] = [];
+
+    activeTrade.itemsToTrade.forEach(tradeItem => {
+      if (tradeItem.source === 'merchant' && tradeItem.destination === 'player1') {
+        merchantItems.push(tradeItem.item as MerchantItem);
+      } else if (tradeItem.source === 'player1' && tradeItem.destination === 'merchant') {
+        playerItems.push(tradeItem.item);
+      }
+    });
+
+    setSelectedMerchantItems(merchantItems);
+    setSelectedPlayerItems(playerItems);
+  }, [activeTrade]);
+
   // Load player's claimed token name
   useEffect(() => {
     if (!playerClaimedTokenId) {
@@ -1126,7 +1150,7 @@ function App() {
     };
 
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: trade });
-    setActiveTab('Trade');
+    setActiveTab('Merchant');
   };
 
   // Start player-to-player trade
@@ -1225,6 +1249,84 @@ function App() {
     setSelectedPlayerItems([]);
   };
 
+  // Toggle merchant item selection and sync to room metadata
+  const handleToggleMerchantItem = async (item: MerchantItem) => {
+    if (!activeTrade || activeTrade.type !== 'merchant') return;
+
+    const isSelected = selectedMerchantItems.some(si => si.id === item.id);
+    const newSelected = isSelected
+      ? selectedMerchantItems.filter(i => i.id !== item.id)
+      : [...selectedMerchantItems, item];
+
+    setSelectedMerchantItems(newSelected);
+
+    // Build updated itemsToTrade
+    const tradeItems: typeof activeTrade.itemsToTrade = [];
+
+    // Items to buy from merchant
+    newSelected.forEach(merchantItem => {
+      tradeItems.push({
+        item: merchantItem,
+        source: 'merchant',
+        destination: 'player1'
+      });
+    });
+
+    // Items to sell to merchant (keep existing)
+    selectedPlayerItems.forEach(playerItem => {
+      tradeItems.push({
+        item: playerItem,
+        source: 'player1',
+        destination: 'merchant'
+      });
+    });
+
+    const netCost = calculateTradeCost(newSelected, selectedPlayerItems);
+
+    // Update trade in room metadata
+    const updatedTrade = { ...activeTrade, itemsToTrade: tradeItems, netCost };
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+  };
+
+  // Toggle player item selection and sync to room metadata
+  const handleTogglePlayerItem = async (item: Item) => {
+    if (!activeTrade || activeTrade.type !== 'merchant') return;
+
+    const isSelected = selectedPlayerItems.some(si => si.id === item.id);
+    const newSelected = isSelected
+      ? selectedPlayerItems.filter(i => i.id !== item.id)
+      : [...selectedPlayerItems, item];
+
+    setSelectedPlayerItems(newSelected);
+
+    // Build updated itemsToTrade
+    const tradeItems: typeof activeTrade.itemsToTrade = [];
+
+    // Items to buy from merchant (keep existing)
+    selectedMerchantItems.forEach(merchantItem => {
+      tradeItems.push({
+        item: merchantItem,
+        source: 'merchant',
+        destination: 'player1'
+      });
+    });
+
+    // Items to sell to merchant
+    newSelected.forEach(playerItem => {
+      tradeItems.push({
+        item: playerItem,
+        source: 'player1',
+        destination: 'merchant'
+      });
+    });
+
+    const netCost = calculateTradeCost(selectedMerchantItems, newSelected);
+
+    // Update trade in room metadata
+    const updatedTrade = { ...activeTrade, itemsToTrade: tradeItems, netCost };
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+  };
+
   // Approve and execute trade (GM for merchant trades, both players for P2P)
   const handleApproveTrade = async () => {
     if (!activeTrade) return;
@@ -1236,33 +1338,7 @@ function App() {
         return;
       }
 
-      // Build itemsToTrade and netCost before executing
-      const tradeItems: typeof activeTrade.itemsToTrade = [];
-
-      // Items player is buying from merchant
-      selectedMerchantItems.forEach(item => {
-        tradeItems.push({
-          item,
-          source: 'merchant',
-          destination: 'player1'
-        });
-      });
-
-      // Items player is selling to merchant
-      selectedPlayerItems.forEach(item => {
-        tradeItems.push({
-          item,
-          source: 'player1',
-          destination: 'merchant'
-        });
-      });
-
-      const netCost = calculateTradeCost(selectedMerchantItems, selectedPlayerItems);
-
-      // Update trade with items and cost
-      const updatedTrade = { ...activeTrade, itemsToTrade: tradeItems, netCost };
-      await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
-
+      // Items and cost are already in activeTrade (synced from player)
       // GM approves - execute immediately
       await executeTrade();
       return;
@@ -1436,11 +1512,18 @@ function App() {
       baseTabs.push({ id: 'Merchant', label: 'BROWSE' });
     }
   }
-  if (activeTrade && (activeTrade.player1Id === playerId || activeTrade.player2Id === playerId || playerRole === 'GM')) {
+  // Only show Trade tab for P2P trades (merchant trades happen in Browse tab)
+  if (activeTrade && activeTrade.type === 'player-to-player' && (activeTrade.player1Id === playerId || activeTrade.player2Id === playerId || playerRole === 'GM')) {
     baseTabs.push({ id: 'Trade', label: 'TRADE' });
   }
 
   let visibleTabs = baseTabs;
+
+  // If player is viewing a merchant token they don't own, hide most tabs
+  if (characterData?.merchantShop?.isActive && !canEditToken()) {
+    visibleTabs = visibleTabs.filter(t => ['Home', 'Merchant'].includes(t.id));
+  }
+
   if (viewingStorageId) {
       visibleTabs = visibleTabs.filter(t => t.id !== 'External');
       const activeStorageType = characterData.externalStorages.find(s => s.id === viewingStorageId)?.type;
@@ -2616,13 +2699,28 @@ function App() {
               </div>
             )}
 
-            {/* Player: Info and trade button */}
+            {/* Player: Trading interface or info */}
             {playerRole !== 'GM' && (
-              <div style={{marginBottom: '16px'}}>
-                <p style={{fontSize: '12px', color: '#aaa', marginBottom: '12px'}}>
-                  Browse the merchant's wares below. Click "START TRADE" on the Home tab to begin trading!
-                </p>
-              </div>
+              <>
+                {activeTrade && activeTrade.type === 'merchant' && activeTrade.player1Id === playerId ? (
+                  // Active trading interface
+                  <div style={{background: 'rgba(240,225,48,0.1)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
+                    <p style={{fontSize: '12px', margin: 0, marginBottom: '8px'}}>
+                      <strong>Trading Session Active</strong>
+                    </p>
+                    <p style={{fontSize: '10px', color: '#aaa', margin: 0}}>
+                      Select items below to buy or sell. Your cart is shown at the bottom.
+                    </p>
+                  </div>
+                ) : (
+                  // Not trading - show info
+                  <div style={{marginBottom: '16px'}}>
+                    <p style={{fontSize: '12px', color: '#aaa', marginBottom: '12px'}}>
+                      Browse the merchant's wares below. Click "START TRADE" on the Home tab to begin trading!
+                    </p>
+                  </div>
+                )}
+              </>
             )}
 
             <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>
@@ -2635,58 +2733,221 @@ function App() {
             )}
 
             <div style={{marginBottom: '24px'}}>
-              {characterData.merchantShop.inventory.map(item => (
-                <div key={item.id} style={{
-                  background: 'rgba(255,255,255,0.05)',
-                  padding: '12px',
-                  borderRadius: '4px',
-                  marginBottom: '8px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <div style={{flex: 1}}>
-                    <div style={{fontWeight: 'bold', fontSize: '13px'}}>{item.name}</div>
-                    <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
-                      Qty: {item.qty} | Category: {item.category}
-                      {item.weight && ` | Weight: ${item.weight}u`}
-                    </div>
-                  </div>
-                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                    <div style={{textAlign: 'right'}}>
-                      <div style={{fontSize: '11px', color: 'var(--accent-gold)'}}>
-                        {playerRole === 'GM' ? 'Sell: ' : ''}{item.sellPrice || item.value}
+              {characterData.merchantShop.inventory.map(item => {
+                const isTrading = activeTrade && activeTrade.type === 'merchant' && activeTrade.player1Id === playerId;
+                const isSelected = isTrading && selectedMerchantItems.some(si => si.id === item.id);
+
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => isTrading && handleToggleMerchantItem(item)}
+                    style={{
+                      background: isSelected ? 'rgba(0,255,0,0.2)' : 'rgba(255,255,255,0.05)',
+                      padding: '12px',
+                      borderRadius: '4px',
+                      marginBottom: '8px',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      cursor: isTrading ? 'pointer' : 'default',
+                      border: isSelected ? '2px solid #0f0' : '2px solid transparent'
+                    }}
+                  >
+                    <div style={{flex: 1}}>
+                      <div style={{fontWeight: 'bold', fontSize: '13px'}}>
+                        {isSelected && '✓ '}{item.name}
                       </div>
-                      {playerRole === 'GM' && (
-                        <div style={{fontSize: '10px', color: '#aaa'}}>
-                          Buy: {item.buyPrice}
+                      <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
+                        Qty: {item.qty} | Category: {item.category}
+                        {item.weight && ` | Weight: ${item.weight}u`}
+                      </div>
+                    </div>
+                    <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                      <div style={{textAlign: 'right'}}>
+                        <div style={{fontSize: '11px', color: 'var(--accent-gold)'}}>
+                          {playerRole === 'GM' ? 'Sell: ' : ''}{item.sellPrice || item.value}
                         </div>
+                        {playerRole === 'GM' && (
+                          <div style={{fontSize: '10px', color: '#aaa'}}>
+                            Buy: {item.buyPrice}
+                          </div>
+                        )}
+                      </div>
+                      {/* GM-only edit/remove buttons */}
+                      {playerRole === 'GM' && (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const newPrice = prompt('Enter new sell price (e.g., "50 gp"):', item.sellPrice || item.value);
+                              if (newPrice) handleUpdateMerchantPrice(item.id, newPrice);
+                            }}
+                            style={{background: '#333', border: 'none', color: 'white', fontSize: '10px', padding: '4px 8px', borderRadius: '2px', cursor: 'pointer'}}
+                          >
+                            EDIT
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveFromMerchantShop(item.id);
+                            }}
+                            style={{background: '#333', border: 'none', color: 'var(--danger)', fontSize: '10px', padding: '4px 8px', borderRadius: '2px', cursor: 'pointer'}}
+                          >
+                            X
+                          </button>
+                        </>
                       )}
                     </div>
-                    {/* GM-only edit/remove buttons */}
-                    {playerRole === 'GM' && (
-                      <>
-                        <button
-                          onClick={() => {
-                            const newPrice = prompt('Enter new sell price (e.g., "50 gp"):', item.sellPrice || item.value);
-                            if (newPrice) handleUpdateMerchantPrice(item.id, newPrice);
-                          }}
-                          style={{background: '#333', border: 'none', color: 'white', fontSize: '10px', padding: '4px 8px', borderRadius: '2px', cursor: 'pointer'}}
-                        >
-                          EDIT
-                        </button>
-                        <button
-                          onClick={() => handleRemoveFromMerchantShop(item.id)}
-                          style={{background: '#333', border: 'none', color: 'var(--danger)', fontSize: '10px', padding: '4px 8px', borderRadius: '2px', cursor: 'pointer'}}
-                        >
-                          X
-                        </button>
-                      </>
-                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {/* Player's Inventory (if actively trading) */}
+            {activeTrade && activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && characterData && (
+              <div style={{marginBottom: '24px'}}>
+                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Your Items to Sell</h3>
+                <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>
+                  Click items you want to sell to the merchant (buyback at 80%)
+                </p>
+                {characterData.inventory.length === 0 ? (
+                  <p style={{fontSize: '10px', color: '#666'}}>Your inventory is empty</p>
+                ) : (
+                  <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+                    {characterData.inventory.map(item => {
+                      const isSelected = selectedPlayerItems.some(si => si.id === item.id);
+                      return (
+                        <div
+                          key={item.id}
+                          onClick={() => handleTogglePlayerItem(item)}
+                          style={{
+                            background: isSelected ? 'rgba(255,0,0,0.2)' : 'rgba(0,0,0,0.2)',
+                            padding: '8px',
+                            borderRadius: '4px',
+                            marginBottom: '4px',
+                            cursor: 'pointer',
+                            border: isSelected ? '2px solid #f00' : '2px solid transparent',
+                            fontSize: '11px'
+                          }}
+                        >
+                          <div style={{fontWeight: 'bold'}}>
+                            {isSelected && '✓ '}{item.name}
+                          </div>
+                          <div style={{color: '#aaa', fontSize: '10px'}}>
+                            Value: {item.value} | Buyback: {calculateBuyback(item.value)} | Qty: {item.qty}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Cart Summary (if actively trading) */}
+            {activeTrade && activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && (
+              <div style={{background: 'rgba(240,225,48,0.1)', padding: '16px', borderRadius: '6px', marginBottom: '24px'}}>
+                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Your Cart</h3>
+
+                <div style={{marginBottom: '12px'}}>
+                  <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>Buying:</h4>
+                  {selectedMerchantItems.length === 0 ? (
+                    <p style={{fontSize: '10px', color: '#666'}}>No items selected</p>
+                  ) : (
+                    selectedMerchantItems.map(item => (
+                      <div key={item.id} style={{background: 'rgba(0,255,0,0.1)', padding: '6px', borderRadius: '3px', marginBottom: '4px', fontSize: '10px'}}>
+                        {item.name} x{item.qty} - {item.sellPrice || item.value}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div style={{marginBottom: '12px'}}>
+                  <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>Selling:</h4>
+                  {selectedPlayerItems.length === 0 ? (
+                    <p style={{fontSize: '10px', color: '#666'}}>No items selected</p>
+                  ) : (
+                    selectedPlayerItems.map(item => (
+                      <div key={item.id} style={{background: 'rgba(255,0,0,0.1)', padding: '6px', borderRadius: '3px', marginBottom: '4px', fontSize: '10px'}}>
+                        {item.name} x{item.qty} - {calculateBuyback(item.value)}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Net cost */}
+                {(selectedMerchantItems.length > 0 || selectedPlayerItems.length > 0) && (() => {
+                  const cost = calculateTradeCost(selectedMerchantItems, selectedPlayerItems);
+                  return (
+                    <div style={{
+                      background: cost.owedTo === 'merchant' ? 'rgba(255,0,0,0.2)' : cost.owedTo === 'player' ? 'rgba(0,255,0,0.2)' : 'rgba(255,255,255,0.1)',
+                      padding: '12px',
+                      borderRadius: '4px',
+                      marginBottom: '12px',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '4px'}}>
+                        {cost.owedTo === 'even' ? 'Trade is Even' : `${cost.amount} ${cost.currency.toUpperCase()}`}
+                      </div>
+                      <div style={{fontSize: '11px', color: '#aaa'}}>
+                        {cost.owedTo === 'merchant' && 'You owe the merchant'}
+                        {cost.owedTo === 'player' && 'Merchant owes you'}
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Submit for approval button */}
+                <button
+                  onClick={() => {
+                    if (selectedMerchantItems.length === 0 && selectedPlayerItems.length === 0) {
+                      alert('Please select at least one item to trade.');
+                      return;
+                    }
+                    // Change status to pending approval
+                    const updatedTrade = { ...activeTrade, status: 'pending' as const };
+                    OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+                    alert('Trade submitted! Waiting for GM approval.');
+                  }}
+                  disabled={activeTrade.status === 'pending'}
+                  style={{
+                    width: '100%',
+                    background: activeTrade.status === 'pending' ? '#555' : 'var(--accent-gold)',
+                    color: 'black',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    cursor: activeTrade.status === 'pending' ? 'default' : 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '12px'
+                  }}
+                >
+                  {activeTrade.status === 'pending' ? 'WAITING FOR GM APPROVAL...' : 'SUBMIT FOR APPROVAL'}
+                </button>
+
+                <button
+                  onClick={handleCancelTrade}
+                  style={{
+                    width: '100%',
+                    background: 'var(--danger)',
+                    color: 'white',
+                    border: 'none',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontWeight: 'bold',
+                    fontSize: '11px',
+                    marginTop: '8px'
+                  }}
+                >
+                  CANCEL TRADE
+                </button>
+
+                <p style={{fontSize: '10px', color: '#666', marginTop: '8px', fontStyle: 'italic', margin: '8px 0 0 0'}}>
+                  * GM must approve the trade for items and currency to transfer automatically.
+                </p>
+              </div>
+            )}
 
             {/* GM Only: Add items from repository */}
             {playerRole === 'GM' && (
@@ -2784,13 +3045,7 @@ function App() {
                     return (
                       <div
                         key={item.id}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedMerchantItems(selectedMerchantItems.filter(i => i.id !== item.id));
-                          } else {
-                            setSelectedMerchantItems([...selectedMerchantItems, item]);
-                          }
-                        }}
+                        onClick={() => handleToggleMerchantItem(item)}
                         style={{
                           background: isSelected ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.2)',
                           padding: '8px',
@@ -2823,13 +3078,7 @@ function App() {
                     return (
                       <div
                         key={item.id}
-                        onClick={() => {
-                          if (isSelected) {
-                            setSelectedPlayerItems(selectedPlayerItems.filter(i => i.id !== item.id));
-                          } else {
-                            setSelectedPlayerItems([...selectedPlayerItems, item]);
-                          }
-                        }}
+                        onClick={() => handleTogglePlayerItem(item)}
                         style={{
                           background: isSelected ? 'rgba(255,0,0,0.2)' : 'rgba(0,0,0,0.2)',
                           padding: '8px',

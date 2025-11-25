@@ -2863,7 +2863,7 @@ function App() {
 
             {/* Player: Merchant Profile */}
             {playerRole !== 'GM' && (
-              <div style={{marginBottom: '20px'}}>
+              <div style={{marginBottom: '20px', width: '100%'}}>
                 {tokenImage && (
                   <div style={{
                     width: '80px',
@@ -3007,7 +3007,7 @@ function App() {
               </p>
             )}
 
-            <div style={{marginBottom: '24px'}}>
+            <div style={{marginBottom: '24px', width: '100%'}}>
               {characterData.merchantShop.inventory.map(item => {
                 const isTrading = activeTrade && activeTrade.type === 'merchant' && activeTrade.player1Id === playerId;
                 const isSelected = isTrading && selectedMerchantItems.some(si => si.id === item.id);

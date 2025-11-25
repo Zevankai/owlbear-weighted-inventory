@@ -1572,12 +1572,21 @@ function App() {
 
   let visibleTabs = baseTabs;
 
-  // If player is viewing a merchant token they don't own, only show Merchant tab
-  if (characterData?.merchantShop?.isActive && !canEditToken()) {
-    console.log('[MERCHANT MODE] Filtering tabs - merchant mode active, player cannot edit');
-    console.log('[MERCHANT MODE] Before filter:', visibleTabs.map(t => t.id));
-    visibleTabs = visibleTabs.filter(t => ['Merchant'].includes(t.id));
-    console.log('[MERCHANT MODE] After filter:', visibleTabs.map(t => t.id));
+  // If viewing a merchant token, filter tabs based on role
+  if (characterData?.merchantShop?.isActive) {
+    if (!canEditToken()) {
+      // Players viewing merchant: only show Merchant tab
+      console.log('[MERCHANT MODE] Filtering tabs - merchant mode active, player cannot edit');
+      console.log('[MERCHANT MODE] Before filter:', visibleTabs.map(t => t.id));
+      visibleTabs = visibleTabs.filter(t => ['Merchant'].includes(t.id));
+      console.log('[MERCHANT MODE] After filter:', visibleTabs.map(t => t.id));
+    } else if (playerRole === 'GM') {
+      // GM viewing merchant: only show Home and Merchant tabs
+      console.log('[MERCHANT MODE] Filtering tabs - merchant mode active, GM view');
+      console.log('[MERCHANT MODE] Before filter:', visibleTabs.map(t => t.id));
+      visibleTabs = visibleTabs.filter(t => ['Home', 'Merchant', 'GM'].includes(t.id));
+      console.log('[MERCHANT MODE] After filter:', visibleTabs.map(t => t.id));
+    }
   }
 
   if (viewingStorageId) {
@@ -2010,8 +2019,8 @@ function App() {
                     </div>
                 )}
 
-                {/* Only show stats if player can edit OR it's storage view */}
-                {(canEditToken() || viewingStorageId) && (
+                {/* Only show stats if player can edit OR it's storage view (but not for merchants) */}
+                {(canEditToken() || viewingStorageId) && !characterData?.merchantShop?.isActive && (
                   <div className="totals-grid">
                       <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
                       <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
@@ -2019,7 +2028,7 @@ function App() {
                   </div>
                 )}
 
-                {!viewingStorageId && canEditToken() && (
+                {!viewingStorageId && canEditToken() && !characterData?.merchantShop?.isActive && (
                     <>
                         <h2 style={{marginTop: '20px', border: 'none'}}>SLOT USAGE</h2>
                         <div className="totals-grid">
@@ -3222,6 +3231,106 @@ function App() {
                   * GM must approve the trade for items and currency to transfer automatically.
                 </p>
               </div>
+            )}
+
+            {/* GM Only: Create Custom Item */}
+            {playerRole === 'GM' && (
+              <>
+                <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px', marginTop: '24px'}}>Create Custom Item</h3>
+                <div style={{background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px'}}>
+                    <input
+                      className="search-input"
+                      placeholder="Item Name"
+                      value={newItem.name || ''}
+                      onChange={(e) => setNewItem({...newItem, name: e.target.value})}
+                      style={{margin: 0}}
+                    />
+                    <select
+                      className="search-input"
+                      value={newItem.category || 'Other'}
+                      onChange={(e) => setNewItem({...newItem, category: e.target.value as ItemCategory})}
+                      style={{margin: 0}}
+                    >
+                      {ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                  </div>
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '8px'}}>
+                    <input
+                      className="search-input"
+                      placeholder="Sell Price (e.g., 10 gp)"
+                      value={newItem.value || ''}
+                      onChange={(e) => setNewItem({...newItem, value: e.target.value})}
+                      style={{margin: 0}}
+                    />
+                    <input
+                      className="search-input"
+                      type="number"
+                      placeholder="Weight"
+                      value={newItem.weight || 1}
+                      onChange={(e) => setNewItem({...newItem, weight: parseFloat(e.target.value)})}
+                      style={{margin: 0}}
+                    />
+                    <input
+                      className="search-input"
+                      type="number"
+                      placeholder="Qty"
+                      value={newItem.qty || 1}
+                      onChange={(e) => setNewItem({...newItem, qty: parseInt(e.target.value)})}
+                      style={{margin: 0}}
+                    />
+                  </div>
+                  <input
+                    className="search-input"
+                    placeholder="Properties (optional)"
+                    value={newItem.properties || ''}
+                    onChange={(e) => setNewItem({...newItem, properties: e.target.value})}
+                    style={{margin: 0, marginBottom: '8px'}}
+                  />
+                  <button
+                    onClick={() => {
+                      if (!newItem.name || !newItem.value) {
+                        alert('Please provide at least a name and sell price.');
+                        return;
+                      }
+                      const merchantItem: MerchantItem = {
+                        id: uuidv4(),
+                        name: newItem.name,
+                        category: newItem.category || 'Other',
+                        type: newItem.type || 'Gear',
+                        weight: newItem.weight || 1,
+                        qty: newItem.qty || 1,
+                        value: newItem.value || '',
+                        sellPrice: newItem.value || '',
+                        buyPrice: calculateBuyback(newItem.value || ''),
+                        properties: newItem.properties || '',
+                        requiresAttunement: newItem.requiresAttunement || false,
+                        isAttuned: false
+                      };
+
+                      const updatedShop = {
+                        ...characterData.merchantShop!,
+                        inventory: [...characterData.merchantShop!.inventory, merchantItem]
+                      };
+                      handleUpdateData({ merchantShop: updatedShop });
+                      setNewItem({ name: '', category: 'Other', type: 'Gear', weight: 1, qty: 1, value: '', properties: '', requiresAttunement: false });
+                    }}
+                    style={{
+                      width: '100%',
+                      background: 'var(--accent-gold)',
+                      color: 'black',
+                      border: 'none',
+                      padding: '8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      fontSize: '11px'
+                    }}
+                  >
+                    ADD CUSTOM ITEM TO SHOP
+                  </button>
+                </div>
+              </>
             )}
 
             {/* GM Only: Add items from repository */}

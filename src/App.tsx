@@ -1572,11 +1572,11 @@ function App() {
 
   let visibleTabs = baseTabs;
 
-  // If player is viewing a merchant token they don't own, hide most tabs
+  // If player is viewing a merchant token they don't own, only show Merchant tab
   if (characterData?.merchantShop?.isActive && !canEditToken()) {
     console.log('[MERCHANT MODE] Filtering tabs - merchant mode active, player cannot edit');
     console.log('[MERCHANT MODE] Before filter:', visibleTabs.map(t => t.id));
-    visibleTabs = visibleTabs.filter(t => ['Home', 'Merchant'].includes(t.id));
+    visibleTabs = visibleTabs.filter(t => ['Merchant'].includes(t.id));
     console.log('[MERCHANT MODE] After filter:', visibleTabs.map(t => t.id));
   }
 
@@ -2861,6 +2861,94 @@ function App() {
           <div className="section">
             <h2>{playerRole === 'GM' ? 'Merchant Shop Management' : 'Merchant Shop'}</h2>
 
+            {/* Player: Merchant Profile */}
+            {playerRole !== 'GM' && (
+              <div style={{marginBottom: '20px'}}>
+                {tokenImage && (
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    border: '3px solid var(--accent-gold)',
+                    background: 'transparent',
+                    margin: '0 auto 8px auto'
+                  }}>
+                    <img
+                      src={tokenImage}
+                      alt="Merchant"
+                      style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                    />
+                  </div>
+                )}
+                <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center', marginBottom: '8px'}}>
+                  {tokenName || 'Unknown Merchant'}
+                </div>
+                {currentDisplayData.condition && (
+                  <div style={{marginTop: '12px'}}>
+                    <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '4px'}}>
+                      Description
+                    </label>
+                    <div style={{
+                      background: 'rgba(0,0,0,0.3)',
+                      padding: '10px',
+                      borderRadius: '6px',
+                      fontSize: '13px',
+                      color: '#ccc',
+                      lineHeight: '1.5',
+                      border: '1px solid rgba(255,255,255,0.1)'
+                    }}>
+                      {currentDisplayData.condition}
+                    </div>
+                  </div>
+                )}
+                <div style={{display: 'flex', gap: '8px', marginTop: '12px'}}>
+                  <button
+                    onClick={toggleFavorite}
+                    style={{
+                      flex: 1,
+                      background: 'transparent',
+                      border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
+                      color: isFavorited ? 'var(--accent-gold)' : '#666',
+                      padding: '6px 12px',
+                      borderRadius: '12px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '4px'
+                    }}
+                    title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
+                  </button>
+                  {favorites.length > 0 && (
+                    <button
+                      onClick={() => setViewingFavorites(true)}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(240, 225, 48, 0.1)',
+                        border: '1px solid var(--accent-gold)',
+                        color: 'var(--accent-gold)',
+                        padding: '6px 12px',
+                        borderRadius: '12px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '4px'
+                      }}
+                      title="View all favorite tokens"
+                    >
+                      ⭐ View Favorites
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* GM Only: Buyback rate info */}
             {playerRole === 'GM' && (
               <div style={{background: 'rgba(240,225,48,0.1)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
@@ -2884,11 +2972,27 @@ function App() {
                     </p>
                   </div>
                 ) : (
-                  // Not trading - show info
+                  // Not trading - show button to start trade
                   <div style={{marginBottom: '16px'}}>
-                    <p style={{fontSize: '12px', color: '#aaa', marginBottom: '12px'}}>
-                      Browse the merchant's wares below. Click "TRADE WITH MERCHANT" on the Home tab to begin trading!
-                    </p>
+                    <button
+                      onClick={() => {
+                        console.log('[START TRADE] Button clicked, merchantTokenId:', tokenId);
+                        handleStartTrade(tokenId);
+                      }}
+                      style={{
+                        width: '100%',
+                        background: 'var(--accent-gold)',
+                        border: 'none',
+                        color: 'black',
+                        padding: '12px 20px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: 'bold'
+                      }}
+                    >
+                      TRADE WITH MERCHANT
+                    </button>
                   </div>
                 )}
               </>

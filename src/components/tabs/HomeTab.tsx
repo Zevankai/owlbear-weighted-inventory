@@ -88,7 +88,7 @@ export function HomeTab({
   activeStorageDef
 }: HomeTabProps) {
   return (
-    <div className="section">
+    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
         {/* Debug button - subtle and only on Home tab */}
@@ -376,16 +376,14 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Show stats */}
-      {(canEditToken() || viewingStorageId) && (
-        <div className="totals-grid">
-          <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
-          <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
-          <div className="stat-box"><div className="stat-label">ITEMS</div><div className="stat-value">{currentDisplayData.inventory.length}</div></div>
-        </div>
-      )}
+      {/* Show stats - always show in read-only mode too */}
+      <div className="totals-grid">
+        <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
+        <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
+        <div className="stat-box"><div className="stat-label">ITEMS</div><div className="stat-value">{currentDisplayData.inventory.length}</div></div>
+      </div>
 
-      {!viewingStorageId && canEditToken() && (
+      {!viewingStorageId && (
         <>
           <h2 style={{marginTop: '20px', border: 'none'}}>SLOT USAGE</h2>
           <div className="totals-grid">

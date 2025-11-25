@@ -3,7 +3,6 @@ import type { ActiveTrade, Tab } from '../../types';
 interface GMOverviewTabProps {
   activeTrade: ActiveTrade | null;
   isExecutingTrade: boolean;
-  handleApproveTrade: () => void;
   handleCancelTrade: () => void;
   loadTokenById: (tokenId: string) => void;
   setActiveTab: (tab: Tab) => void;
@@ -12,7 +11,6 @@ interface GMOverviewTabProps {
 export function GMOverviewTab({
   activeTrade,
   isExecutingTrade,
-  handleApproveTrade,
   handleCancelTrade,
   loadTokenById,
   setActiveTab,
@@ -43,21 +41,21 @@ export function GMOverviewTab({
               <strong>{activeTrade.player2Name}</strong>
             </div>
             <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '8px' }}>
-              {activeTrade.player1Approved && (
+              {activeTrade.player1Confirmed && (
                 <span style={{ color: '#0f0' }}>✓ {activeTrade.player1Name}</span>
               )}
-              {!activeTrade.player1Approved && <span>○ {activeTrade.player1Name}</span>}
+              {!activeTrade.player1Confirmed && <span>○ {activeTrade.player1Name}</span>}
               <span style={{ margin: '0 8px' }}>|</span>
-              {activeTrade.player2Approved && (
+              {activeTrade.player2Confirmed && (
                 <span style={{ color: '#0f0' }}>✓ {activeTrade.player2Name}</span>
               )}
-              {!activeTrade.player2Approved && <span>○ {activeTrade.player2Name}</span>}
+              {!activeTrade.player2Confirmed && <span>○ {activeTrade.player2Name}</span>}
             </div>
             <div style={{ fontSize: '12px', marginBottom: '12px' }}>
               <strong>Status:</strong> {activeTrade.status}
             </div>
             {/* Trade Summary */}
-            {activeTrade.itemsToTrade.length > 0 && (
+            {(activeTrade.player1OfferedItems.length > 0 || activeTrade.player2OfferedItems.length > 0) && (
               <div
                 style={{
                   background: 'rgba(0,0,0,0.3)',
@@ -70,60 +68,56 @@ export function GMOverviewTab({
                 <div style={{ marginBottom: '6px' }}>
                   <strong>Items Trading:</strong>
                 </div>
-                {activeTrade.itemsToTrade.filter((t) => t.source === 'player1').length > 0 && (
+                {activeTrade.player1OfferedItems.length > 0 && (
                   <div style={{ marginBottom: '4px' }}>
                     <div style={{ color: '#4a9eff', fontSize: '10px' }}>{activeTrade.player1Name} gives:</div>
-                    {activeTrade.itemsToTrade
-                      .filter((t) => t.source === 'player1')
-                      .map((t, i) => (
-                        <div key={i} style={{ paddingLeft: '8px', color: '#aaa' }}>
-                          • {t.item.name} x{t.item.qty}
-                        </div>
-                      ))}
+                    {activeTrade.player1OfferedItems.map((item, i) => (
+                      <div key={i} style={{ paddingLeft: '8px', color: '#aaa' }}>
+                        • {item.name} x{item.qty}
+                      </div>
+                    ))}
                   </div>
                 )}
-                {activeTrade.itemsToTrade.filter((t) => t.source === 'player2').length > 0 && (
+                {activeTrade.player2OfferedItems.length > 0 && (
                   <div style={{ marginBottom: '4px' }}>
                     <div style={{ color: '#4a9eff', fontSize: '10px' }}>{activeTrade.player2Name} gives:</div>
-                    {activeTrade.itemsToTrade
-                      .filter((t) => t.source === 'player2')
-                      .map((t, i) => (
-                        <div key={i} style={{ paddingLeft: '8px', color: '#aaa' }}>
-                          • {t.item.name} x{t.item.qty}
-                        </div>
-                      ))}
+                    {activeTrade.player2OfferedItems.map((item, i) => (
+                      <div key={i} style={{ paddingLeft: '8px', color: '#aaa' }}>
+                        • {item.name} x{item.qty}
+                      </div>
+                    ))}
                   </div>
                 )}
                 {/* Show coins being traded */}
-                {activeTrade.player1CoinsOffered && (
-                  activeTrade.player1CoinsOffered.cp > 0 || 
-                  activeTrade.player1CoinsOffered.sp > 0 || 
-                  activeTrade.player1CoinsOffered.gp > 0 || 
-                  activeTrade.player1CoinsOffered.pp > 0
+                {activeTrade.player1OfferedCoins && (
+                  activeTrade.player1OfferedCoins.cp > 0 || 
+                  activeTrade.player1OfferedCoins.sp > 0 || 
+                  activeTrade.player1OfferedCoins.gp > 0 || 
+                  activeTrade.player1OfferedCoins.pp > 0
                 ) && (
                   <div style={{ marginBottom: '4px' }}>
                     <div style={{ color: 'var(--accent-gold)', fontSize: '10px' }}>{activeTrade.player1Name}'s coins:</div>
                     <div style={{ paddingLeft: '8px', color: '#aaa' }}>
-                      {activeTrade.player1CoinsOffered.cp > 0 && `${activeTrade.player1CoinsOffered.cp}cp `}
-                      {activeTrade.player1CoinsOffered.sp > 0 && `${activeTrade.player1CoinsOffered.sp}sp `}
-                      {activeTrade.player1CoinsOffered.gp > 0 && `${activeTrade.player1CoinsOffered.gp}gp `}
-                      {activeTrade.player1CoinsOffered.pp > 0 && `${activeTrade.player1CoinsOffered.pp}pp`}
+                      {activeTrade.player1OfferedCoins.cp > 0 && `${activeTrade.player1OfferedCoins.cp}cp `}
+                      {activeTrade.player1OfferedCoins.sp > 0 && `${activeTrade.player1OfferedCoins.sp}sp `}
+                      {activeTrade.player1OfferedCoins.gp > 0 && `${activeTrade.player1OfferedCoins.gp}gp `}
+                      {activeTrade.player1OfferedCoins.pp > 0 && `${activeTrade.player1OfferedCoins.pp}pp`}
                     </div>
                   </div>
                 )}
-                {activeTrade.player2CoinsOffered && (
-                  activeTrade.player2CoinsOffered.cp > 0 || 
-                  activeTrade.player2CoinsOffered.sp > 0 || 
-                  activeTrade.player2CoinsOffered.gp > 0 || 
-                  activeTrade.player2CoinsOffered.pp > 0
+                {activeTrade.player2OfferedCoins && (
+                  activeTrade.player2OfferedCoins.cp > 0 || 
+                  activeTrade.player2OfferedCoins.sp > 0 || 
+                  activeTrade.player2OfferedCoins.gp > 0 || 
+                  activeTrade.player2OfferedCoins.pp > 0
                 ) && (
                   <div style={{ marginBottom: '4px' }}>
                     <div style={{ color: 'var(--accent-gold)', fontSize: '10px' }}>{activeTrade.player2Name}'s coins:</div>
                     <div style={{ paddingLeft: '8px', color: '#aaa' }}>
-                      {activeTrade.player2CoinsOffered.cp > 0 && `${activeTrade.player2CoinsOffered.cp}cp `}
-                      {activeTrade.player2CoinsOffered.sp > 0 && `${activeTrade.player2CoinsOffered.sp}sp `}
-                      {activeTrade.player2CoinsOffered.gp > 0 && `${activeTrade.player2CoinsOffered.gp}gp `}
-                      {activeTrade.player2CoinsOffered.pp > 0 && `${activeTrade.player2CoinsOffered.pp}pp`}
+                      {activeTrade.player2OfferedCoins.cp > 0 && `${activeTrade.player2OfferedCoins.cp}cp `}
+                      {activeTrade.player2OfferedCoins.sp > 0 && `${activeTrade.player2OfferedCoins.sp}sp `}
+                      {activeTrade.player2OfferedCoins.gp > 0 && `${activeTrade.player2OfferedCoins.gp}gp `}
+                      {activeTrade.player2OfferedCoins.pp > 0 && `${activeTrade.player2OfferedCoins.pp}pp`}
                     </div>
                   </div>
                 )}
@@ -134,7 +128,7 @@ export function GMOverviewTab({
                 onClick={() => {
                   if (activeTrade.player1TokenId) {
                     loadTokenById(activeTrade.player1TokenId);
-                    setActiveTab('Trade');
+                    setActiveTab('Home');
                   }
                 }}
                 style={{
@@ -148,15 +142,14 @@ export function GMOverviewTab({
                   fontWeight: 'bold',
                 }}
               >
-                VIEW TRADE
+                VIEW PLAYER 1
               </button>
               <button
-                onClick={handleApproveTrade}
+                onClick={handleCancelTrade}
                 disabled={isExecutingTrade}
                 style={{
-                  flex: 1,
-                  background: isExecutingTrade ? '#555' : 'var(--accent-gold)',
-                  color: isExecutingTrade ? '#999' : 'black',
+                  background: 'var(--danger)',
+                  color: 'white',
                   border: 'none',
                   padding: '6px 12px',
                   borderRadius: '4px',
@@ -165,22 +158,7 @@ export function GMOverviewTab({
                   fontWeight: 'bold',
                 }}
               >
-                {isExecutingTrade ? 'EXECUTING...' : 'FORCE EXECUTE'}
-              </button>
-              <button
-                onClick={handleCancelTrade}
-                style={{
-                  background: 'var(--danger)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '6px 12px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                }}
-              >
-                CANCEL
+                CANCEL TRADE
               </button>
             </div>
           </div>
@@ -199,7 +177,7 @@ export function GMOverviewTab({
       }}>
         <p style={{ margin: 0 }}>
           <strong>Player-to-Player Trading:</strong> Players can initiate trades by clicking on another player's claimed token and selecting "TRADE WITH PLAYER".
-          Both players must approve the trade for it to execute.
+          Both players must confirm the trade for it to execute.
         </p>
       </div>
     </div>

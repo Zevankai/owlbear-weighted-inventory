@@ -143,7 +143,6 @@ export const DEFAULT_CHARACTER_DATA: CharacterData = {
   vaults: [],
   externalStorages: [],
   favorites: [],
-  gmNotes: '',
   condition: '',
   claimedBy: undefined,
   claimingEnabled: false,

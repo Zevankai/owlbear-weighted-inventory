@@ -10,7 +10,7 @@ interface TradeTabProps {
   player2Items: Item[];
   setPlayer1Items: (items: Item[]) => void;
   setPlayer2Items: (items: Item[]) => void;
-  player2Data: CharacterData | null;
+  otherPlayerData: CharacterData | null;
   playerRole: string;
   isExecutingTrade: boolean;
   handleApproveTrade: () => void;
@@ -29,7 +29,7 @@ export function TradeTab({
   player2Items,
   setPlayer1Items,
   setPlayer2Items,
-  player2Data,
+  otherPlayerData,
   playerRole,
   isExecutingTrade,
   handleApproveTrade,
@@ -50,6 +50,14 @@ export function TradeTab({
   
   // Get my currency (to validate coin offers)
   const myCurrency = characterData?.currency || { cp: 0, sp: 0, gp: 0, pp: 0 };
+  
+  // Determine which player's items are "mine" and which are "theirs"
+  const myItems = isPlayer1 ? player1Items : player2Items;
+  const setMyItems = isPlayer1 ? setPlayer1Items : setPlayer2Items;
+  const otherItems = isPlayer1 ? player2Items : player1Items;
+  
+  // Determine the other player's name
+  const otherPlayerName = isPlayer1 ? activeTrade.player2Name : activeTrade.player1Name;
   
   // Function to update coin offers with validation
   const handleCoinChange = (coinType: keyof Currency, value: number) => {
@@ -81,18 +89,16 @@ export function TradeTab({
           <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Click items you want to give to the other player</p>
           <div style={{maxHeight: '200px', overflowY: 'auto'}}>
             {characterData.inventory.map(item => {
-              const selectedItems = isPlayer1 ? player1Items : player2Items;
-              const setSelectedItems = isPlayer1 ? setPlayer1Items : setPlayer2Items;
-              const isSelected = selectedItems.some(si => si.id === item.id);
+              const isSelected = myItems.some(si => si.id === item.id);
 
               return (
                 <div
                   key={item.id}
                   onClick={() => {
                     if (isSelected) {
-                      setSelectedItems(selectedItems.filter(i => i.id !== item.id));
+                      setMyItems(myItems.filter(i => i.id !== item.id));
                     } else {
-                      setSelectedItems([...selectedItems, item]);
+                      setMyItems([...myItems, item]);
                     }
                   }}
                   style={{
@@ -156,23 +162,21 @@ export function TradeTab({
       )}
 
       {/* P2P Trade - Other player's items and coins */}
-      {player2Data && (
+      {otherPlayerData && (
         <div style={{marginBottom: '24px'}}>
           <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>
-            {isPlayer1 ? activeTrade.player2Name : activeTrade.player1Name}'s Offer
+            {otherPlayerName}'s Offer
           </h3>
           
           {/* Other player's items */}
           <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>Items:</h4>
           <div style={{maxHeight: '150px', overflowY: 'auto', marginBottom: '12px'}}>
             {(() => {
-              const otherPlayerItems = isPlayer1 ? player2Items : player1Items;
-
-              if (otherPlayerItems.length === 0) {
+              if (otherItems.length === 0) {
                 return <p style={{fontSize: '10px', color: '#666'}}>No items offered yet</p>;
               }
 
-              return otherPlayerItems.map(item => (
+              return otherItems.map(item => (
                 <div
                   key={item.id}
                   style={{

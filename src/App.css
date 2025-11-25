@@ -113,24 +113,34 @@ body {
 .content {
   flex: 1;
   padding: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Make sections fill available height */
+.content > .section {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  margin-bottom: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(240, 225, 48, 0.3) transparent;
 }
 
-/* Webkit Scrollbar (Chrome/Edge) */
-.content::-webkit-scrollbar {
+/* Section scrollbars */
+.content > .section::-webkit-scrollbar {
   width: 8px;
 }
-.content::-webkit-scrollbar-track {
+.content > .section::-webkit-scrollbar-track {
   background: transparent;
 }
-.content::-webkit-scrollbar-thumb {
+.content > .section::-webkit-scrollbar-thumb {
   background: rgba(240, 225, 48, 0.3);
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
-.content::-webkit-scrollbar-thumb:hover {
+.content > .section::-webkit-scrollbar-thumb:hover {
   background: rgba(240, 225, 48, 0.5);
 }
 

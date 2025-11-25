@@ -8,24 +8,20 @@ import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, MerchantItem, ActiveTrade, TradeQueue, Tab } from './types';
-import { ACTIVE_TRADE_KEY, TRADE_QUEUES_KEY, DEFAULT_BUYBACK_RATE } from './constants';
+import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab } from './types';
+import { ACTIVE_TRADE_KEY } from './constants';
 
 // Utilities
 import { hexToRgb } from './utils/color';
 import {
-  toCopperPieces,
-  fromCopperPieces,
   getTotalCopperPieces,
   deductCopperPieces,
   addCopperPieces,
-  calculateBuyback,
 } from './utils/currency';
-import { calculateP2PCost, calculateTradeCost } from './utils/trade';
+import { calculateP2PCost } from './utils/trade';
 
 // Components
 import { GMOverviewTab } from './components/tabs/GMOverviewTab';
-import { MerchantTab } from './components/tabs/MerchantTab';
 import { TradeTab } from './components/tabs/TradeTab';
 import { HomeTab } from './components/tabs/HomeTab';
 
@@ -122,39 +118,58 @@ function App() {
   // Edit item state
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
-  // Merchant mode state
+  // Trading state
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
-  const [tradeQueues, setTradeQueues] = useState<Record<string, TradeQueue>>({});
-  const [selectedMerchantItems, setSelectedMerchantItems] = useState<MerchantItem[]>([]);
-  const [selectedPlayerItems, setSelectedPlayerItems] = useState<Item[]>([]);
-  const [merchantShopData, setMerchantShopData] = useState<MerchantItem[] | null>(null);
-  const [playerOwnInventory, setPlayerOwnInventory] = useState<Item[]>([]); // Player's own inventory from their claimed token
   const [isExecutingTrade, setIsExecutingTrade] = useState(false); // Prevent duplicate trade execution
   // P2P trading state
   const [player1Items, setPlayer1Items] = useState<Item[]>([]);
   const [player2Items, setPlayer2Items] = useState<Item[]>([]);
   const [player2Data, setPlayer2Data] = useState<CharacterData | null>(null);
+  // Coin offers for P2P trading
+  const [player1CoinsOffered, setPlayer1CoinsOffered] = useState<Currency>({ cp: 0, sp: 0, gp: 0, pp: 0 });
+  const [player2CoinsOffered, setPlayer2CoinsOffered] = useState<Currency>({ cp: 0, sp: 0, gp: 0, pp: 0 });
   // Player's claimed token info
   const [playerClaimedTokenName, setPlayerClaimedTokenName] = useState<string | null>(null);
-  // GM overview data
-  const [allMerchants, setAllMerchants] = useState<Array<{id: string; name: string; itemCount: number}>>([]);
 
   useEffect(() => {
     OBR.onReady(() => setReady(true));
   }, []);
 
-  // Load active trade and trade queues from room metadata
+  // Load active trade from room metadata
   useEffect(() => {
     if (!ready) return;
 
     const loadTradeData = async () => {
       const metadata = await OBR.room.getMetadata();
       const trade = metadata[ACTIVE_TRADE_KEY] as ActiveTrade | undefined;
-      const queues = metadata[TRADE_QUEUES_KEY] as Record<string, TradeQueue> | undefined;
 
-      console.log('[TRADE POLL] Active trade:', trade ? `${trade.type} (${trade.status})` : 'null');
-      setActiveTrade(trade || null);
-      setTradeQueues(queues || {});
+      console.log('[TRADE POLL] Active trade:', trade ? `P2P (${trade.status})` : 'null');
+      
+      if (trade) {
+        setActiveTrade(trade);
+        // Load coin offers from the trade
+        setPlayer1CoinsOffered(trade.player1CoinsOffered || { cp: 0, sp: 0, gp: 0, pp: 0 });
+        setPlayer2CoinsOffered(trade.player2CoinsOffered || { cp: 0, sp: 0, gp: 0, pp: 0 });
+        
+        // Load items from trade
+        const p1Items: Item[] = [];
+        const p2Items: Item[] = [];
+        trade.itemsToTrade.forEach(tradeItem => {
+          if (tradeItem.source === 'player1') {
+            p1Items.push(tradeItem.item);
+          } else if (tradeItem.source === 'player2') {
+            p2Items.push(tradeItem.item);
+          }
+        });
+        setPlayer1Items(p1Items);
+        setPlayer2Items(p2Items);
+      } else {
+        setActiveTrade(null);
+        setPlayer1Items([]);
+        setPlayer2Items([]);
+        setPlayer1CoinsOffered({ cp: 0, sp: 0, gp: 0, pp: 0 });
+        setPlayer2CoinsOffered({ cp: 0, sp: 0, gp: 0, pp: 0 });
+      }
     };
 
     loadTradeData();
@@ -165,59 +180,10 @@ function App() {
     return () => clearInterval(interval);
   }, [ready]);
 
-  // Load merchant shop data when trade starts
-  useEffect(() => {
-    if (!activeTrade || !activeTrade.merchantTokenId) {
-      setMerchantShopData(null);
-      return;
-    }
-
-    const loadMerchantShop = async () => {
-      try {
-        const tokens = await OBR.scene.items.getItems([activeTrade.merchantTokenId!]);
-        if (tokens.length > 0) {
-          const merchantData = tokens[0].metadata['com.weighted-inventory/data'] as CharacterData;
-          if (merchantData?.merchantShop) {
-            setMerchantShopData(merchantData.merchantShop.inventory);
-          }
-        }
-      } catch (err) {
-        console.error('Failed to load merchant shop:', err);
-      }
-    };
-
-    loadMerchantShop();
-  }, [activeTrade]);
-
-  // Load selected items from activeTrade
-  useEffect(() => {
-    if (!activeTrade || activeTrade.type !== 'merchant') {
-      setSelectedMerchantItems([]);
-      setSelectedPlayerItems([]);
-      return;
-    }
-
-    // Extract selected items from itemsToTrade
-    const merchantItems: MerchantItem[] = [];
-    const playerItems: Item[] = [];
-
-    activeTrade.itemsToTrade.forEach(tradeItem => {
-      if (tradeItem.source === 'merchant' && tradeItem.destination === 'player1') {
-        merchantItems.push(tradeItem.item as MerchantItem);
-      } else if (tradeItem.source === 'player1' && tradeItem.destination === 'merchant') {
-        playerItems.push(tradeItem.item);
-      }
-    });
-
-    setSelectedMerchantItems(merchantItems);
-    setSelectedPlayerItems(playerItems);
-  }, [activeTrade]);
-
-  // Load player's claimed token name and inventory
+  // Load player's claimed token name
   useEffect(() => {
     if (!playerClaimedTokenId) {
       setPlayerClaimedTokenName(null);
-      setPlayerOwnInventory([]);
       return;
     }
 
@@ -226,9 +192,6 @@ function App() {
         const tokens = await OBR.scene.items.getItems([playerClaimedTokenId]);
         if (tokens.length > 0) {
           setPlayerClaimedTokenName(tokens[0].name || 'My Token');
-          const tokenData = tokens[0].metadata['com.weighted-inventory/data'] as CharacterData | undefined;
-          setPlayerOwnInventory(tokenData?.inventory || []);
-          console.log('[PLAYER INVENTORY] Loaded player inventory:', tokenData?.inventory?.length || 0, 'items');
         }
       } catch (err) {
         console.error('Failed to load claimed token data:', err);
@@ -237,50 +200,15 @@ function App() {
 
     loadClaimedTokenData();
 
-    // Refresh every 2 seconds to catch inventory changes
+    // Refresh every 2 seconds to catch changes
     const interval = setInterval(loadClaimedTokenData, 2000);
     return () => clearInterval(interval);
   }, [playerClaimedTokenId]);
 
-  // Load all merchants for GM overview
-  useEffect(() => {
-    if (!ready || playerRole !== 'GM') return;
-
-    const loadAllMerchants = async () => {
-      try {
-        const allTokens = await OBR.scene.items.getItems();
-        const merchants = allTokens
-          .filter(token => {
-            const data = token.metadata['com.weighted-inventory/data'] as CharacterData | undefined;
-            return data?.merchantShop?.isActive;
-          })
-          .map(token => {
-            const data = token.metadata['com.weighted-inventory/data'] as CharacterData;
-            return {
-              id: token.id,
-              name: token.name || 'Unnamed Merchant',
-              itemCount: data.merchantShop?.inventory.length || 0
-            };
-          });
-        setAllMerchants(merchants);
-      } catch (err) {
-        console.error('Failed to load merchants:', err);
-      }
-    };
-
-    loadAllMerchants();
-
-    // Refresh every 5 seconds
-    const interval = setInterval(loadAllMerchants, 5000);
-    return () => clearInterval(interval);
-  }, [ready, playerRole]);
-
   // Load player2 data for P2P trades
   useEffect(() => {
-    if (!activeTrade || activeTrade.type !== 'player-to-player' || !activeTrade.player2TokenId) {
+    if (!activeTrade || !activeTrade.player2TokenId) {
       setPlayer2Data(null);
-      setPlayer1Items([]);
-      setPlayer2Items([]);
       return;
     }
 
@@ -930,192 +858,7 @@ function App() {
     );
   }
 
-  // ===== MERCHANT MODE & TRADING FUNCTIONS =====
-  // (Currency and trade calculation utilities imported from utils/)
-
-  // Toggle merchant mode on current token
-  const handleToggleMerchantMode = () => {
-    if (!characterData || playerRole !== 'GM') return;
-
-    if (characterData.merchantShop?.isActive) {
-      // Disable merchant mode
-      handleUpdateData({ merchantShop: undefined });
-    } else {
-      // Enable merchant mode
-      handleUpdateData({
-        merchantShop: {
-          isActive: true,
-          buybackRate: DEFAULT_BUYBACK_RATE,
-          inventory: []
-        }
-      });
-    }
-  };
-
-  // Add item to merchant shop from repository
-  const handleAddToMerchantShop = (repoItem: {name: string; value: string; weight: number; type: string; category: ItemCategory; ac?: number; damage?: string; properties?: string; requiresAttunement?: boolean}) => {
-    if (!characterData?.merchantShop || playerRole !== 'GM') return;
-
-    const merchantItem: MerchantItem = {
-      id: uuidv4(),
-      name: repoItem.name,
-      value: repoItem.value,
-      weight: repoItem.weight,
-      type: repoItem.type,
-      category: repoItem.category,
-      qty: 1,
-      ac: repoItem.ac,
-      damage: repoItem.damage,
-      properties: repoItem.properties || '',
-      requiresAttunement: repoItem.requiresAttunement || false,
-      isAttuned: false,
-      equippedSlot: null,
-      sellPrice: repoItem.value,
-      buyPrice: calculateBuyback(repoItem.value, characterData.merchantShop.buybackRate)
-    };
-
-    const updatedShop = {
-      ...characterData.merchantShop,
-      inventory: [...characterData.merchantShop.inventory, merchantItem]
-    };
-
-    handleUpdateData({ merchantShop: updatedShop });
-  };
-
-  // Remove item from merchant shop
-  const handleRemoveFromMerchantShop = (itemId: string) => {
-    if (!characterData?.merchantShop || playerRole !== 'GM') return;
-
-    const updatedShop = {
-      ...characterData.merchantShop,
-      inventory: characterData.merchantShop.inventory.filter(i => i.id !== itemId)
-    };
-
-    handleUpdateData({ merchantShop: updatedShop });
-  };
-
-  // Update merchant item price (GM override)
-  const handleUpdateMerchantPrice = (itemId: string, newPrice: string) => {
-    if (!characterData?.merchantShop || playerRole !== 'GM') return;
-
-    const updatedShop = {
-      ...characterData.merchantShop,
-      inventory: characterData.merchantShop.inventory.map(item =>
-        item.id === itemId
-          ? { ...item, sellPrice: newPrice, buyPrice: calculateBuyback(newPrice, characterData.merchantShop!.buybackRate) }
-          : item
-      )
-    };
-
-    handleUpdateData({ merchantShop: updatedShop });
-  };
-
-  // Start a new trade session
-  const handleStartTrade = async (merchantTokenId: string) => {
-    console.log('[START TRADE] Function called with merchantTokenId:', merchantTokenId);
-    console.log('[START TRADE] playerClaimedTokenId:', playerClaimedTokenId);
-    console.log('[START TRADE] playerId:', playerId);
-    console.log('[START TRADE] playerClaimedTokenName:', playerClaimedTokenName);
-
-    // Check if player has a claimed token
-    if (!playerClaimedTokenId || !playerId || !playerClaimedTokenName) {
-      console.log('[START TRADE] Missing player data, showing alert');
-      alert('You must claim a token before you can trade! Select your character token and click "CLAIM TOKEN".');
-      return;
-    }
-
-    console.log('[START TRADE] Checking proximity...');
-    // Check proximity between player's claimed token and merchant
-    const isNear = await checkProximity(playerClaimedTokenId, merchantTokenId);
-    console.log('[START TRADE] Proximity check result:', isNear);
-    if (!isNear) {
-      alert('Your character must be near the merchant token to trade!');
-      return;
-    }
-
-    // Check if merchant is already in a trade
-    console.log('[START TRADE] Checking if merchant already in trade...');
-    console.log('[START TRADE] activeTrade:', activeTrade);
-    if (activeTrade && activeTrade.merchantTokenId === merchantTokenId) {
-      console.log('[START TRADE] Merchant already in trade, showing alert');
-      alert('This merchant is already in a trade!');
-      return;
-    }
-
-    // Check/join queue
-    console.log('[START TRADE] Checking trade queue...');
-    console.log('[START TRADE] tradeQueues:', tradeQueues);
-    let queue: TradeQueue | null = tradeQueues[merchantTokenId] || null;
-    console.log('[START TRADE] Queue for this merchant:', queue);
-
-    // If there's a queue but no active trade, it's stale - clear it
-    if (queue && !activeTrade) {
-      console.log('[START TRADE] Found stale queue (no active trade), clearing it...');
-      const { [merchantTokenId]: _, ...remainingQueues } = tradeQueues;
-      await OBR.room.setMetadata({ [TRADE_QUEUES_KEY]: remainingQueues });
-      queue = null; // Treat as if no queue exists
-    }
-
-    if (queue) {
-      if (queue.current && queue.current !== playerId) {
-        console.log('[START TRADE] Someone else trading, joining queue...');
-        // Someone else is trading, join queue
-        if (!queue.queue.includes(playerId)) {
-          const updatedQueues = {
-            ...tradeQueues,
-            [merchantTokenId]: {
-              ...queue,
-              queue: [...queue.queue, playerId]
-            }
-          };
-          await OBR.room.setMetadata({ [TRADE_QUEUES_KEY]: updatedQueues });
-          console.log('[START TRADE] Added to queue, returning');
-          const position = queue.queue.length + 1; // +1 because current player counts
-          alert(`Someone is already trading with this merchant. You have been added to the queue.\n\nYour position: ${position}`);
-        } else {
-          const position = queue.queue.indexOf(playerId) + 1;
-          alert(`You are already in the queue for this merchant.\n\nYour position: ${position}`);
-        }
-        return;
-      }
-    }
-
-    // Create new queue with this player as current (if no queue exists or stale was cleared)
-    if (!queue) {
-      console.log('[START TRADE] No queue exists, creating new queue...');
-      const newQueue: TradeQueue = {
-        merchantTokenId,
-        current: playerId,
-        queue: []
-      };
-      await OBR.room.setMetadata({
-        [TRADE_QUEUES_KEY]: { ...tradeQueues, [merchantTokenId]: newQueue }
-      });
-      console.log('[START TRADE] Queue created');
-    }
-
-    // Start trade (using player's claimed token, not the currently viewed token)
-    console.log('[START TRADE] Creating trade object...');
-    const trade: ActiveTrade = {
-      id: uuidv4(),
-      type: 'merchant',
-      merchantTokenId,
-      player1TokenId: playerClaimedTokenId,
-      player1Id: playerId,
-      player1Name: playerClaimedTokenName,
-      itemsToTrade: [],
-      netCost: { amount: 0, currency: 'gp', owedTo: 'even' },
-      status: 'proposing',
-      timestamp: Date.now()
-    };
-
-    console.log('[START TRADE] Trade object created:', trade);
-    console.log('[START TRADE] Setting room metadata...');
-    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: trade });
-    console.log('[START TRADE] Metadata set, switching to Merchant tab');
-    setActiveTab('Merchant');
-    console.log('[START TRADE] Complete!');
-  };
+  // ===== P2P TRADING FUNCTIONS =====
 
   // Start player-to-player trade
   const handleStartP2PTrade = async (otherPlayerTokenId: string) => {
@@ -1161,6 +904,8 @@ function App() {
       player2TokenId: otherPlayerTokenId,
       player2Id: otherPlayerId,
       player2Name: otherTokenName,
+      player1CoinsOffered: { cp: 0, sp: 0, gp: 0, pp: 0 },
+      player2CoinsOffered: { cp: 0, sp: 0, gp: 0, pp: 0 },
       itemsToTrade: [],
       netCost: { amount: 0, currency: 'gp', owedTo: 'even' },
       status: 'proposing',
@@ -1192,231 +937,168 @@ function App() {
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
     console.log('[TRADE] Active trade cleared');
 
-    // Advance queue if applicable
-    if (activeTrade.merchantTokenId) {
-      const queue = tradeQueues[activeTrade.merchantTokenId];
-      if (queue && queue.queue.length > 0) {
-        const nextPlayer = queue.queue[0];
-        const updatedQueue = {
-          ...queue,
-          current: nextPlayer,
-          queue: queue.queue.slice(1)
-        };
-        await OBR.room.setMetadata({
-          [TRADE_QUEUES_KEY]: { ...tradeQueues, [activeTrade.merchantTokenId]: updatedQueue }
-        });
-      } else if (queue) {
-        const { [activeTrade.merchantTokenId]: _, ...remainingQueues } = tradeQueues;
-        await OBR.room.setMetadata({ [TRADE_QUEUES_KEY]: remainingQueues });
-      }
-    }
-
-    setSelectedMerchantItems([]);
-    setSelectedPlayerItems([]);
+    // Reset local state
+    setPlayer1Items([]);
+    setPlayer2Items([]);
+    setPlayer1CoinsOffered({ cp: 0, sp: 0, gp: 0, pp: 0 });
+    setPlayer2CoinsOffered({ cp: 0, sp: 0, gp: 0, pp: 0 });
   };
 
-  // Toggle merchant item selection and sync to room metadata
-  const handleToggleMerchantItem = async (item: MerchantItem) => {
-    if (!activeTrade || activeTrade.type !== 'merchant') return;
+  // Sync item selection to room metadata for P2P trades
+  const syncP2PTradeToMetadata = async (
+    p1Items: Item[],
+    p2Items: Item[],
+    p1Coins: Currency,
+    p2Coins: Currency
+  ) => {
+    if (!activeTrade) return;
 
-    const isSelected = selectedMerchantItems.some(si => si.id === item.id);
-    const newSelected = isSelected
-      ? selectedMerchantItems.filter(i => i.id !== item.id)
-      : [...selectedMerchantItems, item];
-
-    setSelectedMerchantItems(newSelected);
-
-    // Build updated itemsToTrade
+    // Build itemsToTrade
     const tradeItems: typeof activeTrade.itemsToTrade = [];
 
-    // Items to buy from merchant
-    newSelected.forEach(merchantItem => {
+    // Items player1 is giving to player2
+    p1Items.forEach(item => {
       tradeItems.push({
-        item: merchantItem,
-        source: 'merchant',
+        item,
+        source: 'player1',
+        destination: 'player2'
+      });
+    });
+
+    // Items player2 is giving to player1
+    p2Items.forEach(item => {
+      tradeItems.push({
+        item,
+        source: 'player2',
         destination: 'player1'
       });
     });
 
-    // Items to sell to merchant (keep existing)
-    selectedPlayerItems.forEach(playerItem => {
-      tradeItems.push({
-        item: playerItem,
-        source: 'player1',
-        destination: 'merchant'
-      });
-    });
-
-    const netCost = calculateTradeCost(newSelected, selectedPlayerItems);
+    const netCost = calculateP2PCost(p1Items, p2Items, p1Coins, p2Coins);
 
     // Update trade in room metadata
-    const updatedTrade = { ...activeTrade, itemsToTrade: tradeItems, netCost };
+    const updatedTrade: ActiveTrade = {
+      ...activeTrade,
+      itemsToTrade: tradeItems,
+      player1CoinsOffered: p1Coins,
+      player2CoinsOffered: p2Coins,
+      netCost
+    };
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
   };
 
-  // Toggle player item selection and sync to room metadata
-  const handleTogglePlayerItem = async (item: Item) => {
-    if (!activeTrade || activeTrade.type !== 'merchant') return;
-
-    const isSelected = selectedPlayerItems.some(si => si.id === item.id);
-    const newSelected = isSelected
-      ? selectedPlayerItems.filter(i => i.id !== item.id)
-      : [...selectedPlayerItems, item];
-
-    setSelectedPlayerItems(newSelected);
-
-    // Build updated itemsToTrade
-    const tradeItems: typeof activeTrade.itemsToTrade = [];
-
-    // Items to buy from merchant (keep existing)
-    selectedMerchantItems.forEach(merchantItem => {
-      tradeItems.push({
-        item: merchantItem,
-        source: 'merchant',
-        destination: 'player1'
-      });
-    });
-
-    // Items to sell to merchant
-    newSelected.forEach(playerItem => {
-      tradeItems.push({
-        item: playerItem,
-        source: 'player1',
-        destination: 'merchant'
-      });
-    });
-
-    const netCost = calculateTradeCost(selectedMerchantItems, newSelected);
-
-    // Update trade in room metadata
-    const updatedTrade = { ...activeTrade, itemsToTrade: tradeItems, netCost };
-    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+  // Handle player1 item selection changes
+  const handleSetPlayer1Items = (items: Item[]) => {
+    setPlayer1Items(items);
+    syncP2PTradeToMetadata(items, player2Items, player1CoinsOffered, player2CoinsOffered);
   };
 
-  // Approve and execute trade (GM for merchant trades, both players for P2P)
+  // Handle player2 item selection changes
+  const handleSetPlayer2Items = (items: Item[]) => {
+    setPlayer2Items(items);
+    syncP2PTradeToMetadata(player1Items, items, player1CoinsOffered, player2CoinsOffered);
+  };
+
+  // Handle player1 coins offered changes
+  const handleSetPlayer1CoinsOffered = (coins: Currency) => {
+    setPlayer1CoinsOffered(coins);
+    syncP2PTradeToMetadata(player1Items, player2Items, coins, player2CoinsOffered);
+  };
+
+  // Handle player2 coins offered changes
+  const handleSetPlayer2CoinsOffered = (coins: Currency) => {
+    setPlayer2CoinsOffered(coins);
+    syncP2PTradeToMetadata(player1Items, player2Items, player1CoinsOffered, coins);
+  };
+
+  // Approve and execute P2P trade
   const handleApproveTrade = async () => {
     if (!activeTrade || isExecutingTrade) return;
 
-    // For merchant trades, only GM can approve
-    if (activeTrade.type === 'merchant') {
-      if (playerRole !== 'GM') {
-        alert('Only the GM can approve merchant trades.');
-        return;
-      }
+    const isPlayer1 = activeTrade.player1Id === playerId;
+    const isPlayer2 = activeTrade.player2Id === playerId;
+    const isGM = playerRole === 'GM';
 
-      // Check if player has enough coins (if they owe the merchant)
-      if (activeTrade.netCost.owedTo === 'merchant') {
-        try {
-          const playerToken = await OBR.scene.items.getItems([activeTrade.player1TokenId]);
-          if (playerToken.length > 0) {
-            const playerData = playerToken[0].metadata['com.weighted-inventory/data'] as CharacterData;
-            const playerTotalCp = getTotalCopperPieces(playerData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 });
-            const costCp = toCopperPieces(activeTrade.netCost.amount, activeTrade.netCost.currency);
+    if (!isPlayer1 && !isPlayer2 && !isGM) {
+      alert('Only the trading players or GM can approve this trade.');
+      return;
+    }
 
-            if (playerTotalCp < costCp) {
-              alert(`Player does not have enough coins! They need ${activeTrade.netCost.amount} ${activeTrade.netCost.currency} but only have ${fromCopperPieces(playerTotalCp).amount} ${fromCopperPieces(playerTotalCp).type} total.`);
-              return;
-            }
-          }
-        } catch (err) {
-          console.error('Failed to check player coins:', err);
-          alert('Failed to verify player has enough coins. Check console for details.');
-          return;
-        }
-      }
+    // Build itemsToTrade and netCost
+    const tradeItems: typeof activeTrade.itemsToTrade = [];
 
-      // Items and cost are already in activeTrade (synced from player)
-      // GM approves - execute immediately
+    // Items player1 is giving to player2
+    player1Items.forEach(item => {
+      tradeItems.push({
+        item,
+        source: 'player1',
+        destination: 'player2'
+      });
+    });
+
+    // Items player2 is giving to player1
+    player2Items.forEach(item => {
+      tradeItems.push({
+        item,
+        source: 'player2',
+        destination: 'player1'
+      });
+    });
+
+    const netCost = calculateP2PCost(player1Items, player2Items, player1CoinsOffered, player2CoinsOffered);
+
+    // Update approval status and trade details
+    const updatedTrade: ActiveTrade = {
+      ...activeTrade,
+      itemsToTrade: tradeItems,
+      player1CoinsOffered: player1CoinsOffered,
+      player2CoinsOffered: player2CoinsOffered,
+      netCost,
+      player1Approved: isPlayer1 ? true : activeTrade.player1Approved,
+      player2Approved: isPlayer2 ? true : activeTrade.player2Approved
+    };
+
+    // GM can force execute
+    if (isGM && !isPlayer1 && !isPlayer2) {
+      updatedTrade.player1Approved = true;
+      updatedTrade.player2Approved = true;
+    }
+
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+
+    // Check if both players approved
+    if (updatedTrade.player1Approved && updatedTrade.player2Approved) {
+      // Both approved - execute trade
       setIsExecutingTrade(true);
       try {
         await executeTrade();
       } finally {
         setIsExecutingTrade(false);
       }
-      return;
-    }
-
-    // For P2P trades, both players must approve
-    if (activeTrade.type === 'player-to-player') {
-      const isPlayer1 = activeTrade.player1Id === playerId;
-      const isPlayer2 = activeTrade.player2Id === playerId;
-
-      if (!isPlayer1 && !isPlayer2) {
-        alert('Only the trading players can approve this trade.');
-        return;
-      }
-
-      // Build itemsToTrade and netCost
-      const tradeItems: typeof activeTrade.itemsToTrade = [];
-
-      // Items player1 is giving to player2
-      player1Items.forEach(item => {
-        tradeItems.push({
-          item,
-          source: 'player1',
-          destination: 'player2'
-        });
-      });
-
-      // Items player2 is giving to player1
-      player2Items.forEach(item => {
-        tradeItems.push({
-          item,
-          source: 'player2',
-          destination: 'player1'
-        });
-      });
-
-      const netCost = calculateP2PCost(player1Items, player2Items);
-
-      // Update approval status and trade details
-      const updatedTrade: ActiveTrade = {
-        ...activeTrade,
-        itemsToTrade: tradeItems,
-        netCost,
-        player1Approved: isPlayer1 ? true : activeTrade.player1Approved,
-        player2Approved: isPlayer2 ? true : activeTrade.player2Approved
-      };
-
-      await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
-
-      // Check if both players approved
-      if (updatedTrade.player1Approved && updatedTrade.player2Approved) {
-        // Both approved - execute trade
-        setIsExecutingTrade(true);
-        try {
-          await executeTrade();
-        } finally {
-          setIsExecutingTrade(false);
-        }
-      } else {
-        alert('Waiting for other player to approve...');
-      }
-      return;
+    } else {
+      alert('Waiting for other player to approve...');
     }
   };
 
-  // Execute the trade - transfer items and currency between tokens
+  // Execute the P2P trade - transfer items and currency between tokens
   const executeTrade = async () => {
     if (!activeTrade || isExecutingTrade) return;
     try {
       // Get all involved tokens
       const tokenIds = [activeTrade.player1TokenId];
-      if (activeTrade.merchantTokenId) tokenIds.push(activeTrade.merchantTokenId);
       if (activeTrade.player2TokenId) tokenIds.push(activeTrade.player2TokenId);
 
       // Update tokens with new inventories and currency
       await OBR.scene.items.updateItems(tokenIds, (items) => {
+        // Transfer items
         activeTrade.itemsToTrade.forEach(tradeItem => {
           const sourceToken = items.find(t => {
-            if (tradeItem.source === 'merchant') return t.id === activeTrade.merchantTokenId;
             if (tradeItem.source === 'player1') return t.id === activeTrade.player1TokenId;
             if (tradeItem.source === 'player2') return t.id === activeTrade.player2TokenId;
             return false;
           });
 
           const destToken = items.find(t => {
-            if (tradeItem.destination === 'merchant') return t.id === activeTrade.merchantTokenId;
             if (tradeItem.destination === 'player1') return t.id === activeTrade.player1TokenId;
             if (tradeItem.destination === 'player2') return t.id === activeTrade.player2TokenId;
             return false;
@@ -1427,105 +1109,56 @@ function App() {
             const destData = destToken.metadata['com.weighted-inventory/data'] as CharacterData;
 
             // Remove from source
-            if (tradeItem.source === 'merchant') {
-              // Removing from merchant shop inventory
-              if (sourceData.merchantShop) {
-                sourceData.merchantShop.inventory = sourceData.merchantShop.inventory.filter(i => i.id !== tradeItem.item.id);
-              }
-            } else {
-              // Removing from player inventory
-              sourceData.inventory = sourceData.inventory.filter(i => i.id !== tradeItem.item.id);
-            }
+            sourceData.inventory = sourceData.inventory.filter(i => i.id !== tradeItem.item.id);
 
             // Add to destination
-            if (tradeItem.destination === 'merchant') {
-              // Adding to merchant shop inventory (player selling to merchant)
-              if (destData.merchantShop) {
-                const merchantItem: MerchantItem = {
-                  ...tradeItem.item,
-                  equippedSlot: null,
-                  isAttuned: false,
-                  sellPrice: tradeItem.item.value,
-                  buyPrice: calculateBuyback(tradeItem.item.value, destData.merchantShop.buybackRate)
-                };
-                destData.merchantShop.inventory.push(merchantItem);
-              }
-            } else {
-              // Adding to player inventory
-              destData.inventory.push({ ...tradeItem.item, equippedSlot: null, isAttuned: false });
-            }
+            destData.inventory.push({ ...tradeItem.item, equippedSlot: null, isAttuned: false });
 
             sourceToken.metadata['com.weighted-inventory/data'] = sourceData;
             destToken.metadata['com.weighted-inventory/data'] = destData;
           }
         });
 
-        // Handle currency transfer with new coin system
-        if (activeTrade.netCost.owedTo !== 'even') {
-          // Convert net cost to copper pieces
-          const netCostCp = toCopperPieces(activeTrade.netCost.amount, activeTrade.netCost.currency);
+        // Transfer coins offered by each player
+        const player1Token = items.find(t => t.id === activeTrade.player1TokenId);
+        const player2Token = items.find(t => t.id === activeTrade.player2TokenId);
 
-          if (activeTrade.type === 'merchant') {
-            const playerToken = items.find(t => t.id === activeTrade.player1TokenId);
-            const merchantToken = items.find(t => t.id === activeTrade.merchantTokenId);
+        if (player1Token && player2Token) {
+          const player1Data = player1Token.metadata['com.weighted-inventory/data'] as CharacterData;
+          const player2Data = player2Token.metadata['com.weighted-inventory/data'] as CharacterData;
 
-            if (playerToken && merchantToken) {
-              const playerData = playerToken.metadata['com.weighted-inventory/data'] as CharacterData;
+          // Ensure currency objects exist
+          if (!player1Data.currency) player1Data.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
+          if (!player2Data.currency) player2Data.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
 
-              // Ensure currency object exists
-              if (!playerData.currency) {
-                playerData.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
-              }
+          // Get coin offers
+          const p1CoinsOffered = activeTrade.player1CoinsOffered || { cp: 0, sp: 0, gp: 0, pp: 0 };
+          const p2CoinsOffered = activeTrade.player2CoinsOffered || { cp: 0, sp: 0, gp: 0, pp: 0 };
 
-              if (activeTrade.netCost.owedTo === 'merchant') {
-                // Player owes merchant
-                const success = deductCopperPieces(playerData.currency, netCostCp);
-                if (!success) {
-                  throw new Error('Player does not have enough coins to complete this trade!');
-                }
-                // Merchant has infinite coins, so we don't add to merchant
-              } else {
-                // Merchant owes player (giving change)
-                addCopperPieces(playerData.currency, netCostCp);
-                // Merchant has infinite coins, so we don't deduct from merchant
-              }
+          // Convert to copper for transfer
+          const p1CoinsCp = getTotalCopperPieces(p1CoinsOffered);
+          const p2CoinsCp = getTotalCopperPieces(p2CoinsOffered);
 
-              playerToken.metadata['com.weighted-inventory/data'] = playerData;
+          // Deduct player1's offered coins and give to player2
+          if (p1CoinsCp > 0) {
+            const success = deductCopperPieces(player1Data.currency, p1CoinsCp);
+            if (!success) {
+              throw new Error(`${activeTrade.player1Name} does not have enough coins!`);
             }
-          } else {
-            // P2P trade - use original logic
-            let payerToken, receiverToken;
-
-            payerToken = items.find(t =>
-              activeTrade.netCost.owedTo === 'player1'
-                ? t.id === activeTrade.player2TokenId
-                : t.id === activeTrade.player1TokenId
-            );
-            receiverToken = items.find(t =>
-              activeTrade.netCost.owedTo === 'player1'
-                ? t.id === activeTrade.player1TokenId
-                : t.id === activeTrade.player2TokenId
-            );
-
-            if (payerToken && receiverToken) {
-              const payerData = payerToken.metadata['com.weighted-inventory/data'] as CharacterData;
-              const receiverData = receiverToken.metadata['com.weighted-inventory/data'] as CharacterData;
-
-              // Ensure currency objects exist
-              if (!payerData.currency) payerData.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
-              if (!receiverData.currency) receiverData.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
-
-              // Deduct from payer and add to receiver
-              const success = deductCopperPieces(payerData.currency, netCostCp);
-              if (!success) {
-                throw new Error('Payer does not have enough coins to complete this trade!');
-              }
-              addCopperPieces(receiverData.currency, netCostCp);
-
-              payerToken.metadata['com.weighted-inventory/data'] = payerData;
-              receiverToken.metadata['com.weighted-inventory/data'] = receiverData;
-            }
+            addCopperPieces(player2Data.currency, p1CoinsCp);
           }
+
+          // Deduct player2's offered coins and give to player1
+          if (p2CoinsCp > 0) {
+            const success = deductCopperPieces(player2Data.currency, p2CoinsCp);
+            if (!success) {
+              throw new Error(`${activeTrade.player2Name} does not have enough coins!`);
+            }
+            addCopperPieces(player1Data.currency, p2CoinsCp);
+          }
+
+          player1Token.metadata['com.weighted-inventory/data'] = player1Data;
+          player2Token.metadata['com.weighted-inventory/data'] = player2Data;
         }
       });
 
@@ -1536,7 +1169,7 @@ function App() {
       alert('Trade completed successfully!');
     } catch (err) {
       console.error('Failed to execute trade:', err);
-      alert('Trade failed! Check console for details.');
+      alert(`Trade failed! ${err instanceof Error ? err.message : 'Check console for details.'}`);
     }
   };
 
@@ -1546,43 +1179,17 @@ function App() {
     { id: 'Create', label: 'CREATE' }, { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
   ];
 
-  // Add GM tab first (always visible to GMs)
+  // Add GM tab (always visible to GMs)
   if (playerRole === 'GM') {
     baseTabs.push({ id: 'GM', label: 'GM' });
   }
 
-  // Add conditional tabs
-  if (characterData?.merchantShop?.isActive) {
-    if (playerRole === 'GM') {
-      baseTabs.push({ id: 'Merchant', label: 'SHOP' });
-    } else {
-      // Players see a browse-only shop tab
-      baseTabs.push({ id: 'Merchant', label: 'BROWSE' });
-    }
-  }
-  // Only show Trade tab for P2P trades (merchant trades happen in Browse tab)
-  if (activeTrade && activeTrade.type === 'player-to-player' && (activeTrade.player1Id === playerId || activeTrade.player2Id === playerId || playerRole === 'GM')) {
+  // Show Trade tab when there's an active P2P trade for relevant players
+  if (activeTrade && (activeTrade.player1Id === playerId || activeTrade.player2Id === playerId || playerRole === 'GM')) {
     baseTabs.push({ id: 'Trade', label: 'TRADE' });
   }
 
   let visibleTabs = baseTabs;
-
-  // If viewing a merchant token, filter tabs based on role
-  if (characterData?.merchantShop?.isActive) {
-    if (!canEditToken()) {
-      // Players viewing merchant: only show Merchant tab
-      console.log('[MERCHANT MODE] Filtering tabs - merchant mode active, player cannot edit');
-      console.log('[MERCHANT MODE] Before filter:', visibleTabs.map(t => t.id));
-      visibleTabs = visibleTabs.filter(t => ['Merchant'].includes(t.id));
-      console.log('[MERCHANT MODE] After filter:', visibleTabs.map(t => t.id));
-    } else if (playerRole === 'GM') {
-      // GM viewing merchant: only show Home and Merchant tabs
-      console.log('[MERCHANT MODE] Filtering tabs - merchant mode active, GM view');
-      console.log('[MERCHANT MODE] Before filter:', visibleTabs.map(t => t.id));
-      visibleTabs = visibleTabs.filter(t => ['Home', 'Merchant', 'GM'].includes(t.id));
-      console.log('[MERCHANT MODE] After filter:', visibleTabs.map(t => t.id));
-    }
-  }
 
   if (viewingStorageId) {
       visibleTabs = visibleTabs.filter(t => t.id !== 'External');
@@ -1627,12 +1234,10 @@ function App() {
             setViewingFavorites={setViewingFavorites}
             activeTrade={activeTrade}
             tokenId={tokenId}
-            handleStartTrade={handleStartTrade}
             canEditToken={canEditToken}
             claimToken={claimToken}
             unclaimToken={unclaimToken}
             handleUpdateData={handleUpdateData}
-            handleToggleMerchantMode={handleToggleMerchantMode}
             handleStartP2PTrade={handleStartP2PTrade}
             updateData={updateData}
             PACK_DEFINITIONS={PACK_DEFINITIONS}
@@ -2424,64 +2029,25 @@ function App() {
             </div>
         )}
 
-        {/* === MERCHANT TAB === */}
-        {activeTab === 'Merchant' && characterData?.merchantShop && (
-          <MerchantTab
-            characterData={characterData}
-            playerRole={playerRole}
-            tokenImage={tokenImage}
-            tokenName={tokenName}
-            currentDisplayData={currentDisplayData}
-            toggleFavorite={toggleFavorite}
-            isFavorited={isFavorited}
-            favorites={favorites}
-            setViewingFavorites={setViewingFavorites}
-            activeTrade={activeTrade}
-            playerId={playerId}
-            handleStartTrade={handleStartTrade}
-            tokenId={tokenId}
-            selectedMerchantItems={selectedMerchantItems}
-            handleToggleMerchantItem={handleToggleMerchantItem}
-            playerOwnInventory={playerOwnInventory}
-            selectedPlayerItems={selectedPlayerItems}
-            handleTogglePlayerItem={handleTogglePlayerItem}
-            handleCancelTrade={handleCancelTrade}
-            ACTIVE_TRADE_KEY={ACTIVE_TRADE_KEY}
-            newItem={newItem}
-            setNewItem={setNewItem}
-            ITEM_CATEGORIES={ITEM_CATEGORIES}
-            handleUpdateData={handleUpdateData}
-            repoSearch={repoSearch}
-            setRepoSearch={setRepoSearch}
-            ITEM_REPOSITORY={ITEM_REPOSITORY}
-            handleAddToMerchantShop={handleAddToMerchantShop}
-            handleUpdateMerchantPrice={handleUpdateMerchantPrice}
-            handleRemoveFromMerchantShop={handleRemoveFromMerchantShop}
-          />
-        )}
-
         {/* === TRADE TAB === */}
         {activeTab === 'Trade' && activeTrade && (
           <TradeTab
             activeTrade={activeTrade}
-            tradeQueues={tradeQueues}
             playerId={playerId}
-            merchantShopData={merchantShopData}
-            selectedMerchantItems={selectedMerchantItems}
-            handleToggleMerchantItem={handleToggleMerchantItem}
-            playerOwnInventory={playerOwnInventory}
-            selectedPlayerItems={selectedPlayerItems}
-            handleTogglePlayerItem={handleTogglePlayerItem}
             characterData={characterData}
             player1Items={player1Items}
             player2Items={player2Items}
-            setPlayer1Items={setPlayer1Items}
-            setPlayer2Items={setPlayer2Items}
+            setPlayer1Items={handleSetPlayer1Items}
+            setPlayer2Items={handleSetPlayer2Items}
             player2Data={player2Data}
             playerRole={playerRole}
             isExecutingTrade={isExecutingTrade}
             handleApproveTrade={handleApproveTrade}
             handleCancelTrade={handleCancelTrade}
+            player1CoinsOffered={player1CoinsOffered}
+            player2CoinsOffered={player2CoinsOffered}
+            setPlayer1CoinsOffered={handleSetPlayer1CoinsOffered}
+            setPlayer2CoinsOffered={handleSetPlayer2CoinsOffered}
           />
         )}
 
@@ -2489,8 +2055,6 @@ function App() {
         {activeTab === 'GM' && playerRole === 'GM' && (
           <GMOverviewTab
             activeTrade={activeTrade}
-            tradeQueues={tradeQueues}
-            allMerchants={allMerchants}
             isExecutingTrade={isExecutingTrade}
             handleApproveTrade={handleApproveTrade}
             handleCancelTrade={handleCancelTrade}

@@ -1,4 +1,4 @@
-import type { CharacterData, PackType } from '../../types';
+import type { CharacterData, PackType, ActiveTrade } from '../../types';
 
 interface Stats {
   totalWeight: number;
@@ -44,17 +44,15 @@ interface HomeTabProps {
   isFavorited: boolean;
   favorites: Array<{ id: string; name: string }>;
   setViewingFavorites: (viewing: boolean) => void;
-  activeTrade: any;
+  activeTrade: ActiveTrade | null;
   tokenId: string | null;
-  handleStartTrade: (tokenId: string) => void;
   canEditToken: () => boolean;
   claimToken: () => Promise<boolean | undefined>;
   unclaimToken: () => void;
   handleUpdateData: (updates: Partial<CharacterData>) => void;
-  handleToggleMerchantMode: () => void;
   handleStartP2PTrade: (tokenId: string) => void;
   updateData: (updates: Partial<CharacterData>) => void;
-  PACK_DEFINITIONS: Record<string, any>;
+  PACK_DEFINITIONS: Record<string, { capacity: number; utilitySlots: number }>;
   theme: Theme;
   updateTheme: (theme: Theme) => void;
   currentDisplayData: CharacterData;
@@ -77,12 +75,10 @@ export function HomeTab({
   setViewingFavorites,
   activeTrade,
   tokenId,
-  handleStartTrade,
   canEditToken,
   claimToken,
   unclaimToken,
   handleUpdateData,
-  handleToggleMerchantMode,
   handleStartP2PTrade,
   updateData,
   PACK_DEFINITIONS,
@@ -114,101 +110,8 @@ export function HomeTab({
         </button>
       </div>
 
-      {/* --- TOKEN PROFILE (Player Only) --- */}
-      {!viewingStorageId && (characterData?.merchantShop?.isActive && playerRole !== 'GM' && (!characterData.claimedBy || characterData.claimedBy !== playerId) ? (
-        // Merchant view - full width layout (no wrapper, elements are direct children of .section)
-        <>
-          {tokenImage && (
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              border: '3px solid var(--accent-gold)',
-              background: 'transparent',
-              marginBottom: '8px',
-              margin: '0 auto 8px auto'
-            }}>
-              <img
-                src={tokenImage}
-                alt="Token"
-                style={{width: '100%', height: '100%', objectFit: 'cover'}}
-              />
-            </div>
-          )}
-          <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center', marginBottom: '8px'}}>
-            {tokenName || 'Unknown Character'}
-          </div>
-          <div style={{display: 'flex', gap: '8px', marginBottom: '12px'}}>
-            <button
-              onClick={toggleFavorite}
-              style={{
-                flex: 1,
-                background: 'transparent',
-                border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
-                color: isFavorited ? 'var(--accent-gold)' : '#666',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px'
-              }}
-              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
-            </button>
-            {favorites.length > 0 && (
-              <button
-                onClick={() => setViewingFavorites(true)}
-                style={{
-                  flex: 1,
-                  background: 'rgba(240, 225, 48, 0.1)',
-                  border: '1px solid var(--accent-gold)',
-                  color: 'var(--accent-gold)',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-                title="View all favorite tokens"
-              >
-                ⭐ View Favorites
-              </button>
-            )}
-          </div>
-          {/* Start Merchant Trade Button */}
-          {!activeTrade && tokenId && (
-            <button
-              onClick={() => {
-                console.log('[START TRADE] Button clicked, merchantTokenId:', tokenId);
-                handleStartTrade(tokenId);
-              }}
-              style={{
-                width: '100%',
-                marginBottom: '20px',
-                background: 'var(--accent-gold)',
-                border: 'none',
-                color: 'black',
-                padding: '12px 20px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '13px',
-                fontWeight: 'bold'
-              }}
-            >
-              TRADE WITH MERCHANT
-            </button>
-          )}
-        </>
-      ) : (
-        // Normal view - centered layout
+      {/* --- TOKEN PROFILE --- */}
+      {!viewingStorageId && (
         <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>
           {tokenImage && (
             <div style={{
@@ -217,7 +120,7 @@ export function HomeTab({
               borderRadius: '50%',
               overflow: 'hidden',
               border: '3px solid var(--accent-gold)',
-              background: 'transparent', // Clear background
+              background: 'transparent',
               marginBottom: '8px',
               alignSelf: 'center'
             }}>
@@ -235,14 +138,11 @@ export function HomeTab({
             display: 'flex',
             gap: '8px',
             marginTop: '8px',
-            width: characterData?.merchantShop?.isActive && !canEditToken() ? '100%' : 'auto',
-            alignSelf: characterData?.merchantShop?.isActive && !canEditToken() ? 'stretch' : 'auto',
             justifyContent: 'center'
           }}>
             <button
               onClick={toggleFavorite}
               style={{
-                flex: characterData?.merchantShop?.isActive && !canEditToken() ? 1 : 'none',
                 background: 'transparent',
                 border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
                 color: isFavorited ? 'var(--accent-gold)' : '#666',
@@ -263,7 +163,6 @@ export function HomeTab({
               <button
                 onClick={() => setViewingFavorites(true)}
                 style={{
-                  flex: characterData?.merchantShop?.isActive && !canEditToken() ? 1 : 'none',
                   background: 'rgba(240, 225, 48, 0.1)',
                   border: '1px solid var(--accent-gold)',
                   color: 'var(--accent-gold)',
@@ -364,29 +263,11 @@ export function HomeTab({
               >
                 {characterData.claimingEnabled ? '🔓 CLAIMING ENABLED' : '🔒 CLAIMING DISABLED'}
               </button>
-
-              {/* Merchant Mode Toggle */}
-              <button
-                onClick={handleToggleMerchantMode}
-                style={{
-                  background: characterData.merchantShop?.isActive ? 'rgba(255,0,0,0.2)' : 'rgba(240,225,48,0.2)',
-                  border: '1px solid ' + (characterData.merchantShop?.isActive ? '#f00' : 'var(--accent-gold)'),
-                  color: characterData.merchantShop?.isActive ? '#f00' : 'var(--accent-gold)',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: 'bold',
-                  width: '220px'
-                }}
-              >
-                {characterData.merchantShop?.isActive ? 'DISABLE MERCHANT MODE' : 'ENABLE MERCHANT MODE'}
-              </button>
             </div>
           )}
 
           {/* Start P2P Trade Button */}
-          {characterData && !characterData.merchantShop?.isActive && !activeTrade && tokenId &&
+          {characterData && !activeTrade && tokenId &&
             characterData.claimedBy && characterData.claimedBy !== playerId && (
             <div style={{marginTop: '12px', textAlign: 'center'}}>
               <button
@@ -407,7 +288,7 @@ export function HomeTab({
             </div>
           )}
         </div>
-      ))}
+      )}
 
       {!viewingStorageId ? (
         <>
@@ -495,8 +376,8 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Only show stats if player can edit OR it's storage view (but not for merchants) */}
-      {(canEditToken() || viewingStorageId) && !characterData?.merchantShop?.isActive && (
+      {/* Show stats */}
+      {(canEditToken() || viewingStorageId) && (
         <div className="totals-grid">
           <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
           <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
@@ -504,7 +385,7 @@ export function HomeTab({
         </div>
       )}
 
-      {!viewingStorageId && canEditToken() && !characterData?.merchantShop?.isActive && (
+      {!viewingStorageId && canEditToken() && (
         <>
           <h2 style={{marginTop: '20px', border: 'none'}}>SLOT USAGE</h2>
           <div className="totals-grid">

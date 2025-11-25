@@ -1,25 +1,37 @@
-import type { Item, MerchantItem } from '../types';
-import { parseCurrency, toCopperPieces, fromCopperPieces } from './currency';
-import { DEFAULT_BUYBACK_RATE } from '../constants';
+import type { Item, Currency } from '../types';
+import { parseCurrency, toCopperPieces, fromCopperPieces, getTotalCopperPieces } from './currency';
+
+const DEFAULT_CURRENCY: Currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
 
 /**
- * Calculate net cost for player-to-player trade
+ * Calculate net cost for player-to-player trade, considering both items and coins offered
  */
 export function calculateP2PCost(
   player1GivesItems: Item[],
-  player2GivesItems: Item[]
-): { amount: number; currency: 'cp' | 'sp' | 'gp' | 'pp'; owedTo: 'merchant' | 'player1' | 'player2' | 'even' } {
+  player2GivesItems: Item[],
+  player1CoinsOffered: Currency = DEFAULT_CURRENCY,
+  player2CoinsOffered: Currency = DEFAULT_CURRENCY
+): { amount: number; currency: 'cp' | 'sp' | 'gp' | 'pp'; owedTo: 'player1' | 'player2' | 'even' } {
   // Calculate value of items player1 is giving
-  const player1Total = player1GivesItems.reduce((sum, item) => {
+  const player1ItemsTotal = player1GivesItems.reduce((sum, item) => {
     const { amount, type } = parseCurrency(item.value);
     return sum + (toCopperPieces(amount, type) * item.qty);
   }, 0);
 
   // Calculate value of items player2 is giving
-  const player2Total = player2GivesItems.reduce((sum, item) => {
+  const player2ItemsTotal = player2GivesItems.reduce((sum, item) => {
     const { amount, type } = parseCurrency(item.value);
     return sum + (toCopperPieces(amount, type) * item.qty);
   }, 0);
+
+  // Add coins offered by each player
+  const player1CoinsTotal = getTotalCopperPieces(player1CoinsOffered);
+  const player2CoinsTotal = getTotalCopperPieces(player2CoinsOffered);
+
+  // Total value player1 is giving (items + coins)
+  const player1Total = player1ItemsTotal + player1CoinsTotal;
+  // Total value player2 is giving (items + coins)
+  const player2Total = player2ItemsTotal + player2CoinsTotal;
 
   const netCp = player1Total - player2Total;
   const netAbs = Math.abs(netCp);
@@ -29,36 +41,5 @@ export function calculateP2PCost(
     amount: converted.amount,
     currency: converted.type,
     owedTo: netCp > 0 ? 'player2' : netCp < 0 ? 'player1' : 'even'
-  };
-}
-
-/**
- * Calculate net cost of merchant trade
- */
-export function calculateTradeCost(
-  itemsToBuy: MerchantItem[],
-  itemsToSell: Item[]
-): { amount: number; currency: 'cp' | 'sp' | 'gp' | 'pp'; owedTo: 'merchant' | 'player' | 'even' } {
-  // Calculate total cost to buy from merchant
-  const buyTotal = itemsToBuy.reduce((sum, item) => {
-    const { amount, type } = parseCurrency(item.sellPrice || item.value);
-    return sum + (toCopperPieces(amount, type) * item.qty);
-  }, 0);
-
-  // Calculate total value selling to merchant (at buyback rate)
-  const sellTotal = itemsToSell.reduce((sum, item) => {
-    const { amount, type } = parseCurrency(item.value);
-    const buybackPrice = toCopperPieces(amount, type) * DEFAULT_BUYBACK_RATE;
-    return sum + (buybackPrice * item.qty);
-  }, 0);
-
-  const netCp = buyTotal - sellTotal;
-  const netAbs = Math.abs(netCp);
-  const converted = fromCopperPieces(Math.ceil(netAbs));
-
-  return {
-    amount: converted.amount,
-    currency: converted.type,
-    owedTo: netCp > 0 ? 'merchant' : netCp < 0 ? 'player' : 'even'
   };
 }

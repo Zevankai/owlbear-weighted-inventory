@@ -961,6 +961,67 @@ function App() {
     return `${buybackAmount} ${type}`;
   };
 
+  // Calculate total value of a currency object in copper pieces
+  const getTotalCopperPieces = (currency: Currency): number => {
+    return (
+      (currency.cp || 0) * 1 +
+      (currency.sp || 0) * 10 +
+      (currency.gp || 0) * 100 +
+      (currency.pp || 0) * 1000
+    );
+  };
+
+  // Convert copper pieces to optimal coin breakdown (fewest coins)
+  const breakdownCopperToCoins = (cp: number): Currency => {
+    let remaining = cp;
+    const result: Currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
+
+    result.pp = Math.floor(remaining / 1000);
+    remaining = remaining % 1000;
+
+    result.gp = Math.floor(remaining / 100);
+    remaining = remaining % 100;
+
+    result.sp = Math.floor(remaining / 10);
+    remaining = remaining % 10;
+
+    result.cp = remaining;
+
+    return result;
+  };
+
+  // Deduct copper pieces from a currency object, modifying it in place
+  const deductCopperPieces = (currency: Currency, cpToDeduct: number): boolean => {
+    const totalCp = getTotalCopperPieces(currency);
+
+    if (totalCp < cpToDeduct) {
+      return false; // Not enough coins
+    }
+
+    // Convert all to copper, deduct, then break down optimally
+    const remainingCp = totalCp - cpToDeduct;
+    const breakdown = breakdownCopperToCoins(remainingCp);
+
+    // Update currency object
+    currency.cp = breakdown.cp;
+    currency.sp = breakdown.sp;
+    currency.gp = breakdown.gp;
+    currency.pp = breakdown.pp;
+
+    return true;
+  };
+
+  // Add copper pieces to a currency object, converting to optimal breakdown
+  const addCopperPieces = (currency: Currency, cpToAdd: number): void => {
+    const totalCp = getTotalCopperPieces(currency) + cpToAdd;
+    const breakdown = breakdownCopperToCoins(totalCp);
+
+    currency.cp = breakdown.cp;
+    currency.sp = breakdown.sp;
+    currency.gp = breakdown.gp;
+    currency.pp = breakdown.pp;
+  };
+
   // Toggle merchant mode on current token
   const handleToggleMerchantMode = () => {
     if (!characterData || playerRole !== 'GM') return;
@@ -1389,6 +1450,27 @@ function App() {
         return;
       }
 
+      // Check if player has enough coins (if they owe the merchant)
+      if (activeTrade.netCost.owedTo === 'merchant') {
+        try {
+          const playerToken = await OBR.scene.items.getItems([activeTrade.player1TokenId]);
+          if (playerToken.length > 0) {
+            const playerData = playerToken[0].metadata['com.weighted-inventory/data'] as CharacterData;
+            const playerTotalCp = getTotalCopperPieces(playerData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 });
+            const costCp = toCopperPieces(activeTrade.netCost.amount, activeTrade.netCost.currency);
+
+            if (playerTotalCp < costCp) {
+              alert(`Player does not have enough coins! They need ${activeTrade.netCost.amount} ${activeTrade.netCost.currency} but only have ${fromCopperPieces(playerTotalCp).amount} ${fromCopperPieces(playerTotalCp).type} total.`);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('Failed to check player coins:', err);
+          alert('Failed to verify player has enough coins. Check console for details.');
+          return;
+        }
+      }
+
       // Items and cost are already in activeTrade (synced from player)
       // GM approves - execute immediately
       await executeTrade();
@@ -1481,33 +1563,75 @@ function App() {
             const destData = destToken.metadata['com.weighted-inventory/data'] as CharacterData;
 
             // Remove from source
-            sourceData.inventory = sourceData.inventory.filter(i => i.id !== tradeItem.item.id);
+            if (tradeItem.source === 'merchant') {
+              // Removing from merchant shop inventory
+              if (sourceData.merchantShop) {
+                sourceData.merchantShop.inventory = sourceData.merchantShop.inventory.filter(i => i.id !== tradeItem.item.id);
+              }
+            } else {
+              // Removing from player inventory
+              sourceData.inventory = sourceData.inventory.filter(i => i.id !== tradeItem.item.id);
+            }
 
             // Add to destination
-            destData.inventory.push({ ...tradeItem.item, equippedSlot: null, isAttuned: false });
+            if (tradeItem.destination === 'merchant') {
+              // Adding to merchant shop inventory (player selling to merchant)
+              if (destData.merchantShop) {
+                const merchantItem: MerchantItem = {
+                  ...tradeItem.item,
+                  equippedSlot: null,
+                  isAttuned: false,
+                  sellPrice: tradeItem.item.value,
+                  buyPrice: calculateBuyback(tradeItem.item.value, destData.merchantShop.buybackRate)
+                };
+                destData.merchantShop.inventory.push(merchantItem);
+              }
+            } else {
+              // Adding to player inventory
+              destData.inventory.push({ ...tradeItem.item, equippedSlot: null, isAttuned: false });
+            }
 
             sourceToken.metadata['com.weighted-inventory/data'] = sourceData;
             destToken.metadata['com.weighted-inventory/data'] = destData;
           }
         });
 
-        // Handle currency transfer
+        // Handle currency transfer with new coin system
         if (activeTrade.netCost.owedTo !== 'even') {
-          let payerToken, receiverToken;
+          // Convert net cost to copper pieces
+          const netCostCp = toCopperPieces(activeTrade.netCost.amount, activeTrade.netCost.currency);
 
           if (activeTrade.type === 'merchant') {
-            payerToken = items.find(t =>
-              activeTrade.netCost.owedTo === 'merchant'
-                ? t.id === activeTrade.player1TokenId
-                : t.id === activeTrade.merchantTokenId
-            );
-            receiverToken = items.find(t =>
-              activeTrade.netCost.owedTo === 'merchant'
-                ? t.id === activeTrade.merchantTokenId
-                : t.id === activeTrade.player1TokenId
-            );
+            const playerToken = items.find(t => t.id === activeTrade.player1TokenId);
+            const merchantToken = items.find(t => t.id === activeTrade.merchantTokenId);
+
+            if (playerToken && merchantToken) {
+              const playerData = playerToken.metadata['com.weighted-inventory/data'] as CharacterData;
+
+              // Ensure currency object exists
+              if (!playerData.currency) {
+                playerData.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
+              }
+
+              if (activeTrade.netCost.owedTo === 'merchant') {
+                // Player owes merchant
+                const success = deductCopperPieces(playerData.currency, netCostCp);
+                if (!success) {
+                  throw new Error('Player does not have enough coins to complete this trade!');
+                }
+                // Merchant has infinite coins, so we don't add to merchant
+              } else {
+                // Merchant owes player (giving change)
+                addCopperPieces(playerData.currency, netCostCp);
+                // Merchant has infinite coins, so we don't deduct from merchant
+              }
+
+              playerToken.metadata['com.weighted-inventory/data'] = playerData;
+            }
           } else {
-            // P2P trade
+            // P2P trade - use original logic
+            let payerToken, receiverToken;
+
             payerToken = items.find(t =>
               activeTrade.netCost.owedTo === 'player1'
                 ? t.id === activeTrade.player2TokenId
@@ -1518,18 +1642,25 @@ function App() {
                 ? t.id === activeTrade.player1TokenId
                 : t.id === activeTrade.player2TokenId
             );
-          }
 
-          if (payerToken && receiverToken) {
-            const payerData = payerToken.metadata['com.weighted-inventory/data'] as CharacterData;
-            const receiverData = receiverToken.metadata['com.weighted-inventory/data'] as CharacterData;
+            if (payerToken && receiverToken) {
+              const payerData = payerToken.metadata['com.weighted-inventory/data'] as CharacterData;
+              const receiverData = receiverToken.metadata['com.weighted-inventory/data'] as CharacterData;
 
-            const coinType = activeTrade.netCost.currency;
-            payerData.currency[coinType] = (payerData.currency[coinType] || 0) - activeTrade.netCost.amount;
-            receiverData.currency[coinType] = (receiverData.currency[coinType] || 0) + activeTrade.netCost.amount;
+              // Ensure currency objects exist
+              if (!payerData.currency) payerData.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
+              if (!receiverData.currency) receiverData.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
 
-            payerToken.metadata['com.weighted-inventory/data'] = payerData;
-            receiverToken.metadata['com.weighted-inventory/data'] = receiverData;
+              // Deduct from payer and add to receiver
+              const success = deductCopperPieces(payerData.currency, netCostCp);
+              if (!success) {
+                throw new Error('Payer does not have enough coins to complete this trade!');
+              }
+              addCopperPieces(receiverData.currency, netCostCp);
+
+              payerToken.metadata['com.weighted-inventory/data'] = payerData;
+              receiverToken.metadata['com.weighted-inventory/data'] = receiverData;
+            }
           }
         }
       });

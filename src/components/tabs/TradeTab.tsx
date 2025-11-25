@@ -1,17 +1,10 @@
-import type { ActiveTrade, TradeQueue, MerchantItem, Item, CharacterData } from '../../types';
-import { calculateBuyback } from '../../utils/currency';
-import { calculateP2PCost, calculateTradeCost } from '../../utils/trade';
+import type { ActiveTrade, Item, CharacterData, Currency } from '../../types';
+import { calculateP2PCost } from '../../utils/trade';
+import { getTotalCopperPieces } from '../../utils/currency';
 
 interface TradeTabProps {
   activeTrade: ActiveTrade;
-  tradeQueues: Record<string, TradeQueue>;
   playerId: string | null;
-  merchantShopData: MerchantItem[] | null;
-  selectedMerchantItems: MerchantItem[];
-  handleToggleMerchantItem: (item: MerchantItem) => void;
-  playerOwnInventory: Item[];
-  selectedPlayerItems: Item[];
-  handleTogglePlayerItem: (item: Item) => void;
   characterData: CharacterData | null;
   player1Items: Item[];
   player2Items: Item[];
@@ -22,18 +15,15 @@ interface TradeTabProps {
   isExecutingTrade: boolean;
   handleApproveTrade: () => void;
   handleCancelTrade: () => void;
+  player1CoinsOffered: Currency;
+  player2CoinsOffered: Currency;
+  setPlayer1CoinsOffered: (coins: Currency) => void;
+  setPlayer2CoinsOffered: (coins: Currency) => void;
 }
 
 export function TradeTab({
   activeTrade,
-  tradeQueues,
   playerId,
-  merchantShopData,
-  selectedMerchantItems,
-  handleToggleMerchantItem,
-  playerOwnInventory,
-  selectedPlayerItems,
-  handleTogglePlayerItem,
   characterData,
   player1Items,
   player2Items,
@@ -43,124 +33,54 @@ export function TradeTab({
   playerRole,
   isExecutingTrade,
   handleApproveTrade,
-  handleCancelTrade
+  handleCancelTrade,
+  player1CoinsOffered,
+  player2CoinsOffered,
+  setPlayer1CoinsOffered,
+  setPlayer2CoinsOffered
 }: TradeTabProps) {
+  const isPlayer1 = activeTrade.player1Id === playerId;
+  const isPlayer2 = activeTrade.player2Id === playerId;
+  const isParticipant = isPlayer1 || isPlayer2;
+  
+  // Determine which coin state to use for current player
+  const myCoinsOffered = isPlayer1 ? player1CoinsOffered : player2CoinsOffered;
+  const setMyCoinsOffered = isPlayer1 ? setPlayer1CoinsOffered : setPlayer2CoinsOffered;
+  const otherCoinsOffered = isPlayer1 ? player2CoinsOffered : player1CoinsOffered;
+  
+  // Get my currency (to validate coin offers)
+  const myCurrency = characterData?.currency || { cp: 0, sp: 0, gp: 0, pp: 0 };
+  
+  // Function to update coin offers with validation
+  const handleCoinChange = (coinType: keyof Currency, value: number) => {
+    const newValue = Math.max(0, Math.min(value, myCurrency[coinType]));
+    setMyCoinsOffered({ ...myCoinsOffered, [coinType]: newValue });
+  };
+
   return (
     <div className="section">
-      <h2>Trade Session</h2>
+      <h2>Player Trade</h2>
 
-      {activeTrade.type === 'merchant' && (
-        <div style={{background: 'rgba(240,225,48,0.1)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
-          <p style={{fontSize: '12px', margin: 0}}>
-            <strong>Trading with:</strong> Merchant | <strong>Player:</strong> {activeTrade.player1Name}
-          </p>
+      <div style={{background: 'rgba(74,158,255,0.1)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
+        <p style={{fontSize: '12px', margin: 0}}>
+          <strong>{activeTrade.player1Name}</strong> ↔ <strong>{activeTrade.player2Name}</strong>
+        </p>
+        <div style={{fontSize: '11px', color: '#aaa', marginTop: '4px'}}>
+          {activeTrade.player1Approved && <span style={{color: '#0f0'}}>✓ {activeTrade.player1Name} approved</span>}
+          {!activeTrade.player1Approved && <span>○ {activeTrade.player1Name} pending</span>}
+          <span style={{margin: '0 8px'}}>|</span>
+          {activeTrade.player2Approved && <span style={{color: '#0f0'}}>✓ {activeTrade.player2Name} approved</span>}
+          {!activeTrade.player2Approved && <span>○ {activeTrade.player2Name} pending</span>}
         </div>
-      )}
-
-      {activeTrade.type === 'player-to-player' && (
-        <div style={{background: 'rgba(74,158,255,0.1)', padding: '12px', borderRadius: '6px', marginBottom: '16px'}}>
-          <p style={{fontSize: '12px', margin: 0}}>
-            <strong>{activeTrade.player1Name}</strong> ↔ <strong>{activeTrade.player2Name}</strong>
-          </p>
-          <div style={{fontSize: '11px', color: '#aaa', marginTop: '4px'}}>
-            {activeTrade.player1Approved && <span style={{color: '#0f0'}}>✓ {activeTrade.player1Name} approved</span>}
-            {!activeTrade.player1Approved && <span>○ {activeTrade.player1Name} pending</span>}
-            <span style={{margin: '0 8px'}}>|</span>
-            {activeTrade.player2Approved && <span style={{color: '#0f0'}}>✓ {activeTrade.player2Name} approved</span>}
-            {!activeTrade.player2Approved && <span>○ {activeTrade.player2Name} pending</span>}
-          </div>
-        </div>
-      )}
-
-      {/* Queue indicator */}
-      {activeTrade.merchantTokenId && tradeQueues[activeTrade.merchantTokenId] && (
-        <div style={{background: 'rgba(0,0,0,0.2)', padding: '8px', borderRadius: '4px', marginBottom: '16px', fontSize: '11px'}}>
-          {tradeQueues[activeTrade.merchantTokenId].queue.length > 0 && (
-            <p style={{margin: 0}}>
-              <strong>{tradeQueues[activeTrade.merchantTokenId].queue.length}</strong> player(s) waiting in queue
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* Browse Merchant Shop (if player is trading) */}
-      {activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && merchantShopData && (
-        <div style={{marginBottom: '24px'}}>
-          <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Merchant's Wares</h3>
-          <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Click items to add to your purchase cart</p>
-          <div style={{maxHeight: '200px', overflowY: 'auto'}}>
-            {merchantShopData.map(item => {
-              const isSelected = selectedMerchantItems.some(si => si.id === item.id);
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleToggleMerchantItem(item)}
-                  style={{
-                    background: isSelected ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.2)',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    marginBottom: '4px',
-                    cursor: 'pointer',
-                    border: isSelected ? '1px solid #0f0' : '1px solid transparent',
-                    fontSize: '11px'
-                  }}
-                >
-                  <div style={{fontWeight: 'bold'}}>{item.name}</div>
-                  <div style={{color: '#aaa', fontSize: '10px'}}>
-                    Price: {item.sellPrice || item.value} | Qty: {item.qty}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Browse Player Inventory (if player is trading) */}
-      {activeTrade.type === 'merchant' && activeTrade.player1Id === playerId && (
-        <div style={{marginBottom: '24px'}}>
-          <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Your Items to Sell</h3>
-          <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Click items to add to your sell list (buyback at 80%)</p>
-          {playerOwnInventory.length === 0 ? (
-            <p style={{fontSize: '10px', color: '#666'}}>Your inventory is empty</p>
-          ) : (
-            <div style={{maxHeight: '200px', overflowY: 'auto'}}>
-              {playerOwnInventory.map(item => {
-              const isSelected = selectedPlayerItems.some(si => si.id === item.id);
-              return (
-                <div
-                  key={item.id}
-                  onClick={() => handleTogglePlayerItem(item)}
-                  style={{
-                    background: isSelected ? 'rgba(255,0,0,0.2)' : 'rgba(0,0,0,0.2)',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    marginBottom: '4px',
-                    cursor: 'pointer',
-                    border: isSelected ? '1px solid #f00' : '1px solid transparent',
-                    fontSize: '11px'
-                  }}
-                >
-                  <div style={{fontWeight: 'bold'}}>{item.name}</div>
-                  <div style={{color: '#aaa', fontSize: '10px'}}>
-                    Value: {item.value} | Buyback: {calculateBuyback(item.value)} | Qty: {item.qty}
-                  </div>
-                </div>
-              );
-            })}
-            </div>
-          )}
-        </div>
-      )}
+      </div>
 
       {/* P2P Trade - Your inventory */}
-      {activeTrade.type === 'player-to-player' && characterData && (
+      {characterData && isParticipant && (
         <div style={{marginBottom: '24px'}}>
           <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Your Items to Offer</h3>
           <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Click items you want to give to the other player</p>
           <div style={{maxHeight: '200px', overflowY: 'auto'}}>
             {characterData.inventory.map(item => {
-              const isPlayer1 = activeTrade.player1Id === playerId;
               const selectedItems = isPlayer1 ? player1Items : player2Items;
               const setSelectedItems = isPlayer1 ? setPlayer1Items : setPlayer2Items;
               const isSelected = selectedItems.some(si => si.id === item.id);
@@ -196,16 +116,56 @@ export function TradeTab({
         </div>
       )}
 
-      {/* P2P Trade - Other player's inventory */}
-      {activeTrade.type === 'player-to-player' && player2Data && (
+      {/* Coins to Offer */}
+      {isParticipant && (
+        <div style={{marginBottom: '24px'}}>
+          <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Coins to Offer</h3>
+          <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>
+            Enter coins you want to give. Your wallet: {myCurrency.cp}cp, {myCurrency.sp}sp, {myCurrency.gp}gp, {myCurrency.pp}pp
+          </p>
+          <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px'}}>
+            {(['cp', 'sp', 'gp', 'pp'] as const).map(coinType => (
+              <div key={coinType} style={{textAlign: 'center'}}>
+                <label style={{fontSize: '10px', color: '#aaa', display: 'block', marginBottom: '4px', textTransform: 'uppercase'}}>
+                  {coinType}
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max={myCurrency[coinType]}
+                  value={myCoinsOffered[coinType]}
+                  onChange={(e) => handleCoinChange(coinType, parseInt(e.target.value) || 0)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid #444',
+                    borderRadius: '4px',
+                    color: 'white',
+                    textAlign: 'center',
+                    fontSize: '14px'
+                  }}
+                />
+                <div style={{fontSize: '9px', color: '#666', marginTop: '2px'}}>
+                  max: {myCurrency[coinType]}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* P2P Trade - Other player's items and coins */}
+      {player2Data && (
         <div style={{marginBottom: '24px'}}>
           <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>
-            {activeTrade.player1Id === playerId ? activeTrade.player2Name : activeTrade.player1Name}'s Items
+            {isPlayer1 ? activeTrade.player2Name : activeTrade.player1Name}'s Offer
           </h3>
-          <p style={{fontSize: '10px', color: '#aaa', marginBottom: '8px'}}>Items they are offering</p>
-          <div style={{maxHeight: '200px', overflowY: 'auto'}}>
+          
+          {/* Other player's items */}
+          <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>Items:</h4>
+          <div style={{maxHeight: '150px', overflowY: 'auto', marginBottom: '12px'}}>
             {(() => {
-              const isPlayer1 = activeTrade.player1Id === playerId;
               const otherPlayerItems = isPlayer1 ? player2Items : player1Items;
 
               if (otherPlayerItems.length === 0) {
@@ -232,67 +192,89 @@ export function TradeTab({
               ));
             })()}
           </div>
+
+          {/* Other player's coins */}
+          <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>Coins:</h4>
+          {getTotalCopperPieces(otherCoinsOffered) > 0 ? (
+            <div style={{
+              background: 'rgba(0,200,0,0.2)',
+              padding: '10px',
+              borderRadius: '4px',
+              border: '1px solid #0c0',
+              fontSize: '12px',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center'
+            }}>
+              {otherCoinsOffered.cp > 0 && <span>{otherCoinsOffered.cp} CP</span>}
+              {otherCoinsOffered.sp > 0 && <span>{otherCoinsOffered.sp} SP</span>}
+              {otherCoinsOffered.gp > 0 && <span>{otherCoinsOffered.gp} GP</span>}
+              {otherCoinsOffered.pp > 0 && <span>{otherCoinsOffered.pp} PP</span>}
+            </div>
+          ) : (
+            <p style={{fontSize: '10px', color: '#666'}}>No coins offered</p>
+          )}
         </div>
       )}
 
-      <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>
-        {activeTrade.type === 'merchant' ? 'Selected Items' : 'Trade Summary'}
-      </h3>
+      {/* Trade Summary */}
+      <h3 style={{fontSize: '14px', color: 'var(--accent-gold)', marginBottom: '12px'}}>Trade Summary</h3>
 
-      {/* Merchant trade summary */}
-      {activeTrade.type === 'merchant' && (
-        <>
-          <div style={{marginBottom: '16px'}}>
-            <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>To Buy from Merchant:</h4>
-            {selectedMerchantItems.length === 0 && (
-              <p style={{fontSize: '10px', color: '#666'}}>No items selected</p>
-            )}
-            {selectedMerchantItems.map(item => (
-              <div key={item.id} style={{background: 'rgba(0,255,0,0.1)', padding: '8px', borderRadius: '4px', marginBottom: '4px', fontSize: '11px'}}>
-                {item.name} x{item.qty} - {item.sellPrice || item.value}
-              </div>
-            ))}
-          </div>
-
-          <div style={{marginBottom: '16px'}}>
-            <h4 style={{fontSize: '12px', color: '#aaa', marginBottom: '8px'}}>To Sell to Merchant:</h4>
-            {selectedPlayerItems.length === 0 && (
-              <p style={{fontSize: '10px', color: '#666'}}>No items selected</p>
-            )}
-            {selectedPlayerItems.map(item => (
-              <div key={item.id} style={{background: 'rgba(255,0,0,0.1)', padding: '8px', borderRadius: '4px', marginBottom: '4px', fontSize: '11px'}}>
-                {item.name} x{item.qty} - {calculateBuyback(item.value)}
-              </div>
-            ))}
-          </div>
-
-          {/* Net cost calculation for merchant */}
-          {(selectedMerchantItems.length > 0 || selectedPlayerItems.length > 0) && (() => {
-            const cost = calculateTradeCost(selectedMerchantItems, selectedPlayerItems);
-            return (
-              <div style={{
-                background: cost.owedTo === 'merchant' ? 'rgba(255,0,0,0.2)' : cost.owedTo === 'player' ? 'rgba(0,255,0,0.2)' : 'rgba(255,255,255,0.1)',
-                padding: '16px',
-                borderRadius: '6px',
-                marginBottom: '16px',
-                textAlign: 'center'
-              }}>
-                <div style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '4px'}}>
-                  {cost.owedTo === 'even' ? 'Trade is Even' : `${cost.amount} ${cost.currency.toUpperCase()}`}
+      {/* Summary of what each player is giving */}
+      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px'}}>
+        {/* Player 1's offer */}
+        <div style={{background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px'}}>
+          <h4 style={{fontSize: '11px', color: '#aaa', marginBottom: '8px'}}>{activeTrade.player1Name} gives:</h4>
+          {player1Items.length === 0 && getTotalCopperPieces(player1CoinsOffered) === 0 ? (
+            <p style={{fontSize: '10px', color: '#666'}}>Nothing</p>
+          ) : (
+            <>
+              {player1Items.map(item => (
+                <div key={item.id} style={{fontSize: '10px', color: '#ccc', marginBottom: '2px'}}>
+                  • {item.name} x{item.qty}
                 </div>
-                <div style={{fontSize: '11px', color: '#aaa'}}>
-                  {cost.owedTo === 'merchant' && 'Owed to Merchant'}
-                  {cost.owedTo === 'player' && 'Owed to Player'}
+              ))}
+              {getTotalCopperPieces(player1CoinsOffered) > 0 && (
+                <div style={{fontSize: '10px', color: 'var(--accent-gold)', marginTop: '4px'}}>
+                  💰 {player1CoinsOffered.cp > 0 ? `${player1CoinsOffered.cp}cp ` : ''}
+                  {player1CoinsOffered.sp > 0 ? `${player1CoinsOffered.sp}sp ` : ''}
+                  {player1CoinsOffered.gp > 0 ? `${player1CoinsOffered.gp}gp ` : ''}
+                  {player1CoinsOffered.pp > 0 ? `${player1CoinsOffered.pp}pp` : ''}
                 </div>
-              </div>
-            );
-          })()}
-        </>
-      )}
+              )}
+            </>
+          )}
+        </div>
+        
+        {/* Player 2's offer */}
+        <div style={{background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '6px'}}>
+          <h4 style={{fontSize: '11px', color: '#aaa', marginBottom: '8px'}}>{activeTrade.player2Name} gives:</h4>
+          {player2Items.length === 0 && getTotalCopperPieces(player2CoinsOffered) === 0 ? (
+            <p style={{fontSize: '10px', color: '#666'}}>Nothing</p>
+          ) : (
+            <>
+              {player2Items.map(item => (
+                <div key={item.id} style={{fontSize: '10px', color: '#ccc', marginBottom: '2px'}}>
+                  • {item.name} x{item.qty}
+                </div>
+              ))}
+              {getTotalCopperPieces(player2CoinsOffered) > 0 && (
+                <div style={{fontSize: '10px', color: 'var(--accent-gold)', marginTop: '4px'}}>
+                  💰 {player2CoinsOffered.cp > 0 ? `${player2CoinsOffered.cp}cp ` : ''}
+                  {player2CoinsOffered.sp > 0 ? `${player2CoinsOffered.sp}sp ` : ''}
+                  {player2CoinsOffered.gp > 0 ? `${player2CoinsOffered.gp}gp ` : ''}
+                  {player2CoinsOffered.pp > 0 ? `${player2CoinsOffered.pp}pp` : ''}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </div>
 
-      {/* P2P trade summary and net cost */}
-      {activeTrade.type === 'player-to-player' && (player1Items.length > 0 || player2Items.length > 0) && (() => {
-        const cost = calculateP2PCost(player1Items, player2Items);
+      {/* P2P trade net cost */}
+      {(player1Items.length > 0 || player2Items.length > 0 || 
+        getTotalCopperPieces(player1CoinsOffered) > 0 || getTotalCopperPieces(player2CoinsOffered) > 0) && (() => {
+        const cost = calculateP2PCost(player1Items, player2Items, player1CoinsOffered, player2CoinsOffered);
         return (
           <div style={{
             background: cost.owedTo === 'player1' ? 'rgba(255,100,100,0.2)' : cost.owedTo === 'player2' ? 'rgba(100,255,100,0.2)' : 'rgba(255,255,255,0.1)',
@@ -302,25 +284,49 @@ export function TradeTab({
             textAlign: 'center'
           }}>
             <div style={{fontSize: '14px', fontWeight: 'bold', marginBottom: '4px'}}>
-              {cost.owedTo === 'even' ? 'Trade is Even!' : `${cost.amount} ${cost.currency.toUpperCase()}`}
+              {cost.owedTo === 'even' ? 'Trade is Even!' : `${cost.amount} ${cost.currency.toUpperCase()} difference`}
             </div>
             <div style={{fontSize: '11px', color: '#aaa'}}>
-              {cost.owedTo === 'player1' && `${activeTrade.player2Name} owes ${activeTrade.player1Name}`}
-              {cost.owedTo === 'player2' && `${activeTrade.player1Name} owes ${activeTrade.player2Name}`}
+              {cost.owedTo === 'player1' && `${activeTrade.player2Name}'s offer is worth more`}
+              {cost.owedTo === 'player2' && `${activeTrade.player1Name}'s offer is worth more`}
             </div>
           </div>
         );
       })()}
 
       <div style={{display: 'flex', gap: '8px', marginTop: '16px'}}>
-        {activeTrade.type === 'merchant' && playerRole === 'GM' && (
+        {isParticipant && (
+          <button
+            onClick={handleApproveTrade}
+            disabled={isExecutingTrade || (isPlayer1 && activeTrade.player1Approved) || (isPlayer2 && activeTrade.player2Approved)}
+            style={{
+              flex: 1,
+              background: (isPlayer1 && activeTrade.player1Approved) || (isPlayer2 && activeTrade.player2Approved)
+                ? '#555'
+                : '#4a9eff',
+              color: 'white',
+              border: 'none',
+              padding: '12px',
+              borderRadius: '4px',
+              cursor: isExecutingTrade || (isPlayer1 && activeTrade.player1Approved) || (isPlayer2 && activeTrade.player2Approved) ? 'not-allowed' : 'pointer',
+              fontWeight: 'bold'
+            }}
+          >
+            {isExecutingTrade ? 'EXECUTING...' :
+              (isPlayer1 && activeTrade.player1Approved) || (isPlayer2 && activeTrade.player2Approved)
+              ? 'APPROVED ✓'
+              : 'APPROVE TRADE'}
+          </button>
+        )}
+        {/* GM can also approve for debugging */}
+        {playerRole === 'GM' && !isParticipant && (
           <button
             onClick={handleApproveTrade}
             disabled={isExecutingTrade}
             style={{
               flex: 1,
               background: isExecutingTrade ? '#555' : 'var(--accent-gold)',
-              color: isExecutingTrade ? '#999' : 'black',
+              color: 'black',
               border: 'none',
               padding: '12px',
               borderRadius: '4px',
@@ -328,29 +334,7 @@ export function TradeTab({
               fontWeight: 'bold'
             }}
           >
-            {isExecutingTrade ? 'EXECUTING...' : 'APPROVE TRADE'}
-          </button>
-        )}
-        {activeTrade.type === 'player-to-player' && (
-          <button
-            onClick={handleApproveTrade}
-            style={{
-              flex: 1,
-              background: (activeTrade.player1Id === playerId && activeTrade.player1Approved) || (activeTrade.player2Id === playerId && activeTrade.player2Approved)
-                ? '#555'
-                : '#4a9eff',
-              color: 'white',
-              border: 'none',
-              padding: '12px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontWeight: 'bold'
-            }}
-            disabled={(activeTrade.player1Id === playerId && activeTrade.player1Approved) || (activeTrade.player2Id === playerId && activeTrade.player2Approved)}
-          >
-            {(activeTrade.player1Id === playerId && activeTrade.player1Approved) || (activeTrade.player2Id === playerId && activeTrade.player2Approved)
-              ? 'APPROVED ✓'
-              : 'APPROVE TRADE'}
+            {isExecutingTrade ? 'EXECUTING...' : 'GM: FORCE EXECUTE'}
           </button>
         )}
         <button
@@ -362,8 +346,7 @@ export function TradeTab({
       </div>
 
       <p style={{fontSize: '10px', color: '#666', marginTop: '12px', fontStyle: 'italic'}}>
-        {activeTrade.type === 'merchant' && '* GM must approve the trade for items and currency to transfer automatically.'}
-        {activeTrade.type === 'player-to-player' && '* Both players must approve for the trade to execute automatically.'}
+        * Both players must approve for the trade to execute automatically. Items and coins will transfer when both approve.
       </p>
     </div>
   );

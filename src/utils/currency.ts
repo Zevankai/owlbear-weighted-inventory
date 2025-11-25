@@ -104,11 +104,3 @@ export function addCopperPieces(currency: Currency, cpToAdd: number): void {
   currency.pp = breakdown.pp;
 }
 
-/**
- * Calculate buyback price at a given rate (default 80% rounded up)
- */
-export function calculateBuyback(sellPrice: string, rate: number = 0.8): string {
-  const { amount, type } = parseCurrency(sellPrice);
-  const buybackAmount = Math.ceil(amount * rate);
-  return `${buybackAmount} ${type}`;
-}

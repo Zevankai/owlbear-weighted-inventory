@@ -5,7 +5,7 @@ export type Currency = {
   pp: number;
 };
 
-export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'Trade' | 'GM';
+export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM';
 
 export type PackType =
   | 'NPC' | 'Simple' | 'Standard' | 'Warrior' | 'Explorer'
@@ -62,34 +62,21 @@ export interface ExternalStorage {
   isNearby: boolean;
 }
 
-export type TradeItemSource = 'player1' | 'player2';
-
-export interface TradeItem {
-  item: Item;
-  source: TradeItemSource;
-  destination: TradeItemSource;
-}
-
 export interface ActiveTrade {
   id: string;
-  type: 'player-to-player';
+  status: 'pending-acceptance' | 'active' | 'completed' | 'cancelled';
   player1TokenId: string;
   player1Id: string;
   player1Name: string;
-  player2TokenId?: string;       // For P2P trades
-  player2Id?: string;
-  player2Name?: string;
-  player1CoinsOffered?: Currency;  // Coins player1 is offering
-  player2CoinsOffered?: Currency;  // Coins player2 is offering
-  itemsToTrade: TradeItem[];
-  netCost: {
-    amount: number;
-    currency: 'cp' | 'sp' | 'gp' | 'pp';
-    owedTo: 'player1' | 'player2' | 'even';
-  };
-  status: 'proposing' | 'pending' | 'approved' | 'rejected';
-  player1Approved?: boolean;
-  player2Approved?: boolean;
+  player2TokenId: string;
+  player2Id: string;
+  player2Name: string;
+  player1OfferedItems: Item[];
+  player1OfferedCoins: Currency;
+  player2OfferedItems: Item[];
+  player2OfferedCoins: Currency;
+  player1Confirmed: boolean;
+  player2Confirmed: boolean;
   timestamp: number;
 }
 

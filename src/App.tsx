@@ -8,7 +8,7 @@ import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, PackType, StorageType, CharacterData, Vault, Currency, MerchantItem, ActiveTrade, TradeQueue, Tab } from './types';
+import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, MerchantItem, ActiveTrade, TradeQueue, Tab } from './types';
 import { ACTIVE_TRADE_KEY, TRADE_QUEUES_KEY, DEFAULT_BUYBACK_RATE } from './constants';
 
 // Utilities
@@ -27,6 +27,7 @@ import { calculateP2PCost, calculateTradeCost } from './utils/trade';
 import { GMOverviewTab } from './components/tabs/GMOverviewTab';
 import { MerchantTab } from './components/tabs/MerchantTab';
 import { TradeTab } from './components/tabs/TradeTab';
+import { HomeTab } from './components/tabs/HomeTab';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -1610,472 +1611,36 @@ function App() {
 
       <main className="content">
         {activeTab === 'Home' && stats && (
-            <div className="section">
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                    <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
-                    {/* Debug button - subtle and only on Home tab */}
-                    <button
-                        onClick={() => { setShowDebug(true); loadDebugInfo(); }}
-                        style={{
-                            background: 'transparent',
-                            color: '#666',
-                            border: '1px solid #333',
-                            padding: '2px 6px',
-                            borderRadius: '3px',
-                            cursor: 'pointer',
-                            fontSize: '9px',
-                            fontWeight: 'normal'
-                        }}
-                        title="Storage Debug Info"
-                    >
-                        ⚙
-                    </button>
-                </div>
-                
-                {/* --- TOKEN PROFILE (Player Only) --- */}
-                {!viewingStorageId && (characterData?.merchantShop?.isActive && playerRole !== 'GM' && (!characterData.claimedBy || characterData.claimedBy !== playerId) ? (
-                    // Merchant view - full width layout (no wrapper, elements are direct children of .section)
-                    <>
-                        {tokenImage && (
-                            <div style={{
-                                width: '80px',
-                                height: '80px',
-                                borderRadius: '50%',
-                                overflow: 'hidden',
-                                border: '3px solid var(--accent-gold)',
-                                background: 'transparent',
-                                marginBottom: '8px',
-                                margin: '0 auto 8px auto'
-                            }}>
-                                <img
-                                src={tokenImage}
-                                alt="Token"
-                                style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                                />
-                            </div>
-                        )}
-                        <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center', marginBottom: '8px'}}>
-                            {tokenName || 'Unknown Character'}
-                        </div>
-                        <div style={{display: 'flex', gap: '8px', marginBottom: '12px'}}>
-                            <button
-                                onClick={toggleFavorite}
-                                style={{
-                                    flex: 1,
-                                    background: 'transparent',
-                                    border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
-                                    color: isFavorited ? 'var(--accent-gold)' : '#666',
-                                    padding: '4px 12px',
-                                    borderRadius: '12px',
-                                    cursor: 'pointer',
-                                    fontSize: '11px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '4px'
-                                }}
-                                title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                            >
-                                {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
-                            </button>
-                            {favorites.length > 0 && (
-                                <button
-                                    onClick={() => setViewingFavorites(true)}
-                                    style={{
-                                        flex: 1,
-                                        background: 'rgba(240, 225, 48, 0.1)',
-                                        border: '1px solid var(--accent-gold)',
-                                        color: 'var(--accent-gold)',
-                                        padding: '4px 12px',
-                                        borderRadius: '12px',
-                                        cursor: 'pointer',
-                                        fontSize: '11px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '4px'
-                                    }}
-                                    title="View all favorite tokens"
-                                >
-                                    ⭐ View Favorites
-                                </button>
-                            )}
-                        </div>
-                        {/* Start Merchant Trade Button */}
-                        {!activeTrade && (
-                          <button
-                            onClick={() => {
-                              console.log('[START TRADE] Button clicked, merchantTokenId:', tokenId);
-                              handleStartTrade(tokenId);
-                            }}
-                            style={{
-                              width: '100%',
-                              marginBottom: '20px',
-                              background: 'var(--accent-gold)',
-                              border: 'none',
-                              color: 'black',
-                              padding: '12px 20px',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '13px',
-                              fontWeight: 'bold'
-                            }}
-                          >
-                            TRADE WITH MERCHANT
-                          </button>
-                        )}
-                    </>
-                ) : (
-                    // Normal view - centered layout
-                    <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>
-                        {tokenImage && (
-                            <div style={{
-                                width: '80px',
-                                height: '80px',
-                                borderRadius: '50%',
-                                overflow: 'hidden',
-                                border: '3px solid var(--accent-gold)',
-                                background: 'transparent', // Clear background
-                                marginBottom: '8px',
-                                alignSelf: 'center'
-                            }}>
-                                <img 
-                                src={tokenImage} 
-                                alt="Token" 
-                                style={{width: '100%', height: '100%', objectFit: 'cover'}} 
-                                />
-                            </div>
-                        )}
-                        <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
-                            {tokenName || 'Unknown Character'}
-                        </div>
-                        <div style={{
-                          display: 'flex',
-                          gap: '8px',
-                          marginTop: '8px',
-                          width: characterData?.merchantShop?.isActive && !canEditToken() ? '100%' : 'auto',
-                          alignSelf: characterData?.merchantShop?.isActive && !canEditToken() ? 'stretch' : 'auto',
-                          justifyContent: 'center'
-                        }}>
-                            <button
-                                onClick={toggleFavorite}
-                                style={{
-                                    flex: characterData?.merchantShop?.isActive && !canEditToken() ? 1 : 'none',
-                                    background: 'transparent',
-                                    border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
-                                    color: isFavorited ? 'var(--accent-gold)' : '#666',
-                                    padding: '4px 12px',
-                                    borderRadius: '12px',
-                                    cursor: 'pointer',
-                                    fontSize: '11px',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '4px'
-                                }}
-                                title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-                            >
-                                {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
-                            </button>
-                            {favorites.length > 0 && (
-                                <button
-                                    onClick={() => setViewingFavorites(true)}
-                                    style={{
-                                        flex: characterData?.merchantShop?.isActive && !canEditToken() ? 1 : 'none',
-                                        background: 'rgba(240, 225, 48, 0.1)',
-                                        border: '1px solid var(--accent-gold)',
-                                        color: 'var(--accent-gold)',
-                                        padding: '4px 12px',
-                                        borderRadius: '12px',
-                                        cursor: 'pointer',
-                                        fontSize: '11px',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        gap: '4px'
-                                    }}
-                                    title="View all favorite tokens"
-                                >
-                                    ⭐ View Favorites
-                                </button>
-                            )}
-                        </div>
-
-                        {/* Token Claiming */}
-                        {characterData && (
-                          <div style={{marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
-                            {characterData.claimedBy && (
-                              <div style={{fontSize: '10px', color: '#aaa'}}>
-                                {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}
-                              </div>
-                            )}
-                            {!characterData.claimedBy && (
-                              <>
-                                {/* Show claiming status */}
-                                {!characterData.claimingEnabled && playerRole !== 'GM' && (
-                                  <div style={{fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
-                                    🔒 Claiming disabled (GM must enable)
-                                  </div>
-                                )}
-                                {/* Claim button */}
-                                {canEditToken() && (
-                                  <button
-                                    onClick={async () => {
-                                      const success = await claimToken();
-                                      if (success === false) {
-                                        alert('Claiming is not enabled for this token. Ask the GM to enable claiming first.');
-                                      }
-                                    }}
-                                    style={{
-                                      background: characterData.claimingEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(128,128,128,0.1)',
-                                      border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
-                                      color: characterData.claimingEnabled ? '#0f0' : '#888',
-                                      padding: '6px 16px',
-                                      borderRadius: '4px',
-                                      cursor: characterData.claimingEnabled ? 'pointer' : 'not-allowed',
-                                      fontSize: '11px',
-                                      fontWeight: 'bold',
-                                      opacity: characterData.claimingEnabled ? 1 : 0.5
-                                    }}
-                                  >
-                                    CLAIM TOKEN
-                                  </button>
-                                )}
-                              </>
-                            )}
-                            {characterData.claimedBy === playerId && (
-                              <button
-                                onClick={unclaimToken}
-                                style={{
-                                  background: 'rgba(255,0,0,0.1)',
-                                  border: '1px solid #f00',
-                                  color: '#f00',
-                                  padding: '6px 16px',
-                                  borderRadius: '4px',
-                                  cursor: 'pointer',
-                                  fontSize: '11px'
-                                }}
-                              >
-                                UNCLAIM TOKEN
-                              </button>
-                            )}
-                          </div>
-                        )}
-
-                        {/* GM Token Controls */}
-                        {playerRole === 'GM' && characterData && (
-                          <div style={{marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
-                            {/* Enable/Disable Claiming Toggle */}
-                            <button
-                              onClick={() => handleUpdateData({ claimingEnabled: !characterData.claimingEnabled })}
-                              style={{
-                                background: characterData.claimingEnabled ? 'rgba(0,255,0,0.2)' : 'rgba(128,128,128,0.2)',
-                                border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
-                                color: characterData.claimingEnabled ? '#0f0' : '#888',
-                                padding: '6px 16px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '11px',
-                                fontWeight: 'bold',
-                                width: '220px'
-                              }}
-                            >
-                              {characterData.claimingEnabled ? '🔓 CLAIMING ENABLED' : '🔒 CLAIMING DISABLED'}
-                            </button>
-
-                            {/* Merchant Mode Toggle */}
-                            <button
-                              onClick={handleToggleMerchantMode}
-                              style={{
-                                background: characterData.merchantShop?.isActive ? 'rgba(255,0,0,0.2)' : 'rgba(240,225,48,0.2)',
-                                border: '1px solid ' + (characterData.merchantShop?.isActive ? '#f00' : 'var(--accent-gold)'),
-                                color: characterData.merchantShop?.isActive ? '#f00' : 'var(--accent-gold)',
-                                padding: '8px 16px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '12px',
-                                fontWeight: 'bold',
-                                width: '220px'
-                              }}
-                            >
-                              {characterData.merchantShop?.isActive ? 'DISABLE MERCHANT MODE' : 'ENABLE MERCHANT MODE'}
-                            </button>
-                          </div>
-                        )}
-
-                        {/* Start P2P Trade Button */}
-                        {characterData && !characterData.merchantShop?.isActive && !activeTrade && tokenId &&
-                         characterData.claimedBy && characterData.claimedBy !== playerId && (
-                          <div style={{marginTop: '12px', textAlign: 'center'}}>
-                            <button
-                              onClick={() => handleStartP2PTrade(tokenId)}
-                              style={{
-                                background: '#4a9eff',
-                                border: 'none',
-                                color: 'white',
-                                padding: '10px 20px',
-                                borderRadius: '4px',
-                                cursor: 'pointer',
-                                fontSize: '13px',
-                                fontWeight: 'bold'
-                              }}
-                            >
-                              TRADE WITH PLAYER
-                            </button>
-                          </div>
-                        )}
-                    </div>
-                ))}
-
-                {!viewingStorageId ? (
-                    <>
-                        {/* Only show edit controls if player can edit this token */}
-                        {canEditToken() && (
-                          <>
-                            <div style={{marginBottom: '16px'}}>
-                                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
-                                <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
-                                    {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
-                                </select>
-                            </div>
-
-                            {/* Theme Customization */}
-                            <div style={{marginBottom: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
-                                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '12px'}}>🎨 Theme Colors</label>
-                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
-                                    <div>
-                                        <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Accent</label>
-                                        <input
-                                            type="color"
-                                            value={theme.accent}
-                                            onChange={(e) => updateTheme({ ...theme, accent: e.target.value })}
-                                            style={{
-                                                width: '100%',
-                                                height: '40px',
-                                                border: '1px solid var(--glass-border)',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                background: 'transparent'
-                                            }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Background</label>
-                                        <input
-                                            type="color"
-                                            value={theme.background}
-                                            onChange={(e) => updateTheme({ ...theme, background: e.target.value })}
-                                            style={{
-                                                width: '100%',
-                                                height: '40px',
-                                                border: '1px solid var(--glass-border)',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                background: 'transparent'
-                                            }}
-                                        />
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={() => updateTheme({ accent: '#f0e130', background: '#0f0f1e' })}
-                                    style={{
-                                        marginTop: '8px',
-                                        width: '100%',
-                                        padding: '6px',
-                                        background: 'rgba(255,255,255,0.05)',
-                                        border: '1px solid var(--glass-border)',
-                                        borderRadius: '4px',
-                                        color: 'var(--text-muted)',
-                                        fontSize: '10px',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s'
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                                    onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                                >
-                                    Reset to Default
-                                </button>
-                            </div>
-                          </>
-                        )}
-                    </>
-                ) : (
-                    <div style={{marginBottom: '16px'}}>
-                         <div style={{color: '#888', fontSize: '12px'}}>Type: {characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}</div>
-                         <div style={{marginTop:'10px'}}>
-                            <label style={{display:'flex', alignItems:'center', gap:'8px', fontSize:'12px'}}>
-                                <input type="checkbox" checked={characterData.externalStorages.find(s => s.id === viewingStorageId)?.isNearby} onChange={(e) => {
-                                        const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, isNearby: e.target.checked} : s);
-                                        updateData({ externalStorages: newStorages });
-                                }} /> Is Nearby?
-                            </label>
-                         </div>
-                    </div>
-                )}
-
-                {/* Only show stats if player can edit OR it's storage view (but not for merchants) */}
-                {(canEditToken() || viewingStorageId) && !characterData?.merchantShop?.isActive && (
-                  <div className="totals-grid">
-                      <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
-                      <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
-                      <div className="stat-box"><div className="stat-label">ITEMS</div><div className="stat-value">{currentDisplayData.inventory.length}</div></div>
-                  </div>
-                )}
-
-                {!viewingStorageId && canEditToken() && !characterData?.merchantShop?.isActive && (
-                    <>
-                        <h2 style={{marginTop: '20px', border: 'none'}}>SLOT USAGE</h2>
-                        <div className="totals-grid">
-                            <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
-                                <div className="stat-label">WEAPONS</div>
-                                <div className={`stat-value ${stats.usedSlots.weapon > stats.maxSlots.weapon ? 'danger' : ''}`}>{stats.usedSlots.weapon} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.weapon}</span></div>
-                            </div>
-                            <div className="stat-box" style={{borderColor: stats.usedSlots.armor > stats.maxSlots.armor ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
-                                <div className="stat-label">ARMOR</div>
-                                <div className={`stat-value ${stats.usedSlots.armor > stats.maxSlots.armor ? 'danger' : ''}`}>{stats.usedSlots.armor} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.armor}</span></div>
-                            </div>
-                            <div className="stat-box"><div className="stat-label">CLOTHING</div><div className="stat-value">{stats.usedSlots.clothing} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.clothing}</span></div></div>
-                            <div className="stat-box"><div className="stat-label">JEWELRY</div><div className="stat-value">{stats.usedSlots.jewelry} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.jewelry}</span></div></div>
-                            <div className="stat-box" style={{gridColumn: 'span 2', background: 'rgba(240, 225, 48, 0.05)'}}><div className="stat-label" style={{color: 'var(--accent-gold)'}}>UTILITY / QUICK</div><div className="stat-value">{stats.usedSlots.utility} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.utility}</span></div></div>
-                        </div>
-                    </>
-                )}
-
-                {/* Show description - editable if can edit, read-only otherwise */}
-                <div style={{marginTop: '20px', width: '100%', alignSelf: 'stretch'}}>
-                    <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
-                      Description
-                    </label>
-                    <textarea
-                      value={currentDisplayData.condition}
-                      onChange={(e) => canEditToken() && handleUpdateData({ condition: e.target.value })}
-                      className="search-input"
-                      rows={canEditToken() ? 2 : 4}
-                      disabled={!canEditToken()}
-                      style={{
-                        opacity: canEditToken() ? 1 : 0.8,
-                        cursor: canEditToken() ? 'text' : 'default',
-                        fontSize: canEditToken() ? '14px' : '13px',
-                        minHeight: canEditToken() ? 'auto' : '100px'
-                      }}
-                    />
-                </div>
-
-                {/* GM Notes - only show if can edit */}
-                {canEditToken() && (
-                  <div style={{marginTop: '10px', width: '100%', alignSelf: 'stretch'}}>
-                      <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>{viewingStorageId ? 'Notes' : 'GM Notes'}</label>
-                      <textarea value={viewingStorageId ? characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes : currentDisplayData.gmNotes} onChange={(e) => {
-                           if(viewingStorageId) {
-                              const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
-                              updateData({ externalStorages: newStorages });
-                           } else {
-                               handleUpdateData({ gmNotes: e.target.value });
-                           }
-                      }} className="search-input" rows={3} />
-                  </div>
-                )}
-            </div>
+          <HomeTab
+            stats={stats}
+            viewingStorageId={viewingStorageId}
+            setShowDebug={setShowDebug}
+            loadDebugInfo={loadDebugInfo}
+            characterData={characterData}
+            playerRole={playerRole}
+            playerId={playerId}
+            tokenImage={tokenImage}
+            tokenName={tokenName}
+            toggleFavorite={toggleFavorite}
+            isFavorited={isFavorited}
+            favorites={favorites}
+            setViewingFavorites={setViewingFavorites}
+            activeTrade={activeTrade}
+            tokenId={tokenId}
+            handleStartTrade={handleStartTrade}
+            canEditToken={canEditToken}
+            claimToken={claimToken}
+            unclaimToken={unclaimToken}
+            handleUpdateData={handleUpdateData}
+            handleToggleMerchantMode={handleToggleMerchantMode}
+            handleStartP2PTrade={handleStartP2PTrade}
+            updateData={updateData}
+            PACK_DEFINITIONS={PACK_DEFINITIONS}
+            theme={theme}
+            updateTheme={updateTheme}
+            currentDisplayData={currentDisplayData}
+            activeStorageDef={activeStorageDef}
+          />
         )}
 
         {activeTab === 'Pack' && (

@@ -2527,13 +2527,14 @@ function App() {
             border: '2px solid #ff6b6b',
             borderRadius: '8px',
             padding: '12px',
-            width: '300px',
-            maxHeight: '400px',
-            overflow: 'auto',
+            width: 'min(500px, 90vw)',
+            height: 'min(600px, 80vh)',
+            display: 'flex',
+            flexDirection: 'column',
             fontSize: '11px',
             color: 'white'
           }}>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center'}}>
+            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center', flexShrink: 0}}>
               <strong style={{color: '#ff6b6b'}}>Storage Debug</strong>
               <button
                 onClick={() => setShowDebug(false)}
@@ -2551,6 +2552,7 @@ function App() {
               </button>
             </div>
 
+            <div style={{flex: 1, overflowY: 'auto'}}>
             {debugInfo && (
               <>
                 <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
@@ -2626,6 +2628,7 @@ function App() {
                 </button>
               </>
             )}
+            </div>
           </div>
         </>
       )}

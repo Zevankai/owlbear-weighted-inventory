@@ -124,6 +124,7 @@ function App() {
   const [selectedPlayerItems, setSelectedPlayerItems] = useState<Item[]>([]);
   const [merchantShopData, setMerchantShopData] = useState<MerchantItem[] | null>(null);
   const [playerOwnInventory, setPlayerOwnInventory] = useState<Item[]>([]); // Player's own inventory from their claimed token
+  const [isExecutingTrade, setIsExecutingTrade] = useState(false); // Prevent duplicate trade execution
   // P2P trading state
   const [player1Items, setPlayer1Items] = useState<Item[]>([]);
   const [player2Items, setPlayer2Items] = useState<Item[]>([]);
@@ -1441,7 +1442,7 @@ function App() {
 
   // Approve and execute trade (GM for merchant trades, both players for P2P)
   const handleApproveTrade = async () => {
-    if (!activeTrade) return;
+    if (!activeTrade || isExecutingTrade) return;
 
     // For merchant trades, only GM can approve
     if (activeTrade.type === 'merchant') {
@@ -1473,7 +1474,12 @@ function App() {
 
       // Items and cost are already in activeTrade (synced from player)
       // GM approves - execute immediately
-      await executeTrade();
+      setIsExecutingTrade(true);
+      try {
+        await executeTrade();
+      } finally {
+        setIsExecutingTrade(false);
+      }
       return;
     }
 
@@ -1524,7 +1530,12 @@ function App() {
       // Check if both players approved
       if (updatedTrade.player1Approved && updatedTrade.player2Approved) {
         // Both approved - execute trade
-        await executeTrade();
+        setIsExecutingTrade(true);
+        try {
+          await executeTrade();
+        } finally {
+          setIsExecutingTrade(false);
+        }
       } else {
         alert('Waiting for other player to approve...');
       }
@@ -1534,7 +1545,7 @@ function App() {
 
   // Execute the trade - transfer items and currency between tokens
   const executeTrade = async () => {
-    if (!activeTrade) return;
+    if (!activeTrade || isExecutingTrade) return;
     try {
       // Get all involved tokens
       const tokenIds = [activeTrade.player1TokenId];
@@ -3782,9 +3793,19 @@ function App() {
               {activeTrade.type === 'merchant' && playerRole === 'GM' && (
                 <button
                   onClick={handleApproveTrade}
-                  style={{flex: 1, background: 'var(--accent-gold)', color: 'black', border: 'none', padding: '12px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold'}}
+                  disabled={isExecutingTrade}
+                  style={{
+                    flex: 1,
+                    background: isExecutingTrade ? '#555' : 'var(--accent-gold)',
+                    color: isExecutingTrade ? '#999' : 'black',
+                    border: 'none',
+                    padding: '12px',
+                    borderRadius: '4px',
+                    cursor: isExecutingTrade ? 'not-allowed' : 'pointer',
+                    fontWeight: 'bold'
+                  }}
                 >
-                  APPROVE TRADE
+                  {isExecutingTrade ? 'EXECUTING...' : 'APPROVE TRADE'}
                 </button>
               )}
               {activeTrade.type === 'player-to-player' && (
@@ -3872,29 +3893,82 @@ function App() {
                   <div style={{fontSize: '12px', marginBottom: '12px'}}>
                     <strong>Status:</strong> {activeTrade.status}
                   </div>
+                  {/* Trade Summary */}
+                  {activeTrade.type === 'merchant' && activeTrade.itemsToTrade.length > 0 && (
+                    <div style={{background: 'rgba(0,0,0,0.3)', padding: '10px', borderRadius: '4px', marginBottom: '12px', fontSize: '11px'}}>
+                      <div style={{marginBottom: '6px'}}>
+                        <strong>Items Trading:</strong>
+                      </div>
+                      {activeTrade.itemsToTrade.filter(t => t.source === 'merchant').length > 0 && (
+                        <div style={{marginBottom: '4px'}}>
+                          <div style={{color: '#0f0', fontSize: '10px'}}>Player Buying:</div>
+                          {activeTrade.itemsToTrade.filter(t => t.source === 'merchant').map((t, i) => (
+                            <div key={i} style={{paddingLeft: '8px', color: '#aaa'}}>• {t.item.name} x{t.item.qty}</div>
+                          ))}
+                        </div>
+                      )}
+                      {activeTrade.itemsToTrade.filter(t => t.source === 'player1').length > 0 && (
+                        <div style={{marginBottom: '4px'}}>
+                          <div style={{color: '#f00', fontSize: '10px'}}>Player Selling:</div>
+                          {activeTrade.itemsToTrade.filter(t => t.source === 'player1').map((t, i) => (
+                            <div key={i} style={{paddingLeft: '8px', color: '#aaa'}}>• {t.item.name} x{t.item.qty}</div>
+                          ))}
+                        </div>
+                      )}
+                      {activeTrade.netCost.owedTo !== 'even' && (
+                        <div style={{marginTop: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.1)'}}>
+                          <strong>Net Cost:</strong> {activeTrade.netCost.amount} {activeTrade.netCost.currency.toUpperCase()}
+                          {activeTrade.netCost.owedTo === 'merchant' ? (
+                            <span style={{color: '#f00'}}> (Player owes)</span>
+                          ) : (
+                            <span style={{color: '#0f0'}}> (Merchant owes)</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
                   <div style={{display: 'flex', gap: '8px'}}>
                     {activeTrade.type === 'merchant' && (
-                      <button
-                        onClick={() => {
-                          // Load the merchant token
-                          if (activeTrade.merchantTokenId) {
-                            loadTokenById(activeTrade.merchantTokenId);
-                            setActiveTab('Trade');
-                          }
-                        }}
-                        style={{
-                          background: 'var(--accent-gold)',
-                          color: 'black',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: 'bold'
-                        }}
-                      >
-                        VIEW TRADE
-                      </button>
+                      <>
+                        <button
+                          onClick={handleApproveTrade}
+                          disabled={isExecutingTrade}
+                          style={{
+                            flex: 1,
+                            background: isExecutingTrade ? '#555' : 'var(--accent-gold)',
+                            color: isExecutingTrade ? '#999' : 'black',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: isExecutingTrade ? 'not-allowed' : 'pointer',
+                            fontSize: '11px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          {isExecutingTrade ? 'EXECUTING...' : 'APPROVE TRADE'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Load the merchant token
+                            if (activeTrade.merchantTokenId) {
+                              loadTokenById(activeTrade.merchantTokenId);
+                              setActiveTab('Trade');
+                            }
+                          }}
+                          style={{
+                            background: '#4a9eff',
+                            color: 'white',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '11px',
+                            fontWeight: 'bold'
+                          }}
+                        >
+                          VIEW DETAILS
+                        </button>
+                      </>
                     )}
                     <button
                       onClick={handleCancelTrade}
@@ -3909,7 +3983,7 @@ function App() {
                         fontWeight: 'bold'
                       }}
                     >
-                      CANCEL TRADE
+                      CANCEL
                     </button>
                   </div>
                 </div>

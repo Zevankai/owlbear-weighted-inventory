@@ -5,8 +5,10 @@ export type Currency = {
   pp: number;
 };
 
-export type PackType = 
-  | 'NPC' | 'Simple' | 'Standard' | 'Warrior' | 'Explorer' 
+export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'Merchant' | 'Trade' | 'GM';
+
+export type PackType =
+  | 'NPC' | 'Simple' | 'Standard' | 'Warrior' | 'Explorer'
   | 'Tinkerer' | 'Travel' | 'Shadow' | 'Mule' | 'Utility';
 
 export type StorageType = 

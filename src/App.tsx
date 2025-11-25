@@ -2858,17 +2858,7 @@ function App() {
 
         {/* === MERCHANT TAB === */}
         {activeTab === 'Merchant' && characterData?.merchantShop && (
-          <div
-            className="section"
-            style={playerRole !== 'GM' ? {
-              margin: '-12px',
-              borderRadius: 0,
-              border: 'none',
-              width: 'calc(100% + 24px)',
-              minHeight: 'calc(100vh - 48px)',
-              padding: '16px'
-            } : {}}
-          >
+          <div className="section">
             <h2>{playerRole === 'GM' ? 'Merchant Shop Management' : 'Merchant Shop'}</h2>
 
             {/* Player: Merchant Profile */}

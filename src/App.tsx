@@ -1224,6 +1224,8 @@ function App() {
   }
 
   // Hide tabs for non-owners when viewing another player's claimed token
+  // Note: Unclaimed tokens (!characterData?.claimedBy) are accessible to everyone for editing,
+  // since the GM hasn't assigned them to a specific player yet
   const isOwnerOrGM = playerRole === 'GM' || characterData?.claimedBy === playerId || !characterData?.claimedBy;
   if (!isOwnerOrGM && !viewingStorageId) {
     // Non-owners can only see Home and Trade tabs

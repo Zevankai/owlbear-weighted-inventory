@@ -1644,7 +1644,7 @@ function App() {
         )}
 
         {activeTab === 'Pack' && (
-            <div className="section" style={{padding: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '100%'}}>
+            <div className="section" style={{padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
                 <div style={{padding: '12px', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border)'}}>
                     <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
                         <h2 style={{margin: 0, border: 'none'}}>INVENTORY ({viewingStorageId ? 'STORAGE' : 'PLAYER'})</h2>

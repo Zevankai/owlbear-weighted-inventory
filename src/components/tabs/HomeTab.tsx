@@ -424,17 +424,13 @@ export function HomeTab({
         />
       </div>
 
-      {/* GM Notes - only show if can edit */}
-      {canEditToken() && (
+      {/* Storage Notes - only show when viewing storage and can edit */}
+      {viewingStorageId && canEditToken() && (
         <div style={{marginTop: '10px', width: '100%', alignSelf: 'stretch'}}>
-          <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>{viewingStorageId ? 'Notes' : 'GM Notes'}</label>
-          <textarea value={viewingStorageId ? characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes : currentDisplayData.gmNotes} onChange={(e) => {
-            if(viewingStorageId) {
-              const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
-              updateData({ externalStorages: newStorages });
-            } else {
-              handleUpdateData({ gmNotes: e.target.value });
-            }
+          <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Notes</label>
+          <textarea value={characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes || ''} onChange={(e) => {
+            const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
+            updateData({ externalStorages: newStorages });
           }} className="search-input" rows={3} />
         </div>
       )}

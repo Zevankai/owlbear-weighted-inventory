@@ -100,7 +100,6 @@ export interface CharacterData {
   vaults: Vault[];
   externalStorages: ExternalStorage[];
   favorites: string[];
-  gmNotes: string;
   condition: string;
   claimedBy?: string;    // Player ID who claimed this token
   claimingEnabled?: boolean;  // GM controls if token can be claimed

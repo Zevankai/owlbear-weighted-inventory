@@ -82,7 +82,6 @@ function App() {
         inventory: storage.inventory || [],
         currency: storage.currency || { cp: 0, sp: 0, gp: 0, pp: 0 },
         condition: storage.description || '', 
-        gmNotes: '', 
     };
   })();
 
@@ -124,7 +123,7 @@ function App() {
   // P2P trading state
   const [player1Items, setPlayer1Items] = useState<Item[]>([]);
   const [player2Items, setPlayer2Items] = useState<Item[]>([]);
-  const [player2Data, setPlayer2Data] = useState<CharacterData | null>(null);
+  const [otherPlayerData, setOtherPlayerData] = useState<CharacterData | null>(null);
   // Coin offers for P2P trading
   const [player1CoinsOffered, setPlayer1CoinsOffered] = useState<Currency>({ cp: 0, sp: 0, gp: 0, pp: 0 });
   const [player2CoinsOffered, setPlayer2CoinsOffered] = useState<Currency>({ cp: 0, sp: 0, gp: 0, pp: 0 });
@@ -205,27 +204,36 @@ function App() {
     return () => clearInterval(interval);
   }, [playerClaimedTokenId]);
 
-  // Load player2 data for P2P trades
+  // Load other player's data for P2P trades (relative to current player)
   useEffect(() => {
-    if (!activeTrade || !activeTrade.player2TokenId) {
-      setPlayer2Data(null);
+    if (!activeTrade || !playerId) {
+      setOtherPlayerData(null);
       return;
     }
 
-    const loadPlayer2Data = async () => {
+    const loadOtherPlayerData = async () => {
       try {
-        const tokens = await OBR.scene.items.getItems([activeTrade.player2TokenId!]);
+        // Determine which token ID belongs to the "other" player
+        const isPlayer1 = activeTrade.player1Id === playerId;
+        const otherTokenId = isPlayer1 ? activeTrade.player2TokenId : activeTrade.player1TokenId;
+        
+        if (!otherTokenId) {
+          setOtherPlayerData(null);
+          return;
+        }
+
+        const tokens = await OBR.scene.items.getItems([otherTokenId]);
         if (tokens.length > 0) {
           const data = tokens[0].metadata['com.weighted-inventory/data'] as CharacterData;
-          setPlayer2Data(data);
+          setOtherPlayerData(data);
         }
       } catch (err) {
-        console.error('Failed to load player2 data:', err);
+        console.error('Failed to load other player data:', err);
       }
     };
 
-    loadPlayer2Data();
-  }, [activeTrade]);
+    loadOtherPlayerData();
+  }, [activeTrade, playerId]);
 
   // Debug functions
   const loadDebugInfo = async () => {
@@ -915,6 +923,9 @@ function App() {
     };
 
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: trade });
+    
+    // Redirect to player's own claimed token to show Trade tab from their perspective
+    await loadTokenById(playerClaimedTokenId);
     setActiveTab('Trade');
   };
 
@@ -1021,6 +1032,16 @@ function App() {
 
     if (!isPlayer1 && !isPlayer2 && !isGM) {
       alert('Only the trading players or GM can approve this trade.');
+      return;
+    }
+
+    // Verify this player is trading from their claimed token
+    if (isPlayer1 && activeTrade.player1TokenId !== playerClaimedTokenId) {
+      alert('You can only trade from your claimed token!');
+      return;
+    }
+    if (isPlayer2 && activeTrade.player2TokenId !== playerClaimedTokenId) {
+      alert('You can only trade from your claimed token!');
       return;
     }
 
@@ -1202,6 +1223,15 @@ function App() {
       visibleTabs.splice(searchIdx, 0, { id: 'Transfer', label: 'TRANSFER' });
   }
 
+  // Hide tabs for non-owners when viewing another player's claimed token
+  // Note: Unclaimed tokens (!characterData?.claimedBy) are accessible to everyone for editing,
+  // since the GM hasn't assigned them to a specific player yet
+  const isOwnerOrGM = playerRole === 'GM' || characterData?.claimedBy === playerId || !characterData?.claimedBy;
+  if (!isOwnerOrGM && !viewingStorageId) {
+    // Non-owners can only see Home and Trade tabs
+    visibleTabs = visibleTabs.filter(t => ['Home', 'Trade'].includes(t.id));
+  }
+
   const activeStorageDef = viewingStorageId ? STORAGE_DEFINITIONS[characterData.externalStorages.find(s => s.id === viewingStorageId)!.type] : null;
 
   return (
@@ -1210,6 +1240,12 @@ function App() {
           <div style={{background: 'var(--accent-gold)', color: 'black', padding: '4px 8px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
               <span>VIEWING: {currentDisplayData.condition}</span>
               <button onClick={() => { setViewingStorageId(null); setActiveTab('External'); }} style={{background:'black', color:'white', border:'none', padding:'2px 6px', fontSize:'10px', cursor:'pointer'}}>EXIT</button>
+          </div>
+      )}
+      {/* Read-only indicator when viewing another player's claimed token */}
+      {!isOwnerOrGM && !viewingStorageId && characterData?.claimedBy && (
+          <div style={{background: 'rgba(255,100,100,0.2)', color: '#ff6666', padding: '4px 8px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '11px'}}>
+              <span>👁 Viewing {tokenName}'s inventory (Read Only)</span>
           </div>
       )}
       <nav className="nav-bar">
@@ -2039,7 +2075,7 @@ function App() {
             player2Items={player2Items}
             setPlayer1Items={handleSetPlayer1Items}
             setPlayer2Items={handleSetPlayer2Items}
-            player2Data={player2Data}
+            otherPlayerData={otherPlayerData}
             playerRole={playerRole}
             isExecutingTrade={isExecutingTrade}
             handleApproveTrade={handleApproveTrade}

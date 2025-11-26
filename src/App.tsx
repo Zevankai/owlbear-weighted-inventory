@@ -13,16 +13,12 @@ import { ACTIVE_TRADE_KEY } from './constants';
 
 // Utilities
 import { hexToRgb } from './utils/color';
-import {
-  getTotalCopperPieces,
-  deductCopperPieces,
-  addCopperPieces,
-} from './utils/currency';
+// Currency utilities moved to TradeWindow.tsx
 
 // Components
 import { GMOverviewTab } from './components/tabs/GMOverviewTab';
 import { HomeTab } from './components/tabs/HomeTab';
-import { TradeModal } from './components/TradeModal';
+// TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 
 function App() {
@@ -132,12 +128,9 @@ function App() {
 
   // Trading state
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
-  const [isExecutingTrade, setIsExecutingTrade] = useState(false); // Prevent duplicate trade execution
-  const [showTradeModal, setShowTradeModal] = useState(false);
+  const [tradeWindowOpened, setTradeWindowOpened] = useState(false);
   const [showTradeRequest, setShowTradeRequest] = useState(false);
   const [pendingTradeRequest, setPendingTradeRequest] = useState<ActiveTrade | null>(null);
-  // Other player data for trading
-  const [otherPlayerData, setOtherPlayerData] = useState<CharacterData | null>(null);
   // Player's claimed token info
   const [playerClaimedTokenName, setPlayerClaimedTokenName] = useState<string | null>(null);
 
@@ -166,15 +159,15 @@ function App() {
         
         // Check if this is an active trade involving the current player
         if (trade.status === 'active' && (trade.player1Id === playerId || trade.player2Id === playerId)) {
-          setShowTradeModal(true);
+          openTradeWindow();
           setShowTradeRequest(false);
           setPendingTradeRequest(null);
         }
       } else {
         setActiveTrade(null);
-        setShowTradeModal(false);
         setShowTradeRequest(false);
         setPendingTradeRequest(null);
+        setTradeWindowOpened(false);
       }
     };
 
@@ -211,36 +204,7 @@ function App() {
     return () => clearInterval(interval);
   }, [playerClaimedTokenId]);
 
-  // Load other player's data for P2P trades (relative to current player)
-  useEffect(() => {
-    if (!activeTrade || !playerId) {
-      setOtherPlayerData(null);
-      return;
-    }
-
-    const loadOtherPlayerData = async () => {
-      try {
-        // Determine which token ID belongs to the "other" player
-        const isPlayer1 = activeTrade.player1Id === playerId;
-        const otherTokenId = isPlayer1 ? activeTrade.player2TokenId : activeTrade.player1TokenId;
-        
-        if (!otherTokenId) {
-          setOtherPlayerData(null);
-          return;
-        }
-
-        const tokens = await OBR.scene.items.getItems([otherTokenId]);
-        if (tokens.length > 0) {
-          const data = tokens[0].metadata['com.weighted-inventory/data'] as CharacterData;
-          setOtherPlayerData(data);
-        }
-      } catch (err) {
-        console.error('Failed to load other player data:', err);
-      }
-    };
-
-    loadOtherPlayerData();
-  }, [activeTrade, playerId]);
+  // Other player data is now loaded in TradeWindow.tsx for the separate trade window
 
   // Debug functions
   const loadDebugInfo = async () => {
@@ -875,6 +839,20 @@ function App() {
 
   // ===== P2P TRADING FUNCTIONS =====
 
+  // Open separate trade window
+  const openTradeWindow = () => {
+    if (tradeWindowOpened) return; // Prevent opening multiple windows
+
+    OBR.popover.open({
+      id: "com.weighted-inventory.trade-window",
+      url: "/trade",
+      height: 800,
+      width: 800,
+    });
+
+    setTradeWindowOpened(true);
+  };
+
   // Start player-to-player trade (request)
   const handleStartP2PTrade = async (otherPlayerTokenId: string) => {
     // Check if player has a claimed token
@@ -944,7 +922,7 @@ function App() {
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
     setShowTradeRequest(false);
     setPendingTradeRequest(null);
-    setShowTradeModal(true);
+    openTradeWindow();
   };
 
   // Decline trade request
@@ -975,183 +953,9 @@ function App() {
     console.log('[TRADE] Clearing active trade from room metadata');
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
     console.log('[TRADE] Active trade cleared');
-
-    // Reset local state
-    setShowTradeModal(false);
   };
 
-  // Add item to trade offer
-  const handleAddItemToOffer = async (item: Item) => {
-    if (!activeTrade || !playerId) return;
-
-    const isPlayer1 = activeTrade.player1Id === playerId;
-    const currentOfferedItems = isPlayer1 ? activeTrade.player1OfferedItems : activeTrade.player2OfferedItems;
-    
-    // Check if item is already offered
-    if (currentOfferedItems.some(i => i.id === item.id)) return;
-
-    const updatedTrade: ActiveTrade = {
-      ...activeTrade,
-      ...(isPlayer1 
-        ? { player1OfferedItems: [...currentOfferedItems, item] }
-        : { player2OfferedItems: [...currentOfferedItems, item] }
-      ),
-      // Reset confirmation when offer changes
-      player1Confirmed: false,
-      player2Confirmed: false
-    };
-
-    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
-  };
-
-  // Remove item from trade offer
-  const handleRemoveItemFromOffer = async (item: Item) => {
-    if (!activeTrade || !playerId) return;
-
-    const isPlayer1 = activeTrade.player1Id === playerId;
-    const currentOfferedItems = isPlayer1 ? activeTrade.player1OfferedItems : activeTrade.player2OfferedItems;
-
-    const updatedTrade: ActiveTrade = {
-      ...activeTrade,
-      ...(isPlayer1 
-        ? { player1OfferedItems: currentOfferedItems.filter(i => i.id !== item.id) }
-        : { player2OfferedItems: currentOfferedItems.filter(i => i.id !== item.id) }
-      ),
-      // Reset confirmation when offer changes
-      player1Confirmed: false,
-      player2Confirmed: false
-    };
-
-    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
-  };
-
-  // Update coins offered
-  const handleUpdateOfferedCoins = async (coins: Currency) => {
-    if (!activeTrade || !playerId) return;
-
-    const isPlayer1 = activeTrade.player1Id === playerId;
-
-    const updatedTrade: ActiveTrade = {
-      ...activeTrade,
-      ...(isPlayer1 
-        ? { player1OfferedCoins: coins }
-        : { player2OfferedCoins: coins }
-      ),
-      // Reset confirmation when offer changes
-      player1Confirmed: false,
-      player2Confirmed: false
-    };
-
-    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
-  };
-
-  // Confirm trade
-  const handleConfirmTrade = async () => {
-    if (!activeTrade || !playerId || isExecutingTrade) return;
-
-    const isPlayer1 = activeTrade.player1Id === playerId;
-    const isPlayer2 = activeTrade.player2Id === playerId;
-
-    if (!isPlayer1 && !isPlayer2) return;
-
-    const updatedTrade: ActiveTrade = {
-      ...activeTrade,
-      player1Confirmed: isPlayer1 ? true : activeTrade.player1Confirmed,
-      player2Confirmed: isPlayer2 ? true : activeTrade.player2Confirmed
-    };
-
-    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
-
-    // Check if both players confirmed
-    if (updatedTrade.player1Confirmed && updatedTrade.player2Confirmed) {
-      // Both confirmed - execute trade
-      setIsExecutingTrade(true);
-      try {
-        await executeTrade();
-      } finally {
-        setIsExecutingTrade(false);
-      }
-    }
-  };
-
-  // Execute the P2P trade - transfer items and currency between tokens
-  const executeTrade = async () => {
-    if (!activeTrade || isExecutingTrade) return;
-    try {
-      // Get all involved tokens
-      const tokenIds = [activeTrade.player1TokenId, activeTrade.player2TokenId];
-
-      // Update tokens with new inventories and currency
-      await OBR.scene.items.updateItems(tokenIds, (items) => {
-        const player1Token = items.find(t => t.id === activeTrade.player1TokenId);
-        const player2Token = items.find(t => t.id === activeTrade.player2TokenId);
-
-        if (player1Token && player2Token) {
-          const player1Data = player1Token.metadata['com.weighted-inventory/data'] as CharacterData;
-          const player2Data = player2Token.metadata['com.weighted-inventory/data'] as CharacterData;
-
-          // Transfer items from player1 to player2
-          activeTrade.player1OfferedItems.forEach(item => {
-            // Remove from player1
-            player1Data.inventory = player1Data.inventory.filter(i => i.id !== item.id);
-            // Add to player2
-            player2Data.inventory.push({ ...item, equippedSlot: null, isAttuned: false });
-          });
-
-          // Transfer items from player2 to player1
-          activeTrade.player2OfferedItems.forEach(item => {
-            // Remove from player2
-            player2Data.inventory = player2Data.inventory.filter(i => i.id !== item.id);
-            // Add to player1
-            player1Data.inventory.push({ ...item, equippedSlot: null, isAttuned: false });
-          });
-
-          // Ensure currency objects exist
-          if (!player1Data.currency) player1Data.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
-          if (!player2Data.currency) player2Data.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
-
-          // Get coin offers
-          const p1CoinsOffered = activeTrade.player1OfferedCoins || { cp: 0, sp: 0, gp: 0, pp: 0 };
-          const p2CoinsOffered = activeTrade.player2OfferedCoins || { cp: 0, sp: 0, gp: 0, pp: 0 };
-
-          // Convert to copper for transfer
-          const p1CoinsCp = getTotalCopperPieces(p1CoinsOffered);
-          const p2CoinsCp = getTotalCopperPieces(p2CoinsOffered);
-
-          // Deduct player1's offered coins and give to player2
-          if (p1CoinsCp > 0) {
-            const success = deductCopperPieces(player1Data.currency, p1CoinsCp);
-            if (!success) {
-              throw new Error(`${activeTrade.player1Name} does not have enough coins!`);
-            }
-            addCopperPieces(player2Data.currency, p1CoinsCp);
-          }
-
-          // Deduct player2's offered coins and give to player1
-          if (p2CoinsCp > 0) {
-            const success = deductCopperPieces(player2Data.currency, p2CoinsCp);
-            if (!success) {
-              throw new Error(`${activeTrade.player2Name} does not have enough coins!`);
-            }
-            addCopperPieces(player1Data.currency, p2CoinsCp);
-          }
-
-          player1Token.metadata['com.weighted-inventory/data'] = player1Data;
-          player2Token.metadata['com.weighted-inventory/data'] = player2Data;
-        }
-      });
-
-      console.log('[TRADE] Trade execution complete, clearing trade metadata...');
-      // Clear trade
-      await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
-      setShowTradeModal(false);
-      console.log('[TRADE] Trade cleared, showing success alert');
-      alert('Trade completed successfully!');
-    } catch (err) {
-      console.error('Failed to execute trade:', err);
-      alert(`Trade failed! ${err instanceof Error ? err.message : 'Check console for details.'}`);
-    }
-  };
+  // Trade offer management and execution now handled in TradeWindow.tsx
 
   const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
     { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
@@ -2021,7 +1825,7 @@ function App() {
         {activeTab === 'GM' && playerRole === 'GM' && (
           <GMOverviewTab
             activeTrade={activeTrade}
-            isExecutingTrade={isExecutingTrade}
+            isExecutingTrade={false}
             handleCancelTrade={handleCancelTrade}
             loadTokenById={loadTokenById}
             setActiveTab={setActiveTab}
@@ -2037,30 +1841,7 @@ function App() {
         onDecline={handleDeclineTrade}
       />
 
-      {/* Trade Modal */}
-      {activeTrade && activeTrade.status === 'active' && playerId && characterData && (
-        <TradeModal
-          isOpen={showTradeModal}
-          onClose={() => setShowTradeModal(false)}
-          activeTrade={activeTrade}
-          playerId={playerId}
-          playerInventory={characterData.inventory}
-          playerCurrency={characterData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 }}
-          otherPlayerInventory={otherPlayerData?.inventory || []}
-          otherPlayerCurrency={otherPlayerData?.currency || { cp: 0, sp: 0, gp: 0, pp: 0 }}
-          myOfferedItems={activeTrade.player1Id === playerId ? activeTrade.player1OfferedItems : activeTrade.player2OfferedItems}
-          myOfferedCoins={activeTrade.player1Id === playerId ? activeTrade.player1OfferedCoins : activeTrade.player2OfferedCoins}
-          theirOfferedItems={activeTrade.player1Id === playerId ? activeTrade.player2OfferedItems : activeTrade.player1OfferedItems}
-          theirOfferedCoins={activeTrade.player1Id === playerId ? activeTrade.player2OfferedCoins : activeTrade.player1OfferedCoins}
-          onAddItem={handleAddItemToOffer}
-          onRemoveItem={handleRemoveItemFromOffer}
-          onUpdateCoins={handleUpdateOfferedCoins}
-          onConfirm={handleConfirmTrade}
-          onCancel={handleCancelTrade}
-          myConfirmed={activeTrade.player1Id === playerId ? activeTrade.player1Confirmed : activeTrade.player2Confirmed}
-          theirConfirmed={activeTrade.player1Id === playerId ? activeTrade.player2Confirmed : activeTrade.player1Confirmed}
-        />
-      )}
+      {/* Trade Modal - Now handled in separate window (see TradeWindow.tsx) */}
 
       {/* Debug Panel Modal */}
       {showDebug && (

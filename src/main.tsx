@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
+import TradeWindow from './TradeWindow'
 import './index.css'
 import OBR from '@owlbear-rodeo/sdk'
 
@@ -28,9 +29,13 @@ OBR.onReady(() => {
     },
   });
 
+  // Simple routing based on pathname
+  const path = window.location.pathname;
+  const Component = path === '/trade' ? TradeWindow : App;
+
   ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
-      <App />
+      <Component />
     </React.StrictMode>,
   )
 });

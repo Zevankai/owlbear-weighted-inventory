@@ -2,7 +2,7 @@ import type { CharacterData, PackType, ActiveTrade } from '../../types';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '80px';
-const TOKEN_SIZE_READONLY = '100px';
+const TOKEN_SIZE_READONLY = '80px';
 
 // Description box width constants  
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
@@ -338,16 +338,16 @@ export function HomeTab({
           value={currentDisplayData.condition}
           onChange={(e) => canEditToken() && handleUpdateData({ condition: e.target.value })}
           className="search-input"
-          rows={canEditToken() ? 2 : 4}
+          rows={2}
           disabled={!canEditToken()}
           style={{
             width: '100%',
             minHeight: '50px',
             resize: 'vertical',
             boxSizing: 'border-box',
-            opacity: canEditToken() ? 1 : 0.8,
+            opacity: 1,
             cursor: canEditToken() ? 'text' : 'default',
-            fontSize: canEditToken() ? '13px' : '12px'
+            fontSize: '13px'
           }}
         />
       </div>

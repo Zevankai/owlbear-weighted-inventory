@@ -24,8 +24,9 @@ const getThemeKey = (playerId: string) => `${THEME_KEY_PREFIX}${playerId}`;
 const getTokenCenter = (token: Item): Vector2 => {
   // For Image items (tokens), calculate center based on image dimensions and scale
   if (isImage(token)) {
-    const width = token.image.width * token.scale.x;
-    const height = token.image.height * token.scale.y;
+    // Use Math.abs to handle any unusual negative scale values
+    const width = token.image.width * Math.abs(token.scale.x);
+    const height = token.image.height * Math.abs(token.scale.y);
     return {
       x: token.position.x + width / 2,
       y: token.position.y + height / 2

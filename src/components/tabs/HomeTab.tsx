@@ -2,11 +2,11 @@ import type { CharacterData, PackType, ActiveTrade } from '../../types';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '80px';
-const TOKEN_SIZE_READONLY = '160px';
+const TOKEN_SIZE_READONLY = '80px';
 
 // Description box width constants  
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
-const DESCRIPTION_WIDTH_READONLY = '150%';
+const DESCRIPTION_WIDTH_READONLY = '100%';
 
 interface Stats {
   totalWeight: number;
@@ -96,7 +96,7 @@ export function HomeTab({
   activeStorageDef
 }: HomeTabProps) {
   return (
-    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '12px'}}>
+    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '8px'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
         {/* Action buttons - star, list, and debug icons */}
@@ -170,7 +170,7 @@ export function HomeTab({
 
       {/* --- TOKEN PROFILE --- */}
       {!viewingStorageId && (
-        <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>
+        <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '12px'}}>
           {tokenImage && (
             <div style={{
               width: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
@@ -179,7 +179,7 @@ export function HomeTab({
               overflow: 'hidden',
               border: '3px solid var(--accent-gold)',
               background: 'transparent',
-              marginBottom: '8px',
+              marginBottom: '6px',
               alignSelf: 'center'
             }}>
               <img
@@ -189,24 +189,24 @@ export function HomeTab({
               />
             </div>
           )}
-          <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
+          <div style={{fontSize: '16px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
             {tokenName || 'Unknown Character'}
           </div>
 
           {/* Start P2P Trade Button */}
           {characterData && !activeTrade && tokenId &&
             characterData.claimedBy && characterData.claimedBy !== playerId && (
-            <div style={{marginTop: '12px', textAlign: 'center'}}>
+            <div style={{marginTop: '8px', textAlign: 'center'}}>
               <button
                 onClick={() => handleStartP2PTrade(tokenId)}
                 style={{
                   background: '#4a9eff',
                   border: 'none',
                   color: 'white',
-                  padding: '10px 20px',
+                  padding: '8px 16px',
                   borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '13px',
+                  fontSize: '12px',
                   fontWeight: 'bold'
                 }}
               >
@@ -222,7 +222,7 @@ export function HomeTab({
           {/* Only show edit controls if player can edit this token */}
           {canEditToken() && (
             <>
-              <div style={{marginBottom: '16px'}}>
+              <div style={{marginBottom: '12px'}}>
                 <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
                 <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
                   {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
@@ -230,9 +230,9 @@ export function HomeTab({
               </div>
 
               {/* Theme Customization */}
-              <div style={{marginBottom: '16px', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: '8px', border: '1px solid var(--glass-border)'}}>
-                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '12px'}}>🎨 Theme Colors</label>
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+              <div style={{marginBottom: '12px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid var(--glass-border)'}}>
+                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '8px'}}>🎨 Theme Colors</label>
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
                   <div>
                     <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Accent</label>
                     <input
@@ -290,9 +290,9 @@ export function HomeTab({
           )}
         </>
       ) : (
-        <div style={{marginBottom: '16px'}}>
+        <div style={{marginBottom: '12px'}}>
           <div style={{color: '#888', fontSize: '12px'}}>Type: {characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}</div>
-          <div style={{marginTop:'10px'}}>
+          <div style={{marginTop:'8px'}}>
             <label style={{display:'flex', alignItems:'center', gap:'8px', fontSize:'12px'}}>
               <input type="checkbox" checked={characterData.externalStorages.find(s => s.id === viewingStorageId)?.isNearby} onChange={(e) => {
                 const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, isNearby: e.target.checked} : s);
@@ -312,7 +312,7 @@ export function HomeTab({
 
       {!viewingStorageId && (
         <>
-          <h2 style={{marginTop: '20px', border: 'none'}}>SLOT USAGE</h2>
+          <h2 style={{marginTop: '12px', border: 'none'}}>SLOT USAGE</h2>
           <div className="totals-grid">
             <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
               <div className="stat-label">WEAPONS</div>
@@ -330,7 +330,7 @@ export function HomeTab({
       )}
 
       {/* Show description - editable if can edit, read-only otherwise */}
-      <div style={{marginTop: '20px', width: canEditToken() ? DESCRIPTION_WIDTH_EDITABLE : DESCRIPTION_WIDTH_READONLY, alignSelf: 'stretch'}}>
+      <div style={{marginTop: '12px', width: canEditToken() ? DESCRIPTION_WIDTH_EDITABLE : DESCRIPTION_WIDTH_READONLY, alignSelf: 'stretch'}}>
         <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
           Description
         </label>
@@ -338,23 +338,23 @@ export function HomeTab({
           value={currentDisplayData.condition}
           onChange={(e) => canEditToken() && handleUpdateData({ condition: e.target.value })}
           className="search-input"
-          rows={canEditToken() ? 2 : 4}
+          rows={2}
           disabled={!canEditToken()}
           style={{
             width: '100%',
-            minHeight: '60px',
+            minHeight: '50px',
             resize: 'vertical',
             boxSizing: 'border-box',
-            opacity: canEditToken() ? 1 : 0.8,
+            opacity: 1,
             cursor: canEditToken() ? 'text' : 'default',
-            fontSize: canEditToken() ? '14px' : '13px'
+            fontSize: '13px'
           }}
         />
       </div>
 
       {/* Storage Notes - only show when viewing storage and can edit */}
       {viewingStorageId && canEditToken() && (
-        <div style={{marginTop: '10px', width: '100%', alignSelf: 'stretch'}}>
+        <div style={{marginTop: '8px', width: '100%', alignSelf: 'stretch'}}>
           <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Notes</label>
           <textarea value={characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes || ''} onChange={(e) => {
             const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
@@ -365,7 +365,7 @@ export function HomeTab({
 
       {/* Token Claiming - at the bottom of the dashboard */}
       {!viewingStorageId && characterData && (
-        <div style={{marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
+        <div style={{marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center'}}>
           {characterData.claimedBy && (
             <div style={{fontSize: '10px', color: '#aaa'}}>
               {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}

@@ -159,6 +159,12 @@ function App() {
         
         // Check if this is an active trade involving the current player
         if (trade.status === 'active' && (trade.player1Id === playerId || trade.player2Id === playerId)) {
+          console.log('[TRADE] Detected active trade for current player:', {
+            tradeId: trade.id,
+            playerId,
+            isPlayer1: trade.player1Id === playerId,
+            currentWindowOpenedFor: tradeWindowOpenedForId
+          });
           openTradeWindow(trade.id);
           setShowTradeRequest(false);
           setPendingTradeRequest(null);
@@ -841,9 +847,19 @@ function App() {
 
   // Open separate trade window
   const openTradeWindow = (tradeId: string) => {
-    // Prevent opening multiple windows for the same trade
-    if (tradeWindowOpenedForId === tradeId) return;
+    console.log('[TRADE] openTradeWindow called:', {
+      tradeId,
+      tradeWindowOpenedForId,
+      willOpen: tradeWindowOpenedForId !== tradeId
+    });
 
+    // Prevent opening multiple windows for the same trade
+    if (tradeWindowOpenedForId === tradeId) {
+      console.log('[TRADE] Window already opened for this trade, skipping');
+      return;
+    }
+
+    console.log('[TRADE] Opening trade window...');
     OBR.popover.open({
       id: "com.weighted-inventory.trade-window",
       url: "/trade",
@@ -852,6 +868,7 @@ function App() {
     });
 
     setTradeWindowOpenedForId(tradeId);
+    console.log('[TRADE] Trade window opened, set tradeWindowOpenedForId to:', tradeId);
   };
 
   // Start player-to-player trade (request)

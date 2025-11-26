@@ -128,7 +128,7 @@ function App() {
 
   // Trading state
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
-  const [tradeWindowOpened, setTradeWindowOpened] = useState(false);
+  const [tradeWindowOpenedForId, setTradeWindowOpenedForId] = useState<string | null>(null);
   const [showTradeRequest, setShowTradeRequest] = useState(false);
   const [pendingTradeRequest, setPendingTradeRequest] = useState<ActiveTrade | null>(null);
   // Player's claimed token info
@@ -159,7 +159,7 @@ function App() {
         
         // Check if this is an active trade involving the current player
         if (trade.status === 'active' && (trade.player1Id === playerId || trade.player2Id === playerId)) {
-          openTradeWindow();
+          openTradeWindow(trade.id);
           setShowTradeRequest(false);
           setPendingTradeRequest(null);
         }
@@ -167,7 +167,7 @@ function App() {
         setActiveTrade(null);
         setShowTradeRequest(false);
         setPendingTradeRequest(null);
-        setTradeWindowOpened(false);
+        setTradeWindowOpenedForId(null);
       }
     };
 
@@ -840,8 +840,9 @@ function App() {
   // ===== P2P TRADING FUNCTIONS =====
 
   // Open separate trade window
-  const openTradeWindow = () => {
-    if (tradeWindowOpened) return; // Prevent opening multiple windows
+  const openTradeWindow = (tradeId: string) => {
+    // Prevent opening multiple windows for the same trade
+    if (tradeWindowOpenedForId === tradeId) return;
 
     OBR.popover.open({
       id: "com.weighted-inventory.trade-window",
@@ -850,7 +851,7 @@ function App() {
       width: 800,
     });
 
-    setTradeWindowOpened(true);
+    setTradeWindowOpenedForId(tradeId);
   };
 
   // Start player-to-player trade (request)
@@ -922,7 +923,7 @@ function App() {
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
     setShowTradeRequest(false);
     setPendingTradeRequest(null);
-    openTradeWindow();
+    openTradeWindow(updatedTrade.id);
   };
 
   // Decline trade request

@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback } from 'react';
-import OBR, { buildShape } from '@owlbear-rodeo/sdk';
+import OBR, { buildShape, isImage } from '@owlbear-rodeo/sdk';
 import type { Item } from '@owlbear-rodeo/sdk';
 import type { CharacterData } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
+import type { Vector2 } from '@owlbear-rodeo/sdk';
 
 // Store data on each token's own metadata (16KB per token, not shared!)
 const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
@@ -18,6 +19,22 @@ const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
 
 const getFavoritesKey = (playerId: string) => `${FAVORITES_KEY_PREFIX}${playerId}`;
 const getThemeKey = (playerId: string) => `${THEME_KEY_PREFIX}${playerId}`;
+
+// Helper to calculate the center position of a token (pure utility function)
+const getTokenCenter = (token: Item): Vector2 => {
+  // For Image items (tokens), calculate center based on image dimensions and scale
+  if (isImage(token)) {
+    // Use Math.abs to handle any unusual negative scale values
+    const width = token.image.width * Math.abs(token.scale.x);
+    const height = token.image.height * Math.abs(token.scale.y);
+    return {
+      x: token.position.x + width / 2,
+      y: token.position.y + height / 2
+    };
+  }
+  // Fallback: just use the position (top-left) for non-image items
+  return token.position;
+};
 
 interface ThemeColors {
   accent: string;
@@ -424,15 +441,20 @@ export function useInventory() {
 
       if (!token1 || !token2) return false;
 
+      // Calculate center positions of both tokens
+      // Token positions are top-left corners, so we need to offset by half the token size
+      // to get the actual center where the character is visually located
+      const center1 = getTokenCenter(token1);
+      const center2 = getTokenCenter(token2);
+
       // Use OBR's grid distance calculation which automatically handles different
       // map DPI settings and returns distance in grid units (not pixels).
-      // This fixes the bug where proximity checks failed on non-default DPI maps.
-      const distance = await OBR.scene.grid.getDistance(token1.position, token2.position);
+      const distance = await OBR.scene.grid.getDistance(center1, center2);
 
       // Maximum allowed distance is 5 grid units
       const maxDistance = 5;
 
-      console.log('[Proximity] Distance between tokens:', distance, 'grid units. Max:', maxDistance);
+      console.log('[Proximity] Distance between token centers:', distance, 'grid units. Max:', maxDistance);
       return distance <= maxDistance;
     } catch (err) {
       console.error('[Proximity] Failed to check:', err);

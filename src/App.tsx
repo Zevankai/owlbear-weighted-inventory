@@ -128,11 +128,26 @@ function App() {
 
   // Trading state
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
-  const [tradeWindowOpenedForId, setTradeWindowOpenedForId] = useState<string | null>(null);
+  const tradeWindowOpenedForIdRef = useRef<string | null>(null);
   const [showTradeRequest, setShowTradeRequest] = useState(false);
   const [pendingTradeRequest, setPendingTradeRequest] = useState<ActiveTrade | null>(null);
   // Player's claimed token info
   const [playerClaimedTokenName, setPlayerClaimedTokenName] = useState<string | null>(null);
+
+  // Open separate trade window - defined early to be available in useEffect
+  const openTradeWindow = (tradeId: string) => {
+    // Prevent opening multiple windows for the same trade
+    if (tradeWindowOpenedForIdRef.current === tradeId) return;
+
+    OBR.popover.open({
+      id: "com.weighted-inventory.trade-window",
+      url: "/trade",
+      height: 800,
+      width: 800,
+    });
+
+    tradeWindowOpenedForIdRef.current = tradeId;
+  };
 
   useEffect(() => {
     OBR.onReady(() => setReady(true));
@@ -159,6 +174,7 @@ function App() {
         
         // Check if this is an active trade involving the current player
         if (trade.status === 'active' && (trade.player1Id === playerId || trade.player2Id === playerId)) {
+          // Open trade window if not already open (ref-based check prevents duplicates)
           openTradeWindow(trade.id);
           setShowTradeRequest(false);
           setPendingTradeRequest(null);
@@ -167,7 +183,7 @@ function App() {
         setActiveTrade(null);
         setShowTradeRequest(false);
         setPendingTradeRequest(null);
-        setTradeWindowOpenedForId(null);
+        tradeWindowOpenedForIdRef.current = null;
       }
     };
 
@@ -838,21 +854,6 @@ function App() {
   }
 
   // ===== P2P TRADING FUNCTIONS =====
-
-  // Open separate trade window
-  const openTradeWindow = (tradeId: string) => {
-    // Prevent opening multiple windows for the same trade
-    if (tradeWindowOpenedForId === tradeId) return;
-
-    OBR.popover.open({
-      id: "com.weighted-inventory.trade-window",
-      url: "/trade",
-      height: 800,
-      width: 800,
-    });
-
-    setTradeWindowOpenedForId(tradeId);
-  };
 
   // Start player-to-player trade (request)
   const handleStartP2PTrade = async (otherPlayerTokenId: string) => {

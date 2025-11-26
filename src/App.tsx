@@ -691,14 +691,14 @@ function App() {
     return (
       <div className="app-container" style={{display: 'flex', flexDirection: 'column', height: '100%'}}>
         <div style={{
-          padding: '16px',
+          padding: '12px',
           borderBottom: '1px solid var(--border)',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
           flexShrink: 0
         }}>
-          <h2 style={{margin: 0, fontSize: '18px'}}>Inventory Manager</h2>
+          <h2 style={{margin: 0, fontSize: '16px'}}>Inventory Manager</h2>
           {tokenId && (
             <button
               onClick={() => setViewingFavorites(false)}
@@ -706,10 +706,10 @@ function App() {
                 background: 'var(--border)',
                 color: 'white',
                 border: 'none',
-                padding: '6px 16px',
+                padding: '5px 12px',
                 borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: 'bold'
               }}
             >
@@ -718,20 +718,20 @@ function App() {
           )}
         </div>
 
-        <div style={{flex: 1, overflowY: 'auto', padding: '20px'}}>
+        <div style={{flex: 1, overflowY: 'auto', padding: '12px'}}>
           {!tokenId && (
             <div style={{
               textAlign: 'center',
-              padding: '40px 20px',
+              padding: '24px 16px',
               background: 'rgba(255,255,255,0.02)',
-              borderRadius: '8px',
-              marginBottom: '20px'
+              borderRadius: '6px',
+              marginBottom: '12px'
             }}>
-              <div style={{fontSize: '48px', marginBottom: '12px'}}>📦</div>
-              <p style={{color: 'var(--text-main)', fontSize: '16px', marginBottom: '8px'}}>
+              <div style={{fontSize: '40px', marginBottom: '8px'}}>📦</div>
+              <p style={{color: 'var(--text-main)', fontSize: '14px', marginBottom: '6px'}}>
                 Welcome to Inventory Manager
               </p>
-              <p style={{color: 'var(--text-muted)', fontSize: '13px'}}>
+              <p style={{color: 'var(--text-muted)', fontSize: '12px'}}>
                 Select a token on the map to view its inventory
               </p>
             </div>
@@ -739,11 +739,11 @@ function App() {
 
           {/* Current Token (if viewing from an active session) */}
           {tokenId && tokenName && (
-            <div style={{marginBottom: '24px'}}>
+            <div style={{marginBottom: '16px'}}>
               <h3 style={{
-                fontSize: '11px',
+                fontSize: '10px',
                 color: 'var(--text-muted)',
-                marginBottom: '8px',
+                marginBottom: '6px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
                 fontWeight: 'bold'
@@ -755,11 +755,11 @@ function App() {
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '16px',
-                  padding: '16px',
+                  gap: '12px',
+                  padding: '12px',
                   background: 'rgba(240, 225, 48, 0.15)',
                   border: '2px solid var(--accent-gold)',
-                  borderRadius: '8px',
+                  borderRadius: '6px',
                   cursor: 'pointer',
                   color: 'var(--text-main)',
                   textAlign: 'left',
@@ -771,20 +771,20 @@ function App() {
               >
                 {tokenImage && (
                   <div style={{
-                    width: '60px',
-                    height: '60px',
+                    width: '50px',
+                    height: '50px',
                     borderRadius: '50%',
                     overflow: 'hidden',
-                    border: '3px solid var(--accent-gold)',
+                    border: '2px solid var(--accent-gold)',
                     flexShrink: 0,
-                    boxShadow: '0 4px 8px rgba(0,0,0,0.3)'
+                    boxShadow: '0 3px 6px rgba(0,0,0,0.3)'
                   }}>
                     <img src={tokenImage} alt={tokenName} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                   </div>
                 )}
                 <div>
-                  <div style={{fontWeight: 'bold', fontSize: '18px', color: 'var(--accent-gold)'}}>{tokenName}</div>
-                  <div style={{fontSize: '11px', color: 'var(--text-muted)', marginTop: '4px'}}>Click to return</div>
+                  <div style={{fontWeight: 'bold', fontSize: '16px', color: 'var(--accent-gold)'}}>{tokenName}</div>
+                  <div style={{fontSize: '10px', color: 'var(--text-muted)', marginTop: '2px'}}>Click to return</div>
                 </div>
               </button>
             </div>
@@ -793,9 +793,9 @@ function App() {
           {favorites.length > 0 && (
             <div>
               <h3 style={{
-                fontSize: '11px',
+                fontSize: '10px',
                 color: 'var(--text-muted)',
-                marginBottom: '12px',
+                marginBottom: '8px',
                 textTransform: 'uppercase',
                 letterSpacing: '0.5px',
                 fontWeight: 'bold'
@@ -804,8 +804,8 @@ function App() {
               </h3>
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-                gap: '12px'
+                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                gap: '8px'
               }}>
                 {favorites.map(fav => (
                   <button
@@ -817,8 +817,8 @@ function App() {
                     style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '14px',
-                      padding: '14px',
+                      gap: '10px',
+                      padding: '10px',
                       background: 'rgba(255,255,255,0.05)',
                       border: '1px solid var(--border)',
                       borderRadius: '6px',
@@ -838,8 +838,8 @@ function App() {
                   >
                     {fav.image && (
                       <div style={{
-                        width: '50px',
-                        height: '50px',
+                        width: '40px',
+                        height: '40px',
                         borderRadius: '50%',
                         overflow: 'hidden',
                         border: '2px solid var(--accent-gold)',
@@ -848,7 +848,7 @@ function App() {
                         <img src={fav.image} alt={fav.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                       </div>
                     )}
-                    <div style={{fontWeight: 'bold', fontSize: '15px', flex: 1}}>{fav.name}</div>
+                    <div style={{fontWeight: 'bold', fontSize: '13px', flex: 1}}>{fav.name}</div>
                   </button>
                 ))}
               </div>
@@ -858,12 +858,12 @@ function App() {
           {favorites.length === 0 && !tokenId && (
             <div style={{
               textAlign: 'center',
-              padding: '60px 20px',
+              padding: '40px 16px',
               color: 'var(--text-muted)'
             }}>
-              <div style={{fontSize: '64px', marginBottom: '16px', opacity: 0.3}}>⭐</div>
-              <p style={{fontSize: '14px', marginBottom: '8px'}}>No favorites yet</p>
-              <p style={{fontSize: '12px', opacity: 0.7}}>
+              <div style={{fontSize: '48px', marginBottom: '12px', opacity: 0.3}}>⭐</div>
+              <p style={{fontSize: '13px', marginBottom: '6px'}}>No favorites yet</p>
+              <p style={{fontSize: '11px', opacity: 0.7}}>
                 Select a token and add it to favorites from the Home tab
               </p>
             </div>
@@ -1238,24 +1238,24 @@ function App() {
 
         {activeTab === 'Pack' && (
             <div className="section" style={{padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-                <div style={{padding: '12px', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border)'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
+                <div style={{padding: '8px', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border)'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px'}}>
                         <h2 style={{margin: 0, border: 'none'}}>INVENTORY ({viewingStorageId ? 'STORAGE' : 'PLAYER'})</h2>
-                        <span style={{fontSize: '11px', color: 'var(--text-muted)'}}>{currentDisplayData.inventory.length} Items</span>
+                        <span style={{fontSize: '10px', color: 'var(--text-muted)'}}>{currentDisplayData.inventory.length} Items</span>
                     </div>
                     <input type="text" placeholder="Filter items..." className="search-input" style={{marginTop: 0}} value={filterText} onChange={(e) => setFilterText(e.target.value)} />
                 </div>
-                <div style={{flex: 1, overflowY: 'auto', padding: '0 12px 12px 12px'}}>
-                    <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '10px'}}>
+                <div style={{flex: 1, overflowY: 'auto', padding: '0 8px 8px 8px'}}>
+                    <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '8px'}}>
                         <thead>
-                            <tr style={{borderBottom: '2px solid var(--border)', color: 'var(--accent-gold)', fontSize: '10px', textAlign: 'left'}}>
-                                <th style={{padding: '8px 4px'}}>QTY</th>
-                                <th style={{padding: '8px 4px'}}>ITEM</th>
-                                <th style={{padding: '8px 4px'}}>TYPE</th>
-                                <th style={{padding: '8px 4px'}}>VALUE</th>
-                                <th style={{padding: '8px 4px', textAlign:'center'}}>CHARGES</th>
-                                <th style={{padding: '8px 4px', textAlign:'center'}}>WT</th>
-                                <th style={{padding: '8px 4px', textAlign:'right'}}>ACTIONS</th>
+                            <tr style={{borderBottom: '2px solid var(--border)', color: 'var(--accent-gold)', fontSize: '9px', textAlign: 'left'}}>
+                                <th style={{padding: '6px 3px'}}>QTY</th>
+                                <th style={{padding: '6px 3px'}}>ITEM</th>
+                                <th style={{padding: '6px 3px'}}>TYPE</th>
+                                <th style={{padding: '6px 3px'}}>VALUE</th>
+                                <th style={{padding: '6px 3px', textAlign:'center'}}>CHARGES</th>
+                                <th style={{padding: '6px 3px', textAlign:'center'}}>WT</th>
+                                <th style={{padding: '6px 3px', textAlign:'right'}}>ACTIONS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -1273,23 +1273,23 @@ function App() {
                                             background: draggedItemId === item.id ? 'rgba(255, 215, 0, 0.1)' : 'transparent'
                                         }}
                                     >
-                                        <td style={{padding: '8px 4px', width: '50px'}}><input type="number" value={item.qty} min="1" onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, qty: parseInt(e.target.value)} : i); handleUpdateData({inventory: newInv}); }} style={{width: '40px', background: '#222', border: '1px solid #444', color: 'white', textAlign: 'center', padding: '4px'}} /></td>
-                                        <td style={{padding: '8px 4px'}}><div style={{fontWeight: 'bold', color: item.equippedSlot ? 'var(--accent-gold)' : 'var(--text-main)'}}>{item.name}</div>{item.equippedSlot && <div style={{fontSize: '9px', textTransform:'uppercase', color:'var(--accent-gold)'}}>[EQ: {item.equippedSlot}]</div>}</td>
-                                        <td style={{padding: '8px 4px', width: '100px'}}><select value={item.category} onChange={(e) => { const cat = e.target.value as ItemCategory; const newWeight = DEFAULT_CATEGORY_WEIGHTS[cat] || item.weight; const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, category: cat, weight: newWeight} : i); handleUpdateData({inventory: newInv}); }} style={{width: '100%', background: 'transparent', border: 'none', color: '#aaa', fontSize: '11px', textOverflow:'ellipsis'}}>{ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></td>
-                                        <td style={{padding: '8px 4px', fontSize: '11px', color: '#888'}}>{item.value || '-'}</td>
-                                        <td style={{padding: '8px 4px', textAlign:'center', fontSize: '11px'}}>
+                                        <td style={{padding: '6px 3px', width: '45px'}}><input type="number" value={item.qty} min="1" onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, qty: parseInt(e.target.value)} : i); handleUpdateData({inventory: newInv}); }} style={{width: '36px', background: '#222', border: '1px solid #444', color: 'white', textAlign: 'center', padding: '3px'}} /></td>
+                                        <td style={{padding: '6px 3px'}}><div style={{fontWeight: 'bold', fontSize: '12px', color: item.equippedSlot ? 'var(--accent-gold)' : 'var(--text-main)'}}>{item.name}</div>{item.equippedSlot && <div style={{fontSize: '8px', textTransform:'uppercase', color:'var(--accent-gold)'}}>[EQ: {item.equippedSlot}]</div>}</td>
+                                        <td style={{padding: '6px 3px', width: '90px'}}><select value={item.category} onChange={(e) => { const cat = e.target.value as ItemCategory; const newWeight = DEFAULT_CATEGORY_WEIGHTS[cat] || item.weight; const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, category: cat, weight: newWeight} : i); handleUpdateData({inventory: newInv}); }} style={{width: '100%', background: 'transparent', border: 'none', color: '#aaa', fontSize: '10px', textOverflow:'ellipsis'}}>{ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}</select></td>
+                                        <td style={{padding: '6px 3px', fontSize: '10px', color: '#888'}}>{item.value || '-'}</td>
+                                        <td style={{padding: '6px 3px', textAlign:'center', fontSize: '10px'}}>
                                             {item.maxCharges !== undefined ? (
-                                                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'}}>
+                                                <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2px'}}>
                                                     <button
                                                         onClick={() => {
                                                             const newCharges = Math.max(0, (item.charges || 0) - 1);
                                                             const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, charges: newCharges} : i);
                                                             handleUpdateData({inventory: newInv});
                                                         }}
-                                                        style={{background: '#333', border: 'none', color: '#888', cursor: 'pointer', padding: '2px 6px', fontSize: '10px', borderRadius: '2px'}}
+                                                        style={{background: '#333', border: 'none', color: '#888', cursor: 'pointer', padding: '2px 4px', fontSize: '9px', borderRadius: '2px'}}
                                                         title="Decrease charge"
                                                     >−</button>
-                                                    <span style={{color: (item.charges || 0) === 0 ? '#f44' : 'var(--text-main)', fontWeight: 'bold', minWidth: '40px', textAlign: 'center'}}>
+                                                    <span style={{color: (item.charges || 0) === 0 ? '#f44' : 'var(--text-main)', fontWeight: 'bold', minWidth: '32px', textAlign: 'center', fontSize: '10px'}}>
                                                         {item.charges || 0}/{item.maxCharges}
                                                     </span>
                                                     <button
@@ -1298,26 +1298,26 @@ function App() {
                                                             const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, charges: newCharges} : i);
                                                             handleUpdateData({inventory: newInv});
                                                         }}
-                                                        style={{background: '#333', border: 'none', color: '#888', cursor: 'pointer', padding: '2px 6px', fontSize: '10px', borderRadius: '2px'}}
+                                                        style={{background: '#333', border: 'none', color: '#888', cursor: 'pointer', padding: '2px 4px', fontSize: '9px', borderRadius: '2px'}}
                                                         title="Increase charge"
                                                     >+</button>
                                                 </div>
                                             ) : <span style={{color: '#444'}}>-</span>}
                                         </td>
-                                        <td style={{padding: '8px 4px', textAlign:'center', fontSize: '11px', color: '#888'}}>{item.weight * item.qty}</td>
-                                        <td style={{padding: '8px 4px', textAlign:'right'}}>
-                                            <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 4}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                                            <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 4}} title="Equip/Unequip"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
-                                            <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginRight: 4}} title="Sell"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></button>
-                                            <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}} title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                        <td style={{padding: '6px 3px', textAlign:'center', fontSize: '10px', color: '#888'}}>{item.weight * item.qty}</td>
+                                        <td style={{padding: '6px 3px', textAlign:'right'}}>
+                                            <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                                            <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Equip/Unequip"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
+                                            <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginRight: 3}} title="Sell"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></button>
+                                            <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}} title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                                         </td>
                                     </tr>
                                     {editingItemId === item.id ? (
                                         <tr style={{background: 'rgba(0,0,0,0.2)'}}>
-                                            <td colSpan={7} style={{padding: '12px', borderBottom: '1px solid #222'}}>
-                                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px'}}>
+                                            <td colSpan={7} style={{padding: '10px', borderBottom: '1px solid #222'}}>
+                                                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
                                                     <div>
-                                                        <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Name</label>
+                                                        <label style={{display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '3px'}}>Name</label>
                                                         <input className="search-input" style={{marginTop: 0}} value={item.name} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, name: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
                                                     </div>
                                                     <div>

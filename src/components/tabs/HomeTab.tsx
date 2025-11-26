@@ -359,7 +359,7 @@ export function HomeTab({
           <textarea value={characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes || ''} onChange={(e) => {
             const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
             updateData({ externalStorages: newStorages });
-          }} className="search-input" rows={2} />
+          }} className="search-input" rows={3} />
         </div>
       )}
 

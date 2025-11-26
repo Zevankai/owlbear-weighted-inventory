@@ -424,7 +424,9 @@ export function useInventory() {
 
       if (!token1 || !token2) return false;
 
-      // Use OBR's grid distance calculation which handles DPI correctly
+      // Use OBR's grid distance calculation which automatically handles different
+      // map DPI settings and returns distance in grid units (not pixels).
+      // This fixes the bug where proximity checks failed on non-default DPI maps.
       const distance = await OBR.scene.grid.getDistance(token1.position, token2.position);
 
       // Maximum allowed distance is 5 grid units

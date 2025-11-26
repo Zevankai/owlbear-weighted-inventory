@@ -1196,12 +1196,7 @@ function App() {
               <button onClick={() => { setViewingStorageId(null); setActiveTab('External'); }} style={{background:'black', color:'white', border:'none', padding:'2px 6px', fontSize:'10px', cursor:'pointer'}}>EXIT</button>
           </div>
       )}
-      {/* Read-only indicator when viewing another player's claimed token */}
-      {!isOwnerOrGM && !viewingStorageId && characterData?.claimedBy && (
-          <div style={{background: 'rgba(255,100,100,0.2)', color: '#ff6666', padding: '4px 8px', fontWeight: 'bold', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '11px'}}>
-              <span>👁 Viewing {tokenName}'s inventory (Read Only)</span>
-          </div>
-      )}
+
       {/* Only show tab bar if there's more than one tab */}
       {visibleTabs.length > 1 && (
         <nav className="nav-bar">

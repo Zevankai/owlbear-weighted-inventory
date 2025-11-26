@@ -88,26 +88,76 @@ export function HomeTab({
   activeStorageDef
 }: HomeTabProps) {
   return (
-    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%'}}>
+    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '12px'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
-        {/* Debug button - subtle and only on Home tab */}
-        <button
-          onClick={() => { setShowDebug(true); loadDebugInfo(); }}
-          style={{
-            background: 'transparent',
-            color: '#666',
-            border: '1px solid #333',
-            padding: '2px 6px',
-            borderRadius: '3px',
-            cursor: 'pointer',
-            fontSize: '9px',
-            fontWeight: 'normal'
-          }}
-          title="Storage Debug Info"
-        >
-          ⚙
-        </button>
+        {/* Action buttons - star, list, and debug icons */}
+        <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>
+          {!viewingStorageId && (
+            <>
+              {/* Favorite star button */}
+              <button
+                onClick={toggleFavorite}
+                style={{
+                  background: 'transparent',
+                  color: isFavorited ? 'var(--accent-gold)' : '#666',
+                  border: '1px solid #333',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  fontWeight: 'normal'
+                }}
+                title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                {isFavorited ? '⭐' : '☆'}
+              </button>
+              {/* View favorites list button */}
+              {favorites.length > 0 && (
+                <button
+                  onClick={() => setViewingFavorites(true)}
+                  style={{
+                    background: 'transparent',
+                    color: 'var(--accent-gold)',
+                    border: '1px solid #333',
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'normal'
+                  }}
+                  title="View all favorite tokens"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="8" y1="6" x2="21" y2="6"></line>
+                    <line x1="8" y1="12" x2="21" y2="12"></line>
+                    <line x1="8" y1="18" x2="21" y2="18"></line>
+                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
+                  </svg>
+                </button>
+              )}
+            </>
+          )}
+          {/* Debug button */}
+          <button
+            onClick={() => { setShowDebug(true); loadDebugInfo(); }}
+            style={{
+              background: 'transparent',
+              color: '#666',
+              border: '1px solid #333',
+              padding: '2px 6px',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              fontSize: '9px',
+              fontWeight: 'normal'
+            }}
+            title="Storage Debug Info"
+          >
+            ⚙
+          </button>
+        </div>
       </div>
 
       {/* --- TOKEN PROFILE --- */}
@@ -134,137 +184,6 @@ export function HomeTab({
           <div style={{fontSize: '18px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
             {tokenName || 'Unknown Character'}
           </div>
-          <div style={{
-            display: 'flex',
-            gap: '8px',
-            marginTop: '8px',
-            justifyContent: 'center'
-          }}>
-            <button
-              onClick={toggleFavorite}
-              style={{
-                background: 'transparent',
-                border: '1px solid ' + (isFavorited ? 'var(--accent-gold)' : '#666'),
-                color: isFavorited ? 'var(--accent-gold)' : '#666',
-                padding: '4px 12px',
-                borderRadius: '12px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '4px'
-              }}
-              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              {isFavorited ? '⭐' : '☆'} {isFavorited ? 'Favorited' : 'Add to Favorites'}
-            </button>
-            {favorites.length > 0 && (
-              <button
-                onClick={() => setViewingFavorites(true)}
-                style={{
-                  background: 'rgba(240, 225, 48, 0.1)',
-                  border: '1px solid var(--accent-gold)',
-                  color: 'var(--accent-gold)',
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '4px'
-                }}
-                title="View all favorite tokens"
-              >
-                ⭐ View Favorites
-              </button>
-            )}
-          </div>
-
-          {/* Token Claiming */}
-          {characterData && (
-            <div style={{marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
-              {characterData.claimedBy && (
-                <div style={{fontSize: '10px', color: '#aaa'}}>
-                  {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}
-                </div>
-              )}
-              {!characterData.claimedBy && (
-                <>
-                  {/* Show claiming status */}
-                  {!characterData.claimingEnabled && playerRole !== 'GM' && (
-                    <div style={{fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
-                      🔒 Claiming disabled (GM must enable)
-                    </div>
-                  )}
-                  {/* Claim button */}
-                  {canEditToken() && (
-                    <button
-                      onClick={async () => {
-                        const success = await claimToken();
-                        if (success === false) {
-                          alert('Claiming is not enabled for this token. Ask the GM to enable claiming first.');
-                        }
-                      }}
-                      style={{
-                        background: characterData.claimingEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(128,128,128,0.1)',
-                        border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
-                        color: characterData.claimingEnabled ? '#0f0' : '#888',
-                        padding: '6px 16px',
-                        borderRadius: '4px',
-                        cursor: characterData.claimingEnabled ? 'pointer' : 'not-allowed',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        opacity: characterData.claimingEnabled ? 1 : 0.5
-                      }}
-                    >
-                      CLAIM TOKEN
-                    </button>
-                  )}
-                </>
-              )}
-              {characterData.claimedBy === playerId && (
-                <button
-                  onClick={unclaimToken}
-                  style={{
-                    background: 'rgba(255,0,0,0.1)',
-                    border: '1px solid #f00',
-                    color: '#f00',
-                    padding: '6px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '11px'
-                  }}
-                >
-                  UNCLAIM TOKEN
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* GM Token Controls */}
-          {playerRole === 'GM' && characterData && (
-            <div style={{marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
-              {/* Enable/Disable Claiming Toggle */}
-              <button
-                onClick={() => handleUpdateData({ claimingEnabled: !characterData.claimingEnabled })}
-                style={{
-                  background: characterData.claimingEnabled ? 'rgba(0,255,0,0.2)' : 'rgba(128,128,128,0.2)',
-                  border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
-                  color: characterData.claimingEnabled ? '#0f0' : '#888',
-                  padding: '6px 16px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  width: '220px'
-                }}
-              >
-                {characterData.claimingEnabled ? '🔓 CLAIMING ENABLED' : '🔒 CLAIMING DISABLED'}
-              </button>
-            </div>
-          )}
 
           {/* Start P2P Trade Button */}
           {characterData && !activeTrade && tokenId &&
@@ -433,6 +352,87 @@ export function HomeTab({
             const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
             updateData({ externalStorages: newStorages });
           }} className="search-input" rows={3} />
+        </div>
+      )}
+
+      {/* Token Claiming - at the bottom of the dashboard */}
+      {!viewingStorageId && characterData && (
+        <div style={{marginTop: 'auto', paddingTop: '16px', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center'}}>
+          {characterData.claimedBy && (
+            <div style={{fontSize: '10px', color: '#aaa'}}>
+              {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}
+            </div>
+          )}
+          {!characterData.claimedBy && (
+            <>
+              {/* Show claiming status */}
+              {!characterData.claimingEnabled && playerRole !== 'GM' && (
+                <div style={{fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
+                  🔒 Claiming disabled (GM must enable)
+                </div>
+              )}
+              {/* Claim button */}
+              {canEditToken() && (
+                <button
+                  onClick={async () => {
+                    const success = await claimToken();
+                    if (success === false) {
+                      alert('Claiming is not enabled for this token. Ask the GM to enable claiming first.');
+                    }
+                  }}
+                  style={{
+                    background: characterData.claimingEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(128,128,128,0.1)',
+                    border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
+                    color: characterData.claimingEnabled ? '#0f0' : '#888',
+                    padding: '6px 16px',
+                    borderRadius: '4px',
+                    cursor: characterData.claimingEnabled ? 'pointer' : 'not-allowed',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    opacity: characterData.claimingEnabled ? 1 : 0.5
+                  }}
+                >
+                  CLAIM TOKEN
+                </button>
+              )}
+            </>
+          )}
+          {characterData.claimedBy === playerId && (
+            <button
+              onClick={unclaimToken}
+              style={{
+                background: 'rgba(255,0,0,0.1)',
+                border: '1px solid #f00',
+                color: '#f00',
+                padding: '6px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '11px'
+              }}
+            >
+              UNCLAIM TOKEN
+            </button>
+          )}
+
+          {/* GM Token Controls */}
+          {playerRole === 'GM' && (
+            <button
+              onClick={() => handleUpdateData({ claimingEnabled: !characterData.claimingEnabled })}
+              style={{
+                background: characterData.claimingEnabled ? 'rgba(0,255,0,0.2)' : 'rgba(128,128,128,0.2)',
+                border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
+                color: characterData.claimingEnabled ? '#0f0' : '#888',
+                padding: '6px 16px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: 'bold',
+                width: '220px'
+              }}
+            >
+              {characterData.claimingEnabled ? '🔓 CLAIMING ENABLED' : '🔒 CLAIMING DISABLED'}
+            </button>
+          )}
         </div>
       )}
     </div>

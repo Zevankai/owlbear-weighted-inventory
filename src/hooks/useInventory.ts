@@ -20,6 +20,21 @@ const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
 const getFavoritesKey = (playerId: string) => `${FAVORITES_KEY_PREFIX}${playerId}`;
 const getThemeKey = (playerId: string) => `${THEME_KEY_PREFIX}${playerId}`;
 
+// Helper to calculate the center position of a token (pure utility function)
+const getTokenCenter = (token: Item): Vector2 => {
+  // For Image items (tokens), calculate center based on image dimensions and scale
+  if (isImage(token)) {
+    const width = token.image.width * token.scale.x;
+    const height = token.image.height * token.scale.y;
+    return {
+      x: token.position.x + width / 2,
+      y: token.position.y + height / 2
+    };
+  }
+  // Fallback: just use the position (top-left) for non-image items
+  return token.position;
+};
+
 interface ThemeColors {
   accent: string;
   background: string;
@@ -412,21 +427,6 @@ export function useInventory() {
     // If claimed, only the claiming player can edit
     return characterData.claimedBy === playerId;
   }, [characterData, playerId, playerRole]);
-
-  // Helper to calculate the center position of a token
-  const getTokenCenter = (token: Item): Vector2 => {
-    // For Image items (tokens), calculate center based on image dimensions and scale
-    if (isImage(token)) {
-      const width = token.image.width * token.scale.x;
-      const height = token.image.height * token.scale.y;
-      return {
-        x: token.position.x + width / 2,
-        y: token.position.y + height / 2
-      };
-    }
-    // Fallback: just use the position (top-left) for non-image items
-    return token.position;
-  };
 
   // Check proximity between two tokens (within 5 grid units)
   const checkProximity = useCallback(async (token1Id: string, token2Id: string): Promise<boolean> => {

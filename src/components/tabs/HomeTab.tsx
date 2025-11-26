@@ -2,11 +2,11 @@ import type { CharacterData, PackType, ActiveTrade } from '../../types';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '80px';
-const TOKEN_SIZE_READONLY = '160px';
+const TOKEN_SIZE_READONLY = '100px';
 
 // Description box width constants  
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
-const DESCRIPTION_WIDTH_READONLY = '150%';
+const DESCRIPTION_WIDTH_READONLY = '100%';
 
 interface Stats {
   totalWeight: number;

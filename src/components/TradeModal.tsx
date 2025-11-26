@@ -94,7 +94,7 @@ export function TradeModal({
           border: '2px solid var(--accent-gold)',
           borderRadius: '12px',
           padding: '16px',
-          width: 'min(900px, 95vw)',
+          width: 'min(1200px, 98vw)',
           maxHeight: '90vh',
           display: 'flex',
           flexDirection: 'column',

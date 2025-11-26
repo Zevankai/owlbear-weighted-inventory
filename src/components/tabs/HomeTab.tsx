@@ -88,7 +88,7 @@ export function HomeTab({
   activeStorageDef
 }: HomeTabProps) {
   return (
-    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column'}}>
+    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
         {/* Debug button - subtle and only on Home tab */}
@@ -414,10 +414,13 @@ export function HomeTab({
           rows={canEditToken() ? 2 : 4}
           disabled={!canEditToken()}
           style={{
+            width: '100%',
+            minHeight: '60px',
+            resize: 'vertical',
+            boxSizing: 'border-box',
             opacity: canEditToken() ? 1 : 0.8,
             cursor: canEditToken() ? 'text' : 'default',
-            fontSize: canEditToken() ? '14px' : '13px',
-            minHeight: canEditToken() ? 'auto' : '100px'
+            fontSize: canEditToken() ? '14px' : '13px'
           }}
         />
       </div>

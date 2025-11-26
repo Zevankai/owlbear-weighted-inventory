@@ -1202,9 +1202,12 @@ function App() {
               <span>👁 Viewing {tokenName}'s inventory (Read Only)</span>
           </div>
       )}
-      <nav className="nav-bar">
-        {visibleTabs.map((tab) => <button key={tab.id} className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)} title={tab.id}>{tab.icon ? tab.icon : tab.label}</button>)}
-      </nav>
+      {/* Only show tab bar if there's more than one tab */}
+      {visibleTabs.length > 1 && (
+        <nav className="nav-bar">
+          {visibleTabs.map((tab) => <button key={tab.id} className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)} title={tab.id}>{tab.icon ? tab.icon : tab.label}</button>)}
+        </nav>
+      )}
 
       <main className="content">
         {activeTab === 'Home' && stats && (

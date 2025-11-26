@@ -126,7 +126,7 @@ export function useInventory() {
           setPlayerClaimedTokenId(claimedToken.id);
           setPlayerClaimedTokenInfo({
             name: claimedToken.name || 'Unknown',
-            image: (claimedToken as unknown as {image?: {url?: string}}).image?.url || undefined
+            image: (claimedToken as any).image?.url || undefined
           });
           console.log('[Init] Found player claimed token:', claimedToken.name);
         }

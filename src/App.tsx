@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Fragment } from 'react';
+import React, { useState, useEffect, useRef, Fragment } from 'react';
 import OBR from '@owlbear-rodeo/sdk';
 import { v4 as uuidv4 } from 'uuid';
 import './App.css';
@@ -42,6 +42,19 @@ function App() {
     updateOverburdenedEffect, playerId, playerRole, playerClaimedTokenId,
     claimToken, unclaimToken, canEditToken, checkProximity
   } = useInventory();
+
+  // Track previous tokenId to detect token changes
+  const prevTokenIdRef = useRef<string | null>(null);
+
+  // Reset to Home tab when switching to a different token
+  useEffect(() => {
+    // Only reset if this is an actual token change (not initial load)
+    if (prevTokenIdRef.current !== null && tokenId !== null && tokenId !== prevTokenIdRef.current) {
+      setActiveTab('Home');
+      setViewingStorageId(null); // Also reset storage view when switching tokens
+    }
+    prevTokenIdRef.current = tokenId;
+  }, [tokenId]);
 
   // Apply theme colors to CSS variables
   useEffect(() => {

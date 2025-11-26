@@ -418,17 +418,21 @@ export function useInventory() {
       const items = await OBR.scene.items.getItems([token1Id, token2Id]);
       if (items.length !== 2) return false;
 
-      const token1 = items[0] as any;
-      const token2 = items[1] as any;
+      // Find tokens by ID to ensure correct matching
+      const token1 = items.find(item => item.id === token1Id);
+      const token2 = items.find(item => item.id === token2Id);
 
-      const dx = token1.position.x - token2.position.x;
-      const dy = token1.position.y - token2.position.y;
-      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (!token1 || !token2) return false;
 
-      // Convert grid units to DPI (default 150 DPI, 5 grid units = 750 pixels)
-      const maxDistance = 750;
+      // Use OBR's grid distance calculation which automatically handles different
+      // map DPI settings and returns distance in grid units (not pixels).
+      // This fixes the bug where proximity checks failed on non-default DPI maps.
+      const distance = await OBR.scene.grid.getDistance(token1.position, token2.position);
 
-      console.log('[Proximity] Distance between tokens:', distance, 'Max:', maxDistance);
+      // Maximum allowed distance is 5 grid units
+      const maxDistance = 5;
+
+      console.log('[Proximity] Distance between tokens:', distance, 'grid units. Max:', maxDistance);
       return distance <= maxDistance;
     } catch (err) {
       console.error('[Proximity] Failed to check:', err);

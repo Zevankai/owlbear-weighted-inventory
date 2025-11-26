@@ -36,7 +36,8 @@ function App() {
     tokenId, tokenName, tokenImage, characterData, updateData, loading,
     favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme,
     updateOverburdenedEffect, playerId, playerRole, playerClaimedTokenId,
-    claimToken, unclaimToken, canEditToken, checkProximity
+    playerClaimedTokenInfo, claimToken, unclaimToken, unclaimTokenById,
+    removeFavoriteById, canEditToken, checkProximity
   } = useInventory();
 
   // Track previous tokenId to detect token changes
@@ -770,6 +771,82 @@ function App() {
             </div>
           )}
 
+          {/* Claimed Token Section - shown separately at the top */}
+          {playerClaimedTokenId && playerClaimedTokenInfo && (
+            <div style={{marginBottom: '16px'}}>
+              <h3 style={{
+                fontSize: '10px',
+                color: 'var(--text-muted)',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                fontWeight: 'bold'
+              }}>
+                <span style={{color: '#0f0'}}>🎭</span> Your Claimed Token
+              </h3>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px',
+                background: 'rgba(0, 255, 0, 0.05)',
+                border: '1px solid rgba(0, 255, 0, 0.3)',
+                borderRadius: '6px',
+                color: 'var(--text-main)'
+              }}>
+                {playerClaimedTokenInfo.image && (
+                  <div 
+                    onClick={() => {
+                      loadTokenById(playerClaimedTokenId);
+                      setViewingFavorites(false);
+                    }}
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '2px solid #0f0',
+                      flexShrink: 0,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <img src={playerClaimedTokenInfo.image} alt={playerClaimedTokenInfo.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                  </div>
+                )}
+                <div 
+                  onClick={() => {
+                    loadTokenById(playerClaimedTokenId);
+                    setViewingFavorites(false);
+                  }}
+                  style={{fontWeight: 'bold', fontSize: '13px', flex: 1, cursor: 'pointer'}}
+                >
+                  {playerClaimedTokenInfo.name}
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (window.confirm(`Unclaim "${playerClaimedTokenInfo.name}"? You can reclaim it later.`)) {
+                      unclaimTokenById(playerClaimedTokenId);
+                    }
+                  }}
+                  style={{
+                    background: 'rgba(255, 0, 0, 0.1)',
+                    border: '1px solid rgba(255, 0, 0, 0.5)',
+                    color: '#f66',
+                    padding: '4px 8px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                    fontWeight: 'bold',
+                    flexShrink: 0
+                  }}
+                >
+                  UNCLAIM
+                </button>
+              </div>
+            </div>
+          )}
+
           {favorites.length > 0 && (
             <div>
               <h3 style={{
@@ -788,12 +865,8 @@ function App() {
                 gap: '8px'
               }}>
                 {favorites.map(fav => (
-                  <button
+                  <div
                     key={fav.id}
-                    onClick={() => {
-                      loadTokenById(fav.id);
-                      setViewingFavorites(false);
-                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -802,9 +875,7 @@ function App() {
                       background: 'rgba(255,255,255,0.05)',
                       border: '1px solid var(--border)',
                       borderRadius: '6px',
-                      cursor: 'pointer',
                       color: 'var(--text-main)',
-                      textAlign: 'left',
                       transition: 'all 0.2s'
                     }}
                     onMouseEnter={(e) => {
@@ -817,25 +888,60 @@ function App() {
                     }}
                   >
                     {fav.image && (
-                      <div style={{
-                        width: '40px',
-                        height: '40px',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        border: '2px solid var(--accent-gold)',
-                        flexShrink: 0
-                      }}>
+                      <div 
+                        onClick={() => {
+                          loadTokenById(fav.id);
+                          setViewingFavorites(false);
+                        }}
+                        style={{
+                          width: '40px',
+                          height: '40px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          border: '2px solid var(--accent-gold)',
+                          flexShrink: 0,
+                          cursor: 'pointer'
+                        }}
+                      >
                         <img src={fav.image} alt={fav.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
                       </div>
                     )}
-                    <div style={{fontWeight: 'bold', fontSize: '13px', flex: 1}}>{fav.name}</div>
-                  </button>
+                    <div 
+                      onClick={() => {
+                        loadTokenById(fav.id);
+                        setViewingFavorites(false);
+                      }}
+                      style={{fontWeight: 'bold', fontSize: '13px', flex: 1, cursor: 'pointer'}}
+                    >
+                      {fav.name}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFavoriteById(fav.id);
+                      }}
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.05)',
+                        border: '1px solid var(--border)',
+                        color: '#888',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        fontSize: '10px',
+                        fontWeight: 'bold',
+                        flexShrink: 0
+                      }}
+                      title="Remove from favorites"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 ))}
               </div>
             </div>
           )}
 
-          {favorites.length === 0 && !tokenId && (
+          {favorites.length === 0 && !playerClaimedTokenId && !tokenId && (
             <div style={{
               textAlign: 'center',
               padding: '40px 16px',
@@ -1039,6 +1145,7 @@ function App() {
             updateTheme={updateTheme}
             currentDisplayData={currentDisplayData}
             activeStorageDef={activeStorageDef}
+            hasClaimedToken={!!playerClaimedTokenId}
           />
         )}
 

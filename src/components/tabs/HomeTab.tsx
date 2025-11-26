@@ -65,6 +65,7 @@ interface HomeTabProps {
   updateTheme: (theme: Theme) => void;
   currentDisplayData: CharacterData;
   activeStorageDef: StorageDef | null;
+  hasClaimedToken?: boolean;
 }
 
 export function HomeTab({
@@ -93,7 +94,8 @@ export function HomeTab({
   theme,
   updateTheme,
   currentDisplayData,
-  activeStorageDef
+  activeStorageDef,
+  hasClaimedToken
 }: HomeTabProps) {
   return (
     <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '8px'}}>
@@ -121,7 +123,7 @@ export function HomeTab({
                 {isFavorited ? '⭐' : '☆'}
               </button>
               {/* View favorites list button */}
-              {favorites.length > 0 && (
+              {(favorites.length > 0 || hasClaimedToken) && (
                 <button
                   onClick={() => setViewingFavorites(true)}
                   style={{

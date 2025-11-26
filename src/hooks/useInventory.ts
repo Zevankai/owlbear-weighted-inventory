@@ -40,6 +40,7 @@ export function useInventory() {
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [playerRole, setPlayerRole] = useState<'GM' | 'PLAYER'>('PLAYER');
   const [playerClaimedTokenId, setPlayerClaimedTokenId] = useState<string | null>(null);
+  const [playerClaimedTokenInfo, setPlayerClaimedTokenInfo] = useState<{name: string; image?: string} | null>(null);
 
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
@@ -123,6 +124,10 @@ export function useInventory() {
         });
         if (claimedToken && mounted) {
           setPlayerClaimedTokenId(claimedToken.id);
+          setPlayerClaimedTokenInfo({
+            name: claimedToken.name || 'Unknown',
+            image: (claimedToken as unknown as {image?: {url?: string}}).image?.url || undefined
+          });
           console.log('[Init] Found player claimed token:', claimedToken.name);
         }
       } catch (err) {
@@ -265,6 +270,20 @@ export function useInventory() {
     console.log('[Favorites] Save complete');
   }, [tokenId, tokenName, tokenImage, favorites]);
 
+  // Remove a favorite by ID (for removing from favorites menu)
+  const removeFavoriteById = useCallback(async (targetTokenId: string) => {
+    console.log('[Favorites] Removing token by ID:', targetTokenId);
+    const newFavorites = favorites.filter(f => f.id !== targetTokenId);
+
+    setFavorites(newFavorites);
+
+    // Save to room metadata with player-specific key
+    const currentPlayerId = await OBR.player.getId();
+    const favoritesKey = getFavoritesKey(currentPlayerId);
+    await OBR.room.setMetadata({ [favoritesKey]: newFavorites });
+    console.log('[Favorites] Removed from favorites');
+  }, [favorites]);
+
   const isFavorited = tokenId ? favorites.some(f => f.id === tokenId) : false;
 
   // Update theme
@@ -345,8 +364,39 @@ export function useInventory() {
 
     await updateData({ claimedBy: undefined });
     setPlayerClaimedTokenId(null);
+    setPlayerClaimedTokenInfo(null);
     console.log('[Claim] Token unclaimed');
   }, [tokenId, updateData]);
+
+  // Unclaim a token by ID (for unclaiming from favorites menu without selecting the token)
+  const unclaimTokenById = useCallback(async (targetTokenId: string) => {
+    if (!targetTokenId) return;
+
+    try {
+      const items = await OBR.scene.items.getItems([targetTokenId]);
+      if (items.length === 0) {
+        console.error('[unclaimTokenById] Token not found');
+        return;
+      }
+
+      const currentData = items[0].metadata[TOKEN_DATA_KEY] as CharacterData | undefined || DEFAULT_CHARACTER_DATA;
+      const updatedData = { ...currentData, claimedBy: undefined };
+
+      await OBR.scene.items.updateItems([targetTokenId], (items) => {
+        items[0].metadata[TOKEN_DATA_KEY] = updatedData;
+      });
+
+      // Update local state if this was the player's claimed token
+      if (targetTokenId === playerClaimedTokenId) {
+        setPlayerClaimedTokenId(null);
+        setPlayerClaimedTokenInfo(null);
+      }
+
+      console.log('[unclaimTokenById] Token unclaimed:', targetTokenId);
+    } catch (err) {
+      console.error('[unclaimTokenById] Failed:', err);
+    }
+  }, [playerClaimedTokenId]);
 
   // Check if current player can edit the token
   const canEditToken = useCallback(() => {
@@ -403,8 +453,11 @@ export function useInventory() {
     playerId,
     playerRole,
     playerClaimedTokenId,
+    playerClaimedTokenInfo,
     claimToken,
     unclaimToken,
+    unclaimTokenById,
+    removeFavoriteById,
     canEditToken,
     checkProximity
   };

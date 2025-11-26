@@ -128,7 +128,7 @@ function App() {
 
   // Trading state
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
-  const [tradeWindowOpenedForId, setTradeWindowOpenedForId] = useState<string | null>(null);
+  const tradeWindowOpenedForIdRef = useRef<string | null>(null);
   const [showTradeRequest, setShowTradeRequest] = useState(false);
   const [pendingTradeRequest, setPendingTradeRequest] = useState<ActiveTrade | null>(null);
   // Player's claimed token info
@@ -159,7 +159,16 @@ function App() {
         
         // Check if this is an active trade involving the current player
         if (trade.status === 'active' && (trade.player1Id === playerId || trade.player2Id === playerId)) {
-          openTradeWindow(trade.id);
+          // Use ref to check if window is already opened (avoids stale closure issues)
+          if (tradeWindowOpenedForIdRef.current !== trade.id) {
+            OBR.popover.open({
+              id: "com.weighted-inventory.trade-window",
+              url: "/trade",
+              height: 800,
+              width: 800,
+            });
+            tradeWindowOpenedForIdRef.current = trade.id;
+          }
           setShowTradeRequest(false);
           setPendingTradeRequest(null);
         }
@@ -167,7 +176,7 @@ function App() {
         setActiveTrade(null);
         setShowTradeRequest(false);
         setPendingTradeRequest(null);
-        setTradeWindowOpenedForId(null);
+        tradeWindowOpenedForIdRef.current = null;
       }
     };
 
@@ -842,7 +851,7 @@ function App() {
   // Open separate trade window
   const openTradeWindow = (tradeId: string) => {
     // Prevent opening multiple windows for the same trade
-    if (tradeWindowOpenedForId === tradeId) return;
+    if (tradeWindowOpenedForIdRef.current === tradeId) return;
 
     OBR.popover.open({
       id: "com.weighted-inventory.trade-window",
@@ -851,7 +860,7 @@ function App() {
       width: 800,
     });
 
-    setTradeWindowOpenedForId(tradeId);
+    tradeWindowOpenedForIdRef.current = tradeId;
   };
 
   // Start player-to-player trade (request)

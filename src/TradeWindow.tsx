@@ -33,7 +33,7 @@ export default function TradeWindow() {
 
         if (!trade) {
           // Trade was cancelled or completed, close window
-          window.close();
+          OBR.popover.close("com.weighted-inventory.trade-window");
           return;
         }
 
@@ -220,7 +220,7 @@ export default function TradeWindow() {
       // Clear trade and close window
       await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
       alert('Trade completed successfully!');
-      window.close();
+      OBR.popover.close("com.weighted-inventory.trade-window");
     } catch (err) {
       console.error('Failed to execute trade:', err);
       alert(`Trade failed! ${err instanceof Error ? err.message : 'Check console for details.'}`);
@@ -232,7 +232,7 @@ export default function TradeWindow() {
     if (!activeTrade) return;
 
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
-    window.close();
+    OBR.popover.close("com.weighted-inventory.trade-window");
   };
 
   if (loading) {

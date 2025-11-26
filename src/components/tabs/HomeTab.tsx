@@ -1,5 +1,13 @@
 import type { CharacterData, PackType, ActiveTrade } from '../../types';
 
+// Token image sizing constants
+const TOKEN_SIZE_EDITABLE = '80px';
+const TOKEN_SIZE_READONLY = '160px';
+
+// Description box width constants  
+const DESCRIPTION_WIDTH_EDITABLE = '100%';
+const DESCRIPTION_WIDTH_READONLY = '150%';
+
 interface Stats {
   totalWeight: number;
   maxCapacity: number;
@@ -165,8 +173,8 @@ export function HomeTab({
         <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '20px'}}>
           {tokenImage && (
             <div style={{
-              width: '80px',
-              height: '80px',
+              width: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
+              height: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
               borderRadius: '50%',
               overflow: 'hidden',
               border: '3px solid var(--accent-gold)',
@@ -322,7 +330,7 @@ export function HomeTab({
       )}
 
       {/* Show description - editable if can edit, read-only otherwise */}
-      <div style={{marginTop: '20px', width: '100%', alignSelf: 'stretch'}}>
+      <div style={{marginTop: '20px', width: canEditToken() ? DESCRIPTION_WIDTH_EDITABLE : DESCRIPTION_WIDTH_READONLY, alignSelf: 'stretch'}}>
         <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
           Description
         </label>

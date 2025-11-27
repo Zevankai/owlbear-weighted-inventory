@@ -8,6 +8,7 @@ import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID, STORAGE
 import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType } from './types';
 import { HomeTab } from './components/tabs/HomeTab';
+import { hexToRgb } from './utils/color';
 
 // Storage types that support equipment slots (weapons, body, quick)
 const STORAGE_TYPES_WITH_EQUIPMENT: StorageType[] = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
@@ -51,6 +52,30 @@ export default function ExpandedInventoryWindow() {
 
   // Theme state for HomeTab
   const [theme, setTheme] = useState({ accent: '#f0e130', background: '#0f0f1e' });
+
+  // Load theme from characterData when it becomes available
+  useEffect(() => {
+    if (characterData?.theme) {
+      setTheme(characterData.theme);
+    }
+  }, [characterData?.theme]);
+
+  // Apply theme colors to CSS variables
+  useEffect(() => {
+    document.documentElement.style.setProperty('--accent-gold', theme.accent);
+    document.documentElement.style.setProperty('--bg-dark', theme.background);
+    // Calculate lighter/darker variants
+    const accentRgb = hexToRgb(theme.accent);
+    const bgRgb = hexToRgb(theme.background);
+    if (accentRgb) {
+      document.documentElement.style.setProperty('--border-bright', `rgba(${accentRgb.r}, ${accentRgb.g}, ${accentRgb.b}, 0.3)`);
+    }
+    if (bgRgb) {
+      document.documentElement.style.setProperty('--bg-panel', `rgba(${Math.min(bgRgb.r + 20, 255)}, ${Math.min(bgRgb.g + 20, 255)}, ${Math.min(bgRgb.b + 20, 255)}, 0.7)`);
+      // Set navbar background based on theme background
+      document.documentElement.style.setProperty('--nav-bg', `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.8)`);
+    }
+  }, [theme]);
 
   // --- VIRTUAL CONTEXT SWITCHING ---
   const currentDisplayData: CharacterData | null = (() => {

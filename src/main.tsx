@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import TradeWindow from './TradeWindow'
+import ExpandedInventoryWindow from './ExpandedInventoryWindow'
 import './index.css'
 import OBR from '@owlbear-rodeo/sdk'
 import { MAIN_POPOVER_ID, DEFAULT_POPOVER_WIDTH } from './constants'
@@ -32,7 +33,14 @@ OBR.onReady(() => {
 
   // Simple routing based on pathname
   const path = window.location.pathname;
-  const Component = path === '/trade' ? TradeWindow : App;
+  let Component: React.ComponentType;
+  if (path === '/trade') {
+    Component = TradeWindow;
+  } else if (path === '/expanded') {
+    Component = ExpandedInventoryWindow;
+  } else {
+    Component = App;
+  }
 
   ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>

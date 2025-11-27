@@ -4,9 +4,16 @@ import { v4 as uuidv4 } from 'uuid';
 import './App.css';
 
 import { usePackLogic } from './hooks/usePackLogic';
-import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID } from './constants';
+import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID, STORAGE_DEFINITIONS, PACK_DEFINITIONS } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, CharacterData } from './types';
+import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType } from './types';
+import { HomeTab } from './components/tabs/HomeTab';
+
+// Storage types that support equipment slots (weapons, body, quick)
+const STORAGE_TYPES_WITH_EQUIPMENT: StorageType[] = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
+
+// Tab IDs that require equipment slot functionality
+const EQUIPMENT_TAB_IDS: Tab[] = ['Weapons', 'Body', 'Quick'];
 
 export default function ExpandedInventoryWindow() {
   const [loading, setLoading] = useState(true);
@@ -27,7 +34,48 @@ export default function ExpandedInventoryWindow() {
   const [draggedItemId, setDraggedItemId] = useState<string | null>(null);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
-  const stats = usePackLogic(characterData);
+  // Tab navigation
+  const [activeTab, setActiveTab] = useState<Tab>('Home');
+  
+  // State for External Storage Viewing
+  const [viewingStorageId, setViewingStorageId] = useState<string | null>(null);
+
+  // Global search state
+  const [globalSearch, setGlobalSearch] = useState('');
+
+  // Storage and vault states
+  const [newStorage, setNewStorage] = useState<{name: string; description: string; type: StorageType}>({
+    name: '', description: '', type: 'Small Pet'
+  });
+  const [newVaultName, setNewVaultName] = useState('');
+
+  // Theme state for HomeTab
+  const [theme, setTheme] = useState({ accent: '#f0e130', background: '#0f0f1e' });
+
+  // --- VIRTUAL CONTEXT SWITCHING ---
+  const currentDisplayData: CharacterData | null = (() => {
+    if (!characterData) return null;
+    
+    const safeCurrency = characterData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 };
+    const safeInventory = characterData.inventory || [];
+
+    if (!viewingStorageId) {
+      return { ...characterData, inventory: safeInventory, currency: safeCurrency };
+    }
+
+    const storage = characterData.externalStorages.find(s => s.id === viewingStorageId);
+    if (!storage) return { ...characterData, inventory: safeInventory, currency: safeCurrency };
+
+    return {
+      ...characterData, 
+      packType: 'NPC' as PackType, 
+      inventory: storage.inventory || [],
+      currency: storage.currency || { cp: 0, sp: 0, gp: 0, pp: 0 },
+      condition: storage.description || '', 
+    };
+  })();
+
+  const stats = usePackLogic(currentDisplayData);
 
   // Initialize OBR and load data
   useEffect(() => {
@@ -91,6 +139,36 @@ export default function ExpandedInventoryWindow() {
     }
   };
 
+  // --- CORE UPDATE HANDLER (supports storage context switching) ---
+  const handleUpdateData = (updates: Partial<CharacterData>) => {
+    if (!characterData) return;
+
+    if (viewingStorageId) {
+      const newStorages = characterData.externalStorages.map(s => {
+        if (s.id !== viewingStorageId) return s;
+        return {
+          ...s,
+          inventory: updates.inventory !== undefined ? updates.inventory : s.inventory,
+          currency: updates.currency !== undefined ? updates.currency : (s.currency || {cp:0, sp:0, gp:0, pp:0}),
+          description: updates.condition !== undefined ? updates.condition : s.description,
+        };
+      });
+      updateData({ externalStorages: newStorages });
+    } else {
+      const safeUpdates = { ...updates };
+      if (!safeUpdates.currency && !characterData.currency) {
+        safeUpdates.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
+      }
+      updateData(safeUpdates);
+    }
+  };
+
+  // Update theme
+  const updateTheme = (newTheme: { accent: string; background: string }) => {
+    setTheme(newTheme);
+    updateData({ theme: newTheme });
+  };
+
   // Check if player can edit this token
   const canEditToken = () => {
     if (playerRole === 'GM') return true;
@@ -100,7 +178,7 @@ export default function ExpandedInventoryWindow() {
 
   // Handle creating a new item
   const handleCreateItem = () => {
-    if (!newItem.name || !characterData) return;
+    if (!newItem.name || !currentDisplayData) return;
     const createdItem: Item = {
       id: uuidv4(),
       name: newItem.name,
@@ -121,21 +199,21 @@ export default function ExpandedInventoryWindow() {
       damageModifier: newItem.damageModifier,
       hitModifier: newItem.hitModifier
     };
-    updateData({ inventory: [...characterData.inventory, createdItem] });
+    handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] });
     setNewItem({ name: '', category: 'Other', type: 'Gear', weight: 1, qty: 1, value: '', properties: '', requiresAttunement: false });
   };
 
   // Handle deleting an item
   const handleDelete = (itemId: string) => {
-    if (!characterData) return;
+    if (!currentDisplayData) return;
     if (window.confirm("Delete this item?")) {
-      updateData({ inventory: characterData.inventory.filter(i => i.id !== itemId) });
+      handleUpdateData({ inventory: currentDisplayData.inventory.filter(i => i.id !== itemId) });
     }
   };
 
   // Handle selling an item
   const handleSell = (item: Item) => {
-    if (!characterData) return;
+    if (!currentDisplayData) return;
     const qtyToSellStr = window.prompt(`How many "${item.name}" to sell? (Max: ${item.qty})`, "1");
     if (!qtyToSellStr) return;
     const qtyToSell = parseInt(qtyToSellStr);
@@ -152,19 +230,19 @@ export default function ExpandedInventoryWindow() {
     if (finalPriceStr === null) return;
     const finalPrice = parseFloat(finalPriceStr) || 0;
 
-    const newInventory = characterData.inventory.map(i => i.id === item.id ? { ...i, qty: i.qty - qtyToSell } : i).filter(i => i.qty > 0);
-    const newCurrency = { ...characterData.currency };
+    const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, qty: i.qty - qtyToSell } : i).filter(i => i.qty > 0);
+    const newCurrency = { ...currentDisplayData.currency };
     newCurrency[coinType] = (newCurrency[coinType] || 0) + finalPrice;
-    updateData({ inventory: newInventory, currency: newCurrency });
+    handleUpdateData({ inventory: newInventory, currency: newCurrency });
   };
 
   // Handle equipping/unequipping an item
   const handleToggleEquip = (item: Item) => {
-    if (!characterData || !stats) return;
+    if (!currentDisplayData || !stats) return;
 
     if (item.equippedSlot) {
       // Unequip
-      const matchingStack = characterData.inventory.find(i =>
+      const matchingStack = currentDisplayData.inventory.find(i =>
         i.id !== item.id &&
         i.name === item.name &&
         i.category === item.category &&
@@ -173,13 +251,13 @@ export default function ExpandedInventoryWindow() {
       );
 
       if (matchingStack) {
-        const newInventory = characterData.inventory
+        const newInventory = currentDisplayData.inventory
           .map(i => i.id === matchingStack.id ? { ...i, qty: i.qty + item.qty } : i)
           .filter(i => i.id !== item.id);
-        updateData({ inventory: newInventory });
+        handleUpdateData({ inventory: newInventory });
       } else {
-        const newInventory = characterData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: null } : i);
-        updateData({ inventory: newInventory });
+        const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: null } : i);
+        handleUpdateData({ inventory: newInventory });
       }
       return;
     }
@@ -234,14 +312,14 @@ export default function ExpandedInventoryWindow() {
       if (!isAmmo && item.qty > 1) {
         const equippedItem = { ...item, id: uuidv4(), qty: 1, equippedSlot: chosenSlot };
         const remainingItem = { ...item, qty: item.qty - 1 };
-        const newInventory = characterData.inventory.map(i =>
+        const newInventory = currentDisplayData.inventory.map(i =>
           i.id === item.id ? remainingItem : i
         );
         newInventory.push(equippedItem);
-        updateData({ inventory: newInventory });
+        handleUpdateData({ inventory: newInventory });
       } else {
-        const newInventory = characterData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: chosenSlot } : i);
-        updateData({ inventory: newInventory });
+        const newInventory = currentDisplayData.inventory.map(i => i.id === item.id ? { ...i, equippedSlot: chosenSlot } : i);
+        handleUpdateData({ inventory: newInventory });
       }
     }
   };
@@ -256,12 +334,12 @@ export default function ExpandedInventoryWindow() {
   };
 
   const handleDrop = (targetItemId: string) => {
-    if (!characterData || !draggedItemId || draggedItemId === targetItemId) {
+    if (!currentDisplayData || !draggedItemId || draggedItemId === targetItemId) {
       setDraggedItemId(null);
       return;
     }
 
-    const items = characterData.inventory;
+    const items = currentDisplayData.inventory;
     const draggedIndex = items.findIndex(i => i.id === draggedItemId);
     const targetIndex = items.findIndex(i => i.id === targetItemId);
 
@@ -274,8 +352,213 @@ export default function ExpandedInventoryWindow() {
     const [draggedItem] = newItems.splice(draggedIndex, 1);
     newItems.splice(targetIndex, 0, draggedItem);
 
-    updateData({ inventory: newItems });
+    handleUpdateData({ inventory: newItems });
     setDraggedItemId(null);
+  };
+
+  // --- STORAGE & VAULT ACTIONS ---
+
+  const createStorage = () => {
+    if (!newStorage.name || !characterData) return;
+    const storage = {
+      id: uuidv4(),
+      name: newStorage.name,
+      description: newStorage.description,
+      notes: '',
+      type: newStorage.type,
+      inventory: [] as Item[],
+      currency: {cp:0, sp:0, gp:0, pp:0},
+      isNearby: true
+    };
+    updateData({ externalStorages: [...characterData.externalStorages, storage] });
+    setNewStorage({ name: '', description: '', type: 'Small Pet' });
+  };
+
+  const deleteStorage = (id: string) => {
+    if (!characterData) return;
+    if(window.confirm("Delete this storage unit and all items inside?")) {
+      updateData({ externalStorages: characterData.externalStorages.filter(s => s.id !== id) });
+      if (viewingStorageId === id) setViewingStorageId(null);
+    }
+  };
+
+  const createVault = () => {
+    if (!newVaultName || !characterData) return;
+    const vault: Vault = { id: uuidv4(), name: newVaultName, currency: {cp:0, sp:0, gp:0, pp:0}, isNearby: true };
+    updateData({ vaults: [...characterData.vaults, vault] });
+    setNewVaultName('');
+  };
+
+  const deleteVault = (id: string) => {
+    if (!characterData) return;
+    if(window.confirm("Delete this vault?")) {
+      updateData({ vaults: characterData.vaults.filter(v => v.id !== id) });
+    }
+  };
+
+  const transferVaultFunds = (vaultId: string, action: 'deposit' | 'withdraw') => {
+    if (!currentDisplayData || !characterData) return;
+    const vault = characterData.vaults.find(v => v.id === vaultId);
+    if (!vault) return;
+
+    const vaultCurrency = vault.currency || { cp: 0, sp: 0, gp: 0, pp: 0 };
+
+    const coinType = window.prompt("Which coin? (cp, sp, gp, pp)", "gp")?.toLowerCase() as keyof Currency;
+    if (!coinType || !['cp','sp','gp','pp'].includes(coinType)) return;
+
+    const amountStr = window.prompt(`${action.toUpperCase()} ${coinType.toUpperCase()}:\nVault: ${vaultCurrency[coinType]}\nWallet: ${currentDisplayData.currency[coinType]}`);
+    if (!amountStr) return;
+    const amount = parseInt(amountStr);
+    if (isNaN(amount) || amount <= 0) return;
+
+    const newCurrency = { ...currentDisplayData.currency };
+    const newVaultCurrency = { ...vaultCurrency };
+
+    if (action === 'deposit') {
+      if (newCurrency[coinType] < amount) { alert("Not enough coins."); return; }
+      newCurrency[coinType] -= amount;
+      newVaultCurrency[coinType] += amount;
+    } else {
+      if (newVaultCurrency[coinType] < amount) { alert("Not enough coins in vault."); return; }
+      newVaultCurrency[coinType] -= amount;
+      newCurrency[coinType] += amount;
+    }
+
+    const newVaults = characterData.vaults.map(v => v.id === vaultId ? { ...v, currency: newVaultCurrency } : v);
+    
+    if (viewingStorageId) {
+      const newStorages = characterData.externalStorages.map(s => 
+        s.id === viewingStorageId ? { ...s, currency: newCurrency } : s
+      );
+      updateData({ externalStorages: newStorages, vaults: newVaults });
+    } else {
+      updateData({ currency: newCurrency, vaults: newVaults });
+    }
+  };
+
+  const transferNearbyCoins = (targetStorageId: string, direction: 'give' | 'take') => {
+    if (!characterData || !currentDisplayData) return;
+    
+    const targetStorage = characterData.externalStorages.find(s => s.id === targetStorageId);
+    if (!targetStorage) return;
+
+    const coinType = window.prompt("Which coin? (cp, sp, gp, pp)", "gp")?.toLowerCase() as keyof Currency;
+    if (!coinType || !['cp','sp','gp','pp'].includes(coinType)) return;
+    
+    const amountStr = window.prompt(`Amount?`);
+    if (!amountStr) return;
+    const amount = parseInt(amountStr);
+    if (isNaN(amount) || amount <= 0) return;
+
+    const targetCurrency = targetStorage.currency || { cp: 0, sp: 0, gp: 0, pp: 0 };
+    const sourceWallet = direction === 'give' ? currentDisplayData.currency : targetCurrency;
+    const targetWallet = direction === 'give' ? targetCurrency : currentDisplayData.currency;
+    
+    if (sourceWallet[coinType] < amount) { alert("Not enough coins."); return; }
+
+    const newSourceWallet = { ...sourceWallet, [coinType]: sourceWallet[coinType] - amount };
+    const newTargetWallet = { ...targetWallet, [coinType]: targetWallet[coinType] + amount };
+
+    let newStorages = [...characterData.externalStorages];
+    newStorages = newStorages.map(s => s.id === targetStorageId ? { ...s, currency: direction === 'give' ? newTargetWallet : newSourceWallet } : s);
+
+    if (viewingStorageId) {
+      newStorages = newStorages.map(s => s.id === viewingStorageId ? { ...s, currency: direction === 'give' ? newSourceWallet : newTargetWallet } : s);
+      updateData({ externalStorages: newStorages });
+    } else {
+      updateData({ 
+        currency: direction === 'give' ? newSourceWallet : newTargetWallet,
+        externalStorages: newStorages 
+      });
+    }
+  };
+
+  const transferItem = (item: Item, direction: 'ToStorage' | 'ToPlayer') => {
+    if (!characterData || !viewingStorageId) return;
+    const storage = characterData.externalStorages.find(s => s.id === viewingStorageId);
+    if (!storage || !storage.isNearby) { alert("Storage not nearby."); return; }
+
+    const itemToMove = { ...item, isAttuned: false, equippedSlot: null };
+    
+    let newPlayerInv = [...characterData.inventory];
+    let newStorageInv = [...storage.inventory];
+
+    if (direction === 'ToStorage') {
+      newPlayerInv = newPlayerInv.filter(i => i.id !== item.id);
+      newStorageInv.push(itemToMove);
+    } else {
+      newStorageInv = newStorageInv.filter(i => i.id !== item.id);
+      newPlayerInv.push(itemToMove);
+    }
+
+    const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? { ...s, inventory: newStorageInv } : s);
+    updateData({ inventory: newPlayerInv, externalStorages: newStorages });
+  };
+
+  // --- GLOBAL SEARCH ACTIONS ---
+
+  const handleGlobalTake = (item: Item, storageId: string) => {
+    if (!characterData) return;
+    const storage = characterData.externalStorages.find(s => s.id === storageId);
+    if (!storage) return;
+    
+    if (!storage.isNearby) {
+      alert(`${storage.name} is not nearby. Cannot take item.`);
+      return;
+    }
+
+    const newStorageInv = storage.inventory.filter(i => i.id !== item.id);
+    const itemToMove = { ...item, isAttuned: false, equippedSlot: null };
+    const newPlayerInv = [...characterData.inventory, itemToMove];
+
+    const newStorages = characterData.externalStorages.map(s => s.id === storageId ? { ...s, inventory: newStorageInv } : s);
+    
+    updateData({
+      inventory: newPlayerInv,
+      externalStorages: newStorages
+    });
+  };
+
+  const handleJumpTo = (storageId: string | null) => {
+    setViewingStorageId(storageId);
+    setActiveTab('Pack');
+    setFilterText('');
+  };
+
+  // Helper function to add item from repository
+  const handleAddFromRepository = (repoItem: typeof ITEM_REPOSITORY[0]) => {
+    if (!currentDisplayData) return;
+    const createdItem: Item = {
+      id: uuidv4(),
+      name: repoItem.name,
+      category: repoItem.category,
+      type: repoItem.type,
+      weight: repoItem.weight,
+      qty: 1,
+      value: repoItem.value,
+      properties: repoItem.properties || '',
+      requiresAttunement: repoItem.requiresAttunement || false,
+      isAttuned: false,
+      notes: '',
+      ac: repoItem.ac,
+      damage: repoItem.damage,
+      damageModifier: '',
+      hitModifier: '',
+      equippedSlot: null,
+      charges: undefined,
+      maxCharges: undefined
+    };
+    handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] });
+  };
+
+  // Helper function to format vault currency display
+  const formatVaultCurrency = (vCurrency: Currency): string => {
+    const parts: string[] = [];
+    if (vCurrency.gp > 0) parts.push(`${vCurrency.gp} GP`);
+    if (vCurrency.sp > 0) parts.push(`${vCurrency.sp} SP`);
+    if (vCurrency.cp > 0) parts.push(`${vCurrency.cp} CP`);
+    if (vCurrency.pp > 0) parts.push(`${vCurrency.pp} PP`);
+    return parts.length > 0 ? parts.join(' ') : 'Empty';
   };
 
   // Close the expanded window
@@ -291,7 +574,7 @@ export default function ExpandedInventoryWindow() {
     );
   }
 
-  if (!tokenId || !characterData) {
+  if (!tokenId || !characterData || !currentDisplayData) {
     return (
       <div style={{
         display: 'flex',
@@ -323,17 +606,49 @@ export default function ExpandedInventoryWindow() {
     );
   }
 
-  const filteredInventory = characterData.inventory.filter(item =>
+  const filteredInventory = currentDisplayData.inventory.filter(item =>
     item.name.toLowerCase().includes(filterText.toLowerCase())
   );
 
   // Group items by equipped slot for quick access
-  const equippedWeapons = characterData.inventory.filter(i => i.equippedSlot === 'weapon');
-  const equippedArmor = characterData.inventory.filter(i => i.equippedSlot === 'armor');
-  const equippedUtility = characterData.inventory.filter(i => i.equippedSlot === 'utility');
+  const equippedWeapons = currentDisplayData.inventory.filter(i => i.equippedSlot === 'weapon');
+  const equippedArmor = currentDisplayData.inventory.filter(i => i.equippedSlot === 'armor');
+  const equippedClothing = currentDisplayData.inventory.filter(i => i.equippedSlot === 'clothing');
+  const equippedJewelry = currentDisplayData.inventory.filter(i => i.equippedSlot === 'jewelry');
+  const equippedUtility = currentDisplayData.inventory.filter(i => i.equippedSlot === 'utility');
+
+  // Determine which tabs are visible
+  const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
+    { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
+    { id: 'Create', label: 'CREATE' },
+    { id: 'Search', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> },
+    { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
+  ];
+
+  let visibleTabs = baseTabs;
+
+  if (viewingStorageId) {
+    visibleTabs = visibleTabs.filter(t => t.id !== 'External');
+    const activeStorageType = characterData.externalStorages.find(s => s.id === viewingStorageId)?.type;
+    if (!activeStorageType || !STORAGE_TYPES_WITH_EQUIPMENT.includes(activeStorageType)) {
+      visibleTabs = visibleTabs.filter(t => !EQUIPMENT_TAB_IDS.includes(t.id));
+    }
+    const searchIdx = visibleTabs.findIndex(t => t.id === 'Search');
+    visibleTabs.splice(searchIdx, 0, { id: 'Transfer', label: 'TRANSFER' });
+  }
+
+  const activeStorageDef = viewingStorageId ? STORAGE_DEFINITIONS[characterData.externalStorages.find(s => s.id === viewingStorageId)!.type] : null;
 
   return (
-    <div className="app-container" style={{background: 'var(--bg-dark)'}}>
+    <div className="app-container" style={{background: 'var(--bg-dark)', border: viewingStorageId ? '2px solid var(--accent-gold)' : 'none'}}>
+      {/* Storage Viewing Banner */}
+      {viewingStorageId && (
+        <div style={{background: 'var(--accent-gold)', color: 'black', padding: '4px 8px', fontWeight: 'bold', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+          <span>VIEWING: {currentDisplayData.condition}</span>
+          <button onClick={() => { setViewingStorageId(null); setActiveTab('External'); }} style={{background:'black', color:'white', border:'none', padding:'2px 6px', fontSize:'10px', cursor:'pointer'}}>EXIT</button>
+        </div>
+      )}
+
       {/* Header */}
       <div style={{
         display: 'flex',
@@ -358,8 +673,8 @@ export default function ExpandedInventoryWindow() {
           <div>
             <h1 style={{margin: 0, fontSize: '18px', color: 'var(--accent-gold)'}}>{tokenName}</h1>
             <div style={{fontSize: '11px', color: 'var(--text-muted)'}}>
-              {characterData.packType} Pack • {characterData.inventory.length} Items
-              {stats && ` • ${stats.totalWeight}/${stats.maxCapacity}u`}
+              {viewingStorageId ? `Storage: ${characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}` : `${characterData.packType} Pack`} • {currentDisplayData.inventory.length} Items
+              {stats && ` • ${stats.totalWeight}/${activeStorageDef?.capacity || stats.maxCapacity}u`}
             </div>
           </div>
         </div>
@@ -380,398 +695,434 @@ export default function ExpandedInventoryWindow() {
         </button>
       </div>
 
+      {/* Tab Navigation */}
+      <nav className="nav-bar" style={{padding: '8px 12px', gap: '4px'}}>
+        {visibleTabs.map((tab) => (
+          <button
+            key={tab.id}
+            className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(tab.id)}
+            title={tab.id}
+          >
+            {tab.icon ? tab.icon : tab.label}
+          </button>
+        ))}
+      </nav>
+
       {/* Main Content */}
-      <div style={{flex: 1, display: 'flex', overflow: 'hidden'}}>
-        {/* Left Panel - Equipped Items & Quick Stats */}
-        <div style={{
-          width: '220px',
-          borderRight: '1px solid var(--glass-border)',
-          padding: '12px',
-          overflowY: 'auto',
-          background: 'rgba(0,0,0,0.2)'
-        }}>
-          {/* Stats */}
-          {stats && (
-            <div style={{marginBottom: '16px'}}>
-              <h3 style={{margin: '0 0 8px 0', fontSize: '11px', color: 'var(--accent-gold)', textTransform: 'uppercase'}}>Stats</h3>
-              <div style={{display: 'grid', gap: '4px', fontSize: '11px'}}>
-                <div style={{display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px'}}>
-                  <span style={{color: 'var(--text-muted)'}}>Weight</span>
-                  <span style={{color: stats.totalWeight > stats.maxCapacity ? 'var(--danger)' : 'var(--text-main)'}}>{stats.totalWeight}/{stats.maxCapacity}</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px'}}>
-                  <span style={{color: 'var(--text-muted)'}}>Weapons</span>
-                  <span>{stats.usedSlots.weapon}/{stats.maxSlots.weapon}</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px'}}>
-                  <span style={{color: 'var(--text-muted)'}}>Armor</span>
-                  <span>{stats.usedSlots.armor}/{stats.maxSlots.armor}</span>
-                </div>
-                <div style={{display: 'flex', justifyContent: 'space-between', padding: '4px 8px', background: 'rgba(0,0,0,0.2)', borderRadius: '3px'}}>
-                  <span style={{color: 'var(--text-muted)'}}>Utility</span>
-                  <span>{stats.usedSlots.utility}/{stats.maxSlots.utility}</span>
-                </div>
+      <main className="content" style={{flex: 1, overflow: 'auto', padding: '16px'}}>
+        {/* HOME TAB */}
+        {activeTab === 'Home' && stats && (
+          <HomeTab
+            stats={stats}
+            viewingStorageId={viewingStorageId}
+            setShowDebug={() => {}}
+            loadDebugInfo={() => {}}
+            characterData={characterData}
+            playerRole={playerRole}
+            playerId={playerId}
+            tokenImage={tokenImage}
+            tokenName={tokenName}
+            toggleFavorite={() => {}}
+            isFavorited={false}
+            favorites={[]}
+            setViewingFavorites={() => {}}
+            activeTrade={null}
+            tokenId={tokenId}
+            canEditToken={canEditToken}
+            claimToken={async () => false}
+            unclaimToken={() => {}}
+            handleUpdateData={handleUpdateData}
+            handleStartP2PTrade={() => {}}
+            updateData={updateData}
+            PACK_DEFINITIONS={PACK_DEFINITIONS}
+            theme={theme}
+            updateTheme={updateTheme}
+            currentDisplayData={currentDisplayData}
+            activeStorageDef={activeStorageDef}
+          />
+        )}
+
+        {/* PACK TAB */}
+        {activeTab === 'Pack' && (
+          <div className="section" style={{padding: 0, display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%'}}>
+            <div style={{padding: '8px', background: 'var(--bg-panel)', borderBottom: '1px solid var(--border)'}}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px'}}>
+                <h2 style={{margin: 0, border: 'none'}}>INVENTORY ({viewingStorageId ? 'STORAGE' : 'PLAYER'})</h2>
+                <span style={{fontSize: '10px', color: 'var(--text-muted)'}}>{currentDisplayData.inventory.length} Items</span>
               </div>
+              <input type="text" placeholder="Filter items..." className="search-input" style={{marginTop: 0}} value={filterText} onChange={(e) => setFilterText(e.target.value)} />
             </div>
-          )}
-
-          {/* Equipped Weapons */}
-          <div style={{marginBottom: '16px'}}>
-            <h3 style={{margin: '0 0 8px 0', fontSize: '11px', color: 'var(--accent-gold)', textTransform: 'uppercase'}}>Equipped Weapons</h3>
-            {equippedWeapons.length === 0 ? (
-              <div style={{fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic'}}>None equipped</div>
-            ) : (
-              equippedWeapons.map(item => (
-                <div key={item.id} style={{
-                  padding: '6px 8px',
-                  background: 'rgba(240, 225, 48, 0.1)',
-                  border: '1px solid rgba(240, 225, 48, 0.3)',
-                  borderRadius: '4px',
-                  marginBottom: '4px',
-                  fontSize: '11px'
-                }}>
-                  <div style={{fontWeight: 'bold', color: 'var(--text-main)'}}>{item.name}</div>
-                  {item.damage && <div style={{fontSize: '10px', color: 'var(--accent-gold)'}}>{item.damage}</div>}
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Equipped Armor */}
-          <div style={{marginBottom: '16px'}}>
-            <h3 style={{margin: '0 0 8px 0', fontSize: '11px', color: 'var(--accent-gold)', textTransform: 'uppercase'}}>Equipped Armor</h3>
-            {equippedArmor.length === 0 ? (
-              <div style={{fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic'}}>None equipped</div>
-            ) : (
-              equippedArmor.map(item => (
-                <div key={item.id} style={{
-                  padding: '6px 8px',
-                  background: 'rgba(100, 149, 237, 0.1)',
-                  border: '1px solid rgba(100, 149, 237, 0.3)',
-                  borderRadius: '4px',
-                  marginBottom: '4px',
-                  fontSize: '11px'
-                }}>
-                  <div style={{fontWeight: 'bold', color: 'var(--text-main)'}}>{item.name}</div>
-                  {item.ac && <div style={{fontSize: '10px', color: '#6495ed'}}>AC +{item.ac}</div>}
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Equipped Utility */}
-          <div>
-            <h3 style={{margin: '0 0 8px 0', fontSize: '11px', color: 'var(--accent-gold)', textTransform: 'uppercase'}}>Quick Slots</h3>
-            {equippedUtility.length === 0 ? (
-              <div style={{fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic'}}>None equipped</div>
-            ) : (
-              equippedUtility.map(item => (
-                <div key={item.id} style={{
-                  padding: '6px 8px',
-                  background: 'rgba(77, 255, 136, 0.1)',
-                  border: '1px solid rgba(77, 255, 136, 0.3)',
-                  borderRadius: '4px',
-                  marginBottom: '4px',
-                  fontSize: '11px'
-                }}>
-                  <div style={{fontWeight: 'bold', color: 'var(--text-main)'}}>{item.name}</div>
-                  {item.qty > 1 && <div style={{fontSize: '10px', color: 'var(--success)'}}>x{item.qty}</div>}
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* Center Panel - Full Inventory */}
-        <div style={{flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden'}}>
-          {/* Search Bar */}
-          <div style={{padding: '12px', borderBottom: '1px solid var(--glass-border)'}}>
-            <input
-              type="text"
-              placeholder="Search items..."
-              className="search-input"
-              style={{marginTop: 0}}
-              value={filterText}
-              onChange={(e) => setFilterText(e.target.value)}
-            />
-          </div>
-
-          {/* Inventory Table */}
-          <div style={{flex: 1, overflowY: 'auto', padding: '0 12px 12px 12px'}}>
-            <table style={{width: '100%', borderCollapse: 'collapse'}}>
-              <thead>
-                <tr style={{borderBottom: '2px solid var(--border)', color: 'var(--accent-gold)', fontSize: '10px', textAlign: 'left', position: 'sticky', top: 0, background: 'var(--bg-dark)'}}>
-                  <th style={{padding: '8px 4px'}}>QTY</th>
-                  <th style={{padding: '8px 4px'}}>ITEM</th>
-                  <th style={{padding: '8px 4px'}}>TYPE</th>
-                  <th style={{padding: '8px 4px'}}>VALUE</th>
-                  <th style={{padding: '8px 4px', textAlign: 'center'}}>CHARGES</th>
-                  <th style={{padding: '8px 4px', textAlign: 'center'}}>WT</th>
-                  <th style={{padding: '8px 4px', textAlign: 'right'}}>ACTIONS</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredInventory.map((item) => (
-                  <Fragment key={item.id}>
-                    <tr
-                      draggable={canEditToken()}
-                      onDragStart={() => handleDragStart(item.id)}
-                      onDragOver={handleDragOver}
-                      onDrop={() => handleDrop(item.id)}
-                      style={{
-                        borderTop: '1px solid #333',
-                        cursor: canEditToken() ? 'grab' : 'default',
-                        opacity: draggedItemId === item.id ? 0.5 : 1,
-                        background: draggedItemId === item.id ? 'rgba(255, 215, 0, 0.1)' : 'transparent'
-                      }}
-                    >
-                      <td style={{padding: '8px 4px', width: '50px'}}>
-                        <input
-                          type="number"
-                          value={item.qty}
-                          min="1"
-                          disabled={!canEditToken()}
-                          onChange={(e) => {
-                            const parsedQty = parseInt(e.target.value);
-                            if (isNaN(parsedQty) || parsedQty < 1) return;
-                            const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, qty: parsedQty} : i);
-                            updateData({inventory: newInv});
-                          }}
-                          style={{width: '40px', background: '#222', border: '1px solid #444', color: 'white', textAlign: 'center', padding: '4px'}}
-                        />
-                      </td>
-                      <td style={{padding: '8px 4px'}}>
-                        <div style={{fontWeight: 'bold', fontSize: '13px', color: item.equippedSlot ? 'var(--accent-gold)' : 'var(--text-main)'}}>{item.name}</div>
-                        {item.equippedSlot && <div style={{fontSize: '9px', textTransform: 'uppercase', color: 'var(--accent-gold)'}}>[EQ: {item.equippedSlot}]</div>}
-                      </td>
-                      <td style={{padding: '8px 4px', width: '100px'}}>
-                        <select
-                          value={item.category}
-                          disabled={!canEditToken()}
-                          onChange={(e) => {
-                            const cat = e.target.value as ItemCategory;
-                            const newWeight = DEFAULT_CATEGORY_WEIGHTS[cat] || item.weight;
-                            const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, category: cat, weight: newWeight} : i);
-                            updateData({inventory: newInv});
-                          }}
-                          style={{width: '100%', background: 'transparent', border: 'none', color: '#aaa', fontSize: '11px'}}
-                        >
-                          {ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                        </select>
-                      </td>
-                      <td style={{padding: '8px 4px', fontSize: '11px', color: '#888'}}>{item.value || '-'}</td>
-                      <td style={{padding: '8px 4px', textAlign: 'center', fontSize: '11px'}}>
-                        {item.maxCharges !== undefined ? (
-                          <span style={{color: (item.charges || 0) === 0 ? '#f44' : 'var(--text-main)'}}>
-                            {item.charges || 0}/{item.maxCharges}
-                          </span>
-                        ) : <span style={{color: '#444'}}>-</span>}
-                      </td>
-                      <td style={{padding: '8px 4px', textAlign: 'center', fontSize: '11px', color: '#888'}}>{item.weight * item.qty}</td>
-                      <td style={{padding: '8px 4px', textAlign: 'right'}}>
-                        {canEditToken() && (
-                          <>
-                            <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Edit">✎</button>
-                            <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Equip/Unequip">⚔</button>
-                            <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px', marginRight: '4px'}} title="Sell">$</button>
-                            <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px'}} title="Delete">✕</button>
-                          </>
-                        )}
-                      </td>
-                    </tr>
-                    {editingItemId === item.id && canEditToken() && (
-                      <tr style={{background: 'rgba(0,0,0,0.3)'}}>
-                        <td colSpan={7} style={{padding: '12px'}}>
-                          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px'}}>
-                            <div>
-                              <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Name</label>
-                              <input className="search-input" style={{marginTop: 0}} value={item.name} onChange={(e) => { const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, name: e.target.value} : i); updateData({inventory: newInv}); }} />
-                            </div>
-                            <div>
-                              <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Weight</label>
-                              <input type="number" className="search-input" style={{marginTop: 0}} value={item.weight} onChange={(e) => { const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, weight: parseFloat(e.target.value)} : i); updateData({inventory: newInv}); }} />
-                            </div>
-                            <div>
-                              <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Value</label>
-                              <input className="search-input" style={{marginTop: 0}} value={item.value} onChange={(e) => { const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, value: e.target.value} : i); updateData({inventory: newInv}); }} />
-                            </div>
-                            <div style={{gridColumn: 'span 3'}}>
-                              <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Properties / Notes</label>
-                              <textarea className="search-input" style={{marginTop: 0, minHeight: '50px'}} value={item.properties || ''} onChange={(e) => { const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, properties: e.target.value} : i); updateData({inventory: newInv}); }} />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                    {editingItemId !== item.id && item.properties && (
-                      <tr style={{background: 'rgba(0,0,0,0.1)'}}>
-                        <td colSpan={7} style={{padding: '4px 8px 8px 8px', fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
-                          {item.properties}
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Right Panel - Create Item */}
-        {canEditToken() && (
-          <div style={{
-            width: '280px',
-            borderLeft: '1px solid var(--glass-border)',
-            padding: '12px',
-            overflowY: 'auto',
-            background: 'rgba(0,0,0,0.2)'
-          }}>
-            <h3 style={{margin: '0 0 12px 0', fontSize: '12px', color: 'var(--accent-gold)', textTransform: 'uppercase'}}>Add Item</h3>
-
-            {/* Repository Search */}
-            <div style={{position: 'relative', marginBottom: '16px'}}>
-              <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Search Repository</label>
-              <input
-                className="search-input"
-                style={{marginTop: 0}}
-                placeholder="Search items..."
-                value={repoSearch}
-                onChange={(e) => {
-                  setRepoSearch(e.target.value);
-                  setShowRepo(e.target.value.length > 1);
-                }}
-              />
-              {showRepo && repoSearch.length > 1 && (
-                <div style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  background: '#222',
-                  border: '1px solid var(--accent-gold)',
-                  maxHeight: '200px',
-                  overflowY: 'auto',
-                  zIndex: 100,
-                  borderRadius: '0 0 4px 4px'
-                }}>
-                  {ITEM_REPOSITORY
-                    .filter(i => i.name.toLowerCase().includes(repoSearch.toLowerCase()) ||
-                                 i.category.toLowerCase().includes(repoSearch.toLowerCase()))
-                    .slice(0, 10)
-                    .map((repoItem, idx) => (
-                      <div
-                        key={idx}
-                        onClick={() => {
-                          const createdItem: Item = {
-                            id: uuidv4(),
-                            name: repoItem.name,
-                            category: repoItem.category,
-                            type: repoItem.type,
-                            weight: repoItem.weight,
-                            qty: 1,
-                            value: repoItem.value,
-                            properties: repoItem.properties || '',
-                            requiresAttunement: repoItem.requiresAttunement || false,
-                            isAttuned: false,
-                            notes: '',
-                            ac: repoItem.ac,
-                            damage: repoItem.damage,
-                            equippedSlot: null,
-                            charges: undefined,
-                            maxCharges: undefined,
-                            damageModifier: '',
-                            hitModifier: ''
-                          };
-                          updateData({ inventory: [...characterData.inventory, createdItem] });
-                          setRepoSearch('');
-                          setShowRepo(false);
+            <div style={{flex: 1, overflowY: 'auto', padding: '0 8px 8px 8px'}}>
+              <table style={{width: '100%', borderCollapse: 'collapse', marginTop: '8px'}}>
+                <thead>
+                  <tr style={{borderBottom: '2px solid var(--border)', color: 'var(--accent-gold)', fontSize: '10px', textAlign: 'left', position: 'sticky', top: 0, background: 'var(--bg-dark)'}}>
+                    <th style={{padding: '8px 4px'}}>QTY</th>
+                    <th style={{padding: '8px 4px'}}>ITEM</th>
+                    <th style={{padding: '8px 4px'}}>TYPE</th>
+                    <th style={{padding: '8px 4px'}}>VALUE</th>
+                    <th style={{padding: '8px 4px', textAlign: 'center'}}>CHARGES</th>
+                    <th style={{padding: '8px 4px', textAlign: 'center'}}>WT</th>
+                    <th style={{padding: '8px 4px', textAlign: 'right'}}>ACTIONS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInventory.map((item) => (
+                    <Fragment key={item.id}>
+                      <tr
+                        draggable={canEditToken()}
+                        onDragStart={() => handleDragStart(item.id)}
+                        onDragOver={handleDragOver}
+                        onDrop={() => handleDrop(item.id)}
+                        style={{
+                          borderTop: '1px solid #333',
+                          cursor: canEditToken() ? 'grab' : 'default',
+                          opacity: draggedItemId === item.id ? 0.5 : 1,
+                          background: draggedItemId === item.id ? 'rgba(255, 215, 0, 0.1)' : 'transparent'
                         }}
-                        style={{padding: '8px', cursor: 'pointer', borderBottom: '1px solid #333', fontSize: '11px'}}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#333'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                       >
-                        <div style={{fontWeight: 'bold'}}>{repoItem.name}</div>
-                        <div style={{fontSize: '10px', color: '#888'}}>{repoItem.type} • {repoItem.weight}u</div>
-                      </div>
-                    ))
-                  }
-                </div>
-              )}
-            </div>
-
-            <div style={{borderTop: '1px dashed var(--border)', paddingTop: '12px'}}>
-              <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Or Create Custom</label>
-
-              <input
-                className="search-input"
-                placeholder="Item Name"
-                value={newItem.name}
-                onChange={e => setNewItem({...newItem, name: e.target.value})}
-                style={{marginBottom: '8px'}}
-              />
-
-              <select
-                className="search-input"
-                value={newItem.category}
-                onChange={e => {
-                  const cat = e.target.value as ItemCategory;
-                  setNewItem({...newItem, category: cat, weight: DEFAULT_CATEGORY_WEIGHTS[cat] || 1});
-                }}
-                style={{marginBottom: '8px'}}
-              >
-                {ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px'}}>
-                <div>
-                  <label style={{fontSize: '9px', color: 'var(--text-muted)'}}>Weight</label>
-                  <input
-                    type="number"
-                    className="search-input"
-                    value={newItem.weight}
-                    onChange={e => setNewItem({...newItem, weight: parseFloat(e.target.value)})}
-                    style={{marginTop: '2px'}}
-                  />
-                </div>
-                <div>
-                  <label style={{fontSize: '9px', color: 'var(--text-muted)'}}>Qty</label>
-                  <input
-                    type="number"
-                    className="search-input"
-                    value={newItem.qty}
-                    onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value)})}
-                    style={{marginTop: '2px'}}
-                  />
-                </div>
-              </div>
-
-              <input
-                className="search-input"
-                placeholder="Value (e.g. 10gp)"
-                value={newItem.value}
-                onChange={e => setNewItem({...newItem, value: e.target.value})}
-                style={{marginBottom: '8px'}}
-              />
-
-              <button
-                onClick={handleCreateItem}
-                style={{
-                  width: '100%',
-                  padding: '10px',
-                  background: 'var(--accent-gold)',
-                  color: 'black',
-                  border: 'none',
-                  borderRadius: '4px',
-                  fontWeight: 'bold',
-                  cursor: 'pointer'
-                }}
-              >
-                ADD ITEM
-              </button>
+                        <td style={{padding: '8px 4px', width: '50px'}}>
+                          <input
+                            type="number"
+                            value={item.qty}
+                            min="1"
+                            disabled={!canEditToken()}
+                            onChange={(e) => {
+                              const parsedQty = parseInt(e.target.value);
+                              if (isNaN(parsedQty) || parsedQty < 1) return;
+                              const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, qty: parsedQty} : i);
+                              handleUpdateData({inventory: newInv});
+                            }}
+                            style={{width: '40px', background: '#222', border: '1px solid #444', color: 'white', textAlign: 'center', padding: '4px'}}
+                          />
+                        </td>
+                        <td style={{padding: '8px 4px'}}>
+                          <div style={{fontWeight: 'bold', fontSize: '13px', color: item.equippedSlot ? 'var(--accent-gold)' : 'var(--text-main)'}}>{item.name}</div>
+                          {item.equippedSlot && <div style={{fontSize: '9px', textTransform: 'uppercase', color: 'var(--accent-gold)'}}>[EQ: {item.equippedSlot}]</div>}
+                        </td>
+                        <td style={{padding: '8px 4px', width: '100px'}}>
+                          <select
+                            value={item.category}
+                            disabled={!canEditToken()}
+                            onChange={(e) => {
+                              const cat = e.target.value as ItemCategory;
+                              const newWeight = DEFAULT_CATEGORY_WEIGHTS[cat] || item.weight;
+                              const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, category: cat, weight: newWeight} : i);
+                              handleUpdateData({inventory: newInv});
+                            }}
+                            style={{width: '100%', background: 'transparent', border: 'none', color: '#aaa', fontSize: '11px'}}
+                          >
+                            {ITEM_CATEGORIES.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                          </select>
+                        </td>
+                        <td style={{padding: '8px 4px', fontSize: '11px', color: '#888'}}>{item.value || '-'}</td>
+                        <td style={{padding: '8px 4px', textAlign: 'center', fontSize: '11px'}}>
+                          {item.maxCharges !== undefined ? (
+                            <span style={{color: (item.charges || 0) === 0 ? '#f44' : 'var(--text-main)'}}>
+                              {item.charges || 0}/{item.maxCharges}
+                            </span>
+                          ) : <span style={{color: '#444'}}>-</span>}
+                        </td>
+                        <td style={{padding: '8px 4px', textAlign: 'center', fontSize: '11px', color: '#888'}}>{item.weight * item.qty}</td>
+                        <td style={{padding: '8px 4px', textAlign: 'right'}}>
+                          {canEditToken() && (
+                            <>
+                              <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Edit">✎</button>
+                              <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Equip/Unequip">⚔</button>
+                              <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px', marginRight: '4px'}} title="Sell">$</button>
+                              <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px'}} title="Delete">✕</button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                      {editingItemId === item.id && canEditToken() && (
+                        <tr style={{background: 'rgba(0,0,0,0.3)'}}>
+                          <td colSpan={7} style={{padding: '12px'}}>
+                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px'}}>
+                              <div>
+                                <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Name</label>
+                                <input className="search-input" style={{marginTop: 0}} value={item.name} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, name: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                              </div>
+                              <div>
+                                <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Weight</label>
+                                <input type="number" className="search-input" style={{marginTop: 0}} value={item.weight} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, weight: parseFloat(e.target.value)} : i); handleUpdateData({inventory: newInv}); }} />
+                              </div>
+                              <div>
+                                <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Value</label>
+                                <input className="search-input" style={{marginTop: 0}} value={item.value} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, value: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                              </div>
+                              <div style={{gridColumn: 'span 3'}}>
+                                <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Properties / Notes</label>
+                                <textarea className="search-input" style={{marginTop: 0, minHeight: '50px'}} value={item.properties || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, properties: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                      {editingItemId !== item.id && item.properties && (
+                        <tr style={{background: 'rgba(0,0,0,0.1)'}}>
+                          <td colSpan={7} style={{padding: '4px 8px 8px 8px', fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
+                            {item.properties}
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         )}
-      </div>
+
+        {/* WEAPONS TAB */}
+        {activeTab === 'Weapons' && (
+          <div className="section">
+            <h2>Equipped Weapons</h2>
+            {equippedWeapons.map(item => (
+              <div key={item.id} style={{background: 'rgba(0,0,0,0.2)', padding: '10px', borderRadius: '4px', display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'8px'}}>
+                <div>
+                  <div style={{fontWeight:'bold', color: 'var(--text-main)'}}>{item.name}</div>
+                  <div style={{fontSize:'11px', color:'var(--accent-gold)'}}>
+                    {item.damage || 'No Damage'}
+                    {item.hitModifier && <span style={{marginLeft: '8px'}}>Hit: {item.hitModifier}</span>}
+                    {item.damageModifier && <span style={{marginLeft: '8px'}}>Dmg: {item.damageModifier}</span>}
+                  </div>
+                  <div style={{fontSize:'10px', color:'#888', fontStyle:'italic'}}>{item.properties || 'No properties'}</div>
+                </div>
+                <button onClick={() => handleToggleEquip(item)} style={{background: '#333', color: '#888', border:'none', padding:'4px 8px', borderRadius:'4px', fontSize:'10px', cursor:'pointer'}}>UNEQUIP</button>
+              </div>
+            ))}
+            {equippedWeapons.length === 0 && <p style={{color:'#666', fontStyle:'italic'}}>No weapons equipped.</p>}
+          </div>
+        )}
+
+        {/* BODY TAB */}
+        {activeTab === 'Body' && (
+          <div className="section">
+            <h2>Body Slots</h2>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px'}}>
+              <div>
+                <div style={{borderBottom:'1px solid #333', marginBottom:'8px'}}><span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>ARMOR</span></div>
+                {equippedArmor.map(item => (
+                  <div key={item.id} style={{background: 'rgba(0,0,0,0.2)', padding: '8px', marginBottom: '4px', borderRadius: '4px', display:'flex', justifyContent:'space-between'}}>
+                    <div><div style={{fontWeight:'bold'}}>{item.name}</div>{item.ac && <div style={{fontSize:'10px', color:'var(--accent-gold)'}}>AC: +{item.ac}</div>}</div>
+                    <button onClick={() => handleToggleEquip(item)} style={{background:'none', border:'none', color:'#555', cursor:'pointer'}}>X</button>
+                  </div>
+                ))}
+                {equippedArmor.length === 0 && <p style={{color:'#666', fontStyle:'italic', fontSize: '11px'}}>None</p>}
+              </div>
+              <div>
+                <div style={{borderBottom:'1px solid #333', marginBottom:'8px'}}><span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>CLOTHING</span></div>
+                {equippedClothing.map(item => (
+                  <div key={item.id} style={{background: 'rgba(0,0,0,0.2)', padding: '8px', marginBottom: '4px', borderRadius: '4px', display:'flex', justifyContent:'space-between'}}>
+                    <div style={{fontWeight:'bold'}}>{item.name}</div>
+                    <button onClick={() => handleToggleEquip(item)} style={{background:'none', border:'none', color:'#555', cursor:'pointer'}}>X</button>
+                  </div>
+                ))}
+                {equippedClothing.length === 0 && <p style={{color:'#666', fontStyle:'italic', fontSize: '11px'}}>None</p>}
+              </div>
+              <div style={{gridColumn: 'span 2'}}>
+                <div style={{borderBottom:'1px solid #333', marginBottom:'8px'}}><span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>JEWELRY</span></div>
+                {equippedJewelry.map(item => (
+                  <div key={item.id} style={{background: 'rgba(0,0,0,0.2)', padding: '8px', marginBottom: '4px', borderRadius: '4px', display:'flex', justifyContent:'space-between'}}>
+                    <div><div style={{fontWeight:'bold'}}>{item.name}</div>{item.properties && <div style={{fontSize:'10px', color:'#888'}}>{item.properties}</div>}</div>
+                    <button onClick={() => handleToggleEquip(item)} style={{background:'none', border:'none', color:'#555', cursor:'pointer'}}>X</button>
+                  </div>
+                ))}
+                {equippedJewelry.length === 0 && <p style={{color:'#666', fontStyle:'italic', fontSize: '11px'}}>None</p>}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* QUICK TAB */}
+        {activeTab === 'Quick' && (
+          <div className="section">
+            <h2>Quick Slots / Utility</h2>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginTop: '16px'}}>
+              {equippedUtility.map(item => (
+                <div key={item.id} style={{background: 'rgba(240, 225, 48, 0.05)', border:'1px solid rgba(240, 225, 48, 0.2)', padding: '12px', borderRadius: '4px', position:'relative'}}>
+                  <div style={{fontWeight:'bold', fontSize:'12px', paddingRight:'20px'}}>{item.name}</div>
+                  <div style={{fontSize:'10px', color:'#888'}}>{item.qty > 1 ? `Qty: ${item.qty}` : ''}</div>
+                  {item.properties && <div style={{fontSize:'10px', color:'var(--accent-gold)', marginTop: '4px', fontStyle:'italic'}}>{item.properties}</div>}
+                  <button onClick={() => handleToggleEquip(item)} style={{position:'absolute', top:4, right:4, background:'none', border:'none', color:'#555', cursor:'pointer', fontSize:'10px'}}>X</button>
+                </div>
+              ))}
+            </div>
+            {equippedUtility.length === 0 && <p style={{color:'#666', fontStyle:'italic', textAlign:'center', marginTop:'20px'}}>No utility items equipped.</p>}
+          </div>
+        )}
+
+        {/* SEARCH TAB */}
+        {activeTab === 'Search' && (
+          <div className="section">
+            <h2>Global Search</h2>
+            <input className="search-input" placeholder="Search items (min 2 chars)..." value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} autoFocus />
+            <div style={{marginTop: '16px'}}>
+              {globalSearch.length < 2 ? <p style={{color:'#666', fontStyle:'italic'}}>Type to search...</p> : (() => {
+                const term = globalSearch.toLowerCase();
+                const results: { item: Item, source: string, storageId: string | null, isNearby: boolean }[] = [];
+                characterData.inventory.forEach(item => { if (item.name.toLowerCase().includes(term)) results.push({ item, source: 'Player', storageId: null, isNearby: true }); });
+                characterData.externalStorages.forEach(storage => { storage.inventory.forEach(item => { if (item.name.toLowerCase().includes(term)) results.push({ item, source: storage.name, storageId: storage.id, isNearby: storage.isNearby }); }); });
+                if (results.length === 0) return <p style={{color:'#666'}}>No items found.</p>;
+                return (
+                  <div style={{display:'flex', flexDirection:'column', gap:'8px'}}>
+                    {results.map((res, idx) => (
+                      <div key={`${res.item.id}-${idx}`} style={{background:'rgba(255,255,255,0.05)', padding:'12px', borderRadius:'4px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        <div>
+                          <div style={{fontWeight:'bold', color:'var(--text-main)'}}>{res.item.name}</div>
+                          <div style={{fontSize:'11px', color: res.storageId ? 'var(--accent-gold)' : '#888'}}>{res.source} {res.item.qty > 1 ? `(x${res.item.qty})` : ''}{res.storageId && !res.isNearby && <span style={{color:'var(--danger)', marginLeft:'4px'}}>(Not Nearby)</span>}</div>
+                        </div>
+                        <div style={{display:'flex', gap:'8px'}}>
+                          {res.storageId && <button onClick={() => handleGlobalTake(res.item, res.storageId!)} disabled={!res.isNearby} style={{background: res.isNearby ? '#333' : '#222', color: res.isNearby ? 'white' : '#555', border:'none', padding:'6px 12px', borderRadius:'4px', fontSize:'11px', cursor: res.isNearby ? 'pointer' : 'not-allowed'}}>TAKE</button>}
+                          <button onClick={() => handleJumpTo(res.storageId)} style={{background:'var(--border)', color:'white', border:'none', padding:'6px 12px', borderRadius:'4px', fontSize:'11px', cursor:'pointer'}}>JUMP</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
+        {/* CREATE TAB */}
+        {activeTab === 'Create' && (
+          <div className="section">
+            <h2>Forge New Item</h2>
+            <div style={{ position: 'relative', marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px dashed var(--border)' }}>
+              <label style={{display:'block', fontSize:'11px', color:'var(--accent-gold)', fontWeight:'bold'}}>SEARCH REPOSITORY</label>
+              <input className="search-input" placeholder="Search by name, category, or type" value={repoSearch} onChange={(e) => { setRepoSearch(e.target.value); setShowRepo(e.target.value.length > 1); }} onFocus={() => { if (repoSearch.length > 1) setShowRepo(true); }} />
+              {showRepo && repoSearch.length > 1 && (
+                <div style={{position: 'absolute', top: '100%', left: 0, right: 0, background: '#222', border: '1px solid var(--accent-gold)', maxHeight: '300px', overflowY: 'auto', zIndex: 100, borderRadius: '0 0 4px 4px'}}>
+                  {ITEM_REPOSITORY.filter(i => i.name.toLowerCase().includes(repoSearch.toLowerCase()) || i.category.toLowerCase().includes(repoSearch.toLowerCase()) || i.type.toLowerCase().includes(repoSearch.toLowerCase())).map((repoItem, idx) => (
+                    <div key={idx} style={{padding: '8px', cursor: 'pointer', borderBottom:'1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}} onMouseEnter={(e) => e.currentTarget.style.background = '#444'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
+                      <div style={{flex: 1}} onClick={() => { setNewItem({name: repoItem.name, category: repoItem.category, type: repoItem.type, weight: repoItem.weight, value: repoItem.value, damage: repoItem.damage || '', ac: repoItem.ac, properties: repoItem.properties || '', requiresAttunement: repoItem.requiresAttunement || false, qty: 1}); setRepoSearch(''); setShowRepo(false); }}>
+                        <div style={{fontWeight:'bold', color:'var(--text-main)'}}>{repoItem.name}</div>
+                        <div style={{fontSize:'10px', color:'#888'}}>{repoItem.type} | {repoItem.weight}u {repoItem.damage ? `| ${repoItem.damage}` : ''}</div>
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); handleAddFromRepository(repoItem); }} style={{background: 'var(--accent-gold)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginLeft: '8px'}}>ADD</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px'}}>
+              <div style={{gridColumn: 'span 2'}}><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Item Name</label><input className="search-input" value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})} placeholder="Ex: Longsword +1" /></div>
+              <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Category</label><select className="search-input" value={newItem.category} onChange={e => { const cat = e.target.value as ItemCategory; setNewItem({...newItem, category: cat, weight: DEFAULT_CATEGORY_WEIGHTS[cat] || 1}); }}>{ITEM_CATEGORIES.map(cat => (<option key={cat} value={cat}>{cat}</option>))}</select></div>
+              <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Type</label><input className="search-input" value={newItem.type} onChange={e => setNewItem({...newItem, type: e.target.value})} /></div>
+              <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Weight</label><input type="number" className="search-input" value={newItem.weight} onChange={e => setNewItem({...newItem, weight: parseFloat(e.target.value)})} /></div>
+              <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Qty</label><input type="number" className="search-input" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value)})} /></div>
+              <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Value</label><input className="search-input" value={newItem.value} onChange={e => setNewItem({...newItem, value: e.target.value})} placeholder="10gp" /></div>
+              <div style={{gridColumn: 'span 3'}}><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Properties / Notes</label><textarea className="search-input" rows={2} value={newItem.properties} onChange={e => setNewItem({...newItem, properties: e.target.value})} /></div>
+            </div>
+            <button onClick={handleCreateItem} style={{width: '100%', marginTop: '16px', padding: '12px', backgroundColor: 'var(--accent-gold)', color: 'black', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer'}}>FORGE ITEM</button>
+          </div>
+        )}
+
+        {/* EXTERNAL/STORAGE TAB */}
+        {activeTab === 'External' && !viewingStorageId && (
+          <div className="section">
+            <h2>External Storage</h2>
+            <div style={{marginBottom: '20px'}}>
+              {characterData.externalStorages.length === 0 ? <p style={{color:'#666', fontStyle:'italic'}}>No external storage created.</p> : (
+                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px'}}>
+                  {characterData.externalStorages.map(storage => (
+                    <div key={storage.id} style={{background: 'rgba(255,255,255,0.05)', padding: '12px', borderRadius: '4px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                      <div><div style={{fontWeight:'bold'}}>{storage.name}</div><div style={{fontSize:'11px', color:'#888'}}>{storage.type} | {storage.inventory.length} Items</div></div>
+                      <div><button onClick={() => { setViewingStorageId(storage.id); setActiveTab('Home'); }} style={{background: 'var(--accent-gold)', color: 'black', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer', marginRight:'8px'}}>VIEW</button><button onClick={() => deleteStorage(storage.id)} style={{background: '#333', color: '#888', border: 'none', padding: '6px', borderRadius: '4px', cursor: 'pointer'}}>X</button></div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <h3>Add New Storage</h3>
+            <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px'}}>
+              <input className="search-input" placeholder="Name (e.g. Shadowfax)" value={newStorage.name} onChange={e => setNewStorage({...newStorage, name: e.target.value})} />
+              <select className="search-input" value={newStorage.type} onChange={e => setNewStorage({...newStorage, type: e.target.value as StorageType})}>{Object.keys(STORAGE_DEFINITIONS).map(t => <option key={t} value={t}>{t}</option>)}</select>
+              <input className="search-input" placeholder="Description / Notes" value={newStorage.description} onChange={e => setNewStorage({...newStorage, description: e.target.value})} style={{gridColumn:'span 2'}} />
+            </div>
+            <button onClick={createStorage} style={{width:'100%', marginTop:'10px', padding:'10px', background:'var(--border)', color:'white', border:'none', cursor:'pointer', borderRadius:'4px'}}>CREATE STORAGE</button>
+          </div>
+        )}
+
+        {/* TRANSFER TAB */}
+        {activeTab === 'Transfer' && viewingStorageId && (
+          <div className="section">
+            <h2>Transfer Items</h2>
+            {!characterData.externalStorages.find(s => s.id === viewingStorageId)?.isNearby ? (
+              <div style={{color: 'var(--danger)', textAlign:'center', padding:'20px'}}>Storage is NOT Nearby.<br/>Cannot transfer items.</div>
+            ) : (
+              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', height: '450px'}}>
+                <div style={{border: '1px solid #333', borderRadius: '4px', padding: '12px', overflowY: 'auto'}}>
+                  <h3 style={{marginTop:0, fontSize:'12px', color:'var(--accent-gold)'}}>PLAYER</h3>
+                  {characterData.inventory.map(item => (
+                    <div key={item.id} style={{fontSize:'11px', borderBottom:'1px solid #333', padding:'8px', display:'flex', justifyContent:'space-between'}}>
+                      <span>{item.name} ({item.qty}) {item.equippedSlot && <span style={{color:'var(--accent-gold)'}}>[EQ]</span>}</span>
+                      <button onClick={() => transferItem(item, 'ToStorage')} style={{cursor:'pointer', background: '#333', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px'}}>→</button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{border: '1px solid #333', borderRadius: '4px', padding: '12px', overflowY: 'auto'}}>
+                  <h3 style={{marginTop:0, fontSize:'12px', color:'var(--accent-gold)'}}>STORAGE</h3>
+                  {currentDisplayData.inventory.map(item => (
+                    <div key={item.id} style={{fontSize:'11px', borderBottom:'1px solid #333', padding:'8px', display:'flex', justifyContent:'space-between'}}>
+                      <button onClick={() => transferItem(item, 'ToPlayer')} style={{cursor:'pointer', background: '#333', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px'}}>←</button>
+                      <span>{item.name} ({item.qty})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* COIN TAB */}
+        {activeTab === 'Coin' && stats && (
+          <div className="section">
+            <h2>Currency ({viewingStorageId ? 'Storage' : 'Player'})</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', marginBottom: '24px' }}>
+              {(['cp', 'sp', 'gp', 'pp'] as const).map((key) => {
+                const labels = { cp: 'Copper', sp: 'Silver', gp: 'Gold', pp: 'Platinum' };
+                const displayCurrency = currentDisplayData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 };
+                return (
+                  <div key={key} style={{ background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: '4px' }}>{labels[key]}</label>
+                    <input type="number" min="0" value={displayCurrency[key]} onChange={(e) => { const val = parseInt(e.target.value) || 0; handleUpdateData({currency: { ...displayCurrency, [key]: val }}); }} onFocus={(e) => e.target.select()} disabled={!canEditToken()} style={{width: '100%', background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)', color: 'var(--text-main)', fontSize: '20px', fontWeight: 'bold', cursor: canEditToken() ? 'text' : 'not-allowed', opacity: canEditToken() ? 1 : 0.5}} />
+                  </div>
+                );
+              })}
+            </div>
+            <div className="totals-grid" style={{marginBottom: '16px'}}>
+              <div className="stat-box"><div className="stat-label">Total Coins</div><div className={`stat-value ${stats.totalCoins > 30 ? 'warning' : ''}`}>{stats.totalCoins}</div></div>
+              {!viewingStorageId && <div className="stat-box"><div className="stat-label">Limit w/o Penalty</div><div className="stat-value">30</div></div>}
+              <div className="stat-box" style={{ border: stats.coinWeight > 0 ? '1px solid var(--danger)' : 'none' }}><div className="stat-label">Added Weight</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>+{stats.coinWeight}u</div></div>
+            </div>
+            {!viewingStorageId && characterData.externalStorages.some(s => s.isNearby) && (
+              <div style={{marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px'}}>
+                <h3 style={{fontSize:'14px', color:'var(--accent-gold)', marginTop:0}}>NEARBY STORAGE WALLETS</h3>
+                {characterData.externalStorages.filter(s => s.isNearby).map(storage => (
+                  <div key={storage.id} style={{background:'rgba(255,255,255,0.05)', padding:'8px', borderRadius:'4px', marginBottom:'8px', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                    <div><div style={{fontWeight:'bold', fontSize:'12px'}}>{storage.name}</div><div style={{fontSize:'10px', color:'#aaa'}}>{(storage.currency || {gp:0}).gp} GP</div></div>
+                    <div style={{display:'flex', gap:'4px'}}><button onClick={() => transferNearbyCoins(storage.id, 'give')} style={{background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px 12px', borderRadius:'4px', cursor:'pointer'}}>GIVE</button><button onClick={() => transferNearbyCoins(storage.id, 'take')} style={{background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px 12px', borderRadius:'4px', cursor:'pointer'}}>TAKE</button></div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px'}}>
+              <h3 style={{fontSize:'14px', color:'var(--accent-gold)', marginTop:0}}>VAULTS (BANKS)</h3>
+              {characterData.vaults.length === 0 && <p style={{fontSize:'11px', color:'#666'}}>No vaults created.</p>}
+              {characterData.vaults.map(vault => { const vCurrency = vault.currency || { cp: 0, sp: 0, gp: 0, pp: 0 }; return (
+                <div key={vault.id} style={{background:'rgba(255,255,255,0.05)', padding:'12px', borderRadius:'4px', marginBottom:'8px'}}>
+                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}><div style={{fontWeight:'bold', color:'var(--text-main)'}}>{vault.name}</div><div style={{fontWeight:'bold', color:'var(--accent-gold)'}}>{formatVaultCurrency(vCurrency)}</div></div>
+                  <div style={{display:'flex', gap:'4px'}}><button onClick={() => transferVaultFunds(vault.id, 'deposit')} style={{flex:1, background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px', borderRadius:'4px', cursor:'pointer'}}>DEPOSIT</button><button onClick={() => transferVaultFunds(vault.id, 'withdraw')} style={{flex:1, background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px', borderRadius:'4px', cursor:'pointer'}}>WITHDRAW</button><button onClick={() => deleteVault(vault.id)} style={{background:'#333', border:'none', color:'var(--danger)', fontSize:'10px', padding:'6px 12px', borderRadius:'4px', cursor:'pointer'}}>X</button></div>
+                </div>
+              );})}
+              <div style={{marginTop:'12px', display:'flex', gap:'8px'}}><input className="search-input" placeholder="New Vault Name" value={newVaultName} onChange={e => setNewVaultName(e.target.value)} style={{marginTop:0}} /><button onClick={createVault} style={{background:'var(--border)', color:'white', border:'none', padding:'0 12px', borderRadius:'4px', cursor:'pointer'}}>ADD</button></div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

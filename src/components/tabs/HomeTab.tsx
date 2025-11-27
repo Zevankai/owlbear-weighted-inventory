@@ -306,29 +306,33 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Show stats - always show in read-only mode too */}
-      <div className="totals-grid">
-        <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
-        <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
-        <div className="stat-box"><div className="stat-label">ITEMS</div><div className="stat-value">{currentDisplayData.inventory.length}</div></div>
-      </div>
-
-      {!viewingStorageId && (
+      {/* Show stats - hide for non-owners viewing claimed tokens, unless they're the GM */}
+      {(viewingStorageId || playerRole === 'GM' || !characterData.claimedBy || characterData.claimedBy === playerId) && (
         <>
-          <h2 style={{marginTop: '12px', border: 'none'}}>SLOT USAGE</h2>
           <div className="totals-grid">
-            <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
-              <div className="stat-label">WEAPONS</div>
-              <div className={`stat-value ${stats.usedSlots.weapon > stats.maxSlots.weapon ? 'danger' : ''}`}>{stats.usedSlots.weapon} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.weapon}</span></div>
-            </div>
-            <div className="stat-box" style={{borderColor: stats.usedSlots.armor > stats.maxSlots.armor ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
-              <div className="stat-label">ARMOR</div>
-              <div className={`stat-value ${stats.usedSlots.armor > stats.maxSlots.armor ? 'danger' : ''}`}>{stats.usedSlots.armor} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.armor}</span></div>
-            </div>
-            <div className="stat-box"><div className="stat-label">CLOTHING</div><div className="stat-value">{stats.usedSlots.clothing} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.clothing}</span></div></div>
-            <div className="stat-box"><div className="stat-label">JEWELRY</div><div className="stat-value">{stats.usedSlots.jewelry} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.jewelry}</span></div></div>
-            <div className="stat-box" style={{gridColumn: 'span 2', background: 'rgba(240, 225, 48, 0.05)'}}><div className="stat-label" style={{color: 'var(--accent-gold)'}}>UTILITY / QUICK</div><div className="stat-value">{stats.usedSlots.utility} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.utility}</span></div></div>
+            <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
+            <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
+            <div className="stat-box"><div className="stat-label">ITEMS</div><div className="stat-value">{currentDisplayData.inventory.length}</div></div>
           </div>
+
+          {!viewingStorageId && (
+            <>
+              <h2 style={{marginTop: '12px', border: 'none'}}>SLOT USAGE</h2>
+              <div className="totals-grid">
+                <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
+                  <div className="stat-label">WEAPONS</div>
+                  <div className={`stat-value ${stats.usedSlots.weapon > stats.maxSlots.weapon ? 'danger' : ''}`}>{stats.usedSlots.weapon} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.weapon}</span></div>
+                </div>
+                <div className="stat-box" style={{borderColor: stats.usedSlots.armor > stats.maxSlots.armor ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
+                  <div className="stat-label">ARMOR</div>
+                  <div className={`stat-value ${stats.usedSlots.armor > stats.maxSlots.armor ? 'danger' : ''}`}>{stats.usedSlots.armor} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.armor}</span></div>
+                </div>
+                <div className="stat-box"><div className="stat-label">CLOTHING</div><div className="stat-value">{stats.usedSlots.clothing} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.clothing}</span></div></div>
+                <div className="stat-box"><div className="stat-label">JEWELRY</div><div className="stat-value">{stats.usedSlots.jewelry} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.jewelry}</span></div></div>
+                <div className="stat-box" style={{gridColumn: 'span 2', background: 'rgba(240, 225, 48, 0.05)'}}><div className="stat-label" style={{color: 'var(--accent-gold)'}}>UTILITY / QUICK</div><div className="stat-value">{stats.usedSlots.utility} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.utility}</span></div></div>
+              </div>
+            </>
+          )}
         </>
       )}
 

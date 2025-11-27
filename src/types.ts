@@ -103,4 +103,8 @@ export interface CharacterData {
   claimedBy?: string;    // Player ID who claimed this token
   claimingEnabled?: boolean;  // GM controls if token can be claimed
   reputation?: Reputation;  // NPC reputation tracking (only for packType === 'NPC')
+  theme?: {  // Per-token theme colors (everyone sees the same theme for this token)
+    accent: string;
+    background: string;
+  };
 }

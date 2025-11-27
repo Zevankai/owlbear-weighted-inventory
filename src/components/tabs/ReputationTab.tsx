@@ -157,7 +157,7 @@ export function ReputationTab({ characterData, updateData, playerRole }: Reputat
                   borderRadius: '4px',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
+                  gap: '6px',
                   border: '1px solid var(--border)'
                 }}
               >
@@ -168,6 +168,7 @@ export function ReputationTab({ characterData, updateData, playerRole }: Reputat
                   onChange={(e) => handleUpdateEntry(entry.id, { label: e.target.value })}
                   style={{
                     flex: '1',
+                    minWidth: '60px',
                     padding: '6px 8px',
                     background: 'rgba(0,0,0,0.3)',
                     border: '1px solid var(--border)',
@@ -186,8 +187,8 @@ export function ReputationTab({ characterData, updateData, playerRole }: Reputat
                   value={entry.value}
                   onChange={(e) => handleValueChange(entry.id, e.target.value)}
                   style={{
-                    width: '60px',
-                    padding: '6px 8px',
+                    width: '50px',
+                    padding: '6px 4px',
                     background: 'rgba(0,0,0,0.3)',
                     border: '1px solid var(--border)',
                     borderRadius: '3px',
@@ -202,29 +203,33 @@ export function ReputationTab({ characterData, updateData, playerRole }: Reputat
                   fontSize: '10px',
                   color: getReputationColor(entry.value),
                   fontWeight: 'bold',
-                  width: '70px',
-                  textAlign: 'center'
+                  width: '55px',
+                  textAlign: 'center',
+                  flexShrink: 0
                 }}>
                   {getReputationLabel(entry.value)}
                 </div>
 
                 {/* Visibility Toggle */}
-                <label style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  fontSize: '11px',
-                  cursor: 'pointer',
-                  userSelect: 'none',
-                  whiteSpace: 'nowrap'
-                }}>
+                <label
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    flexShrink: 0
+                  }}
+                  title={entry.visibleToPlayer ? 'Visible to players' : 'Hidden from players'}
+                >
                   <input
                     type="checkbox"
                     checked={entry.visibleToPlayer}
                     onChange={() => handleToggleVisibility(entry.id)}
                     style={{ cursor: 'pointer' }}
                   />
-                  Visible
+                  👁
                 </label>
 
                 {/* Delete Button */}
@@ -238,7 +243,8 @@ export function ReputationTab({ characterData, updateData, playerRole }: Reputat
                     color: 'var(--danger)',
                     cursor: 'pointer',
                     fontSize: '11px',
-                    fontWeight: 'bold'
+                    fontWeight: 'bold',
+                    flexShrink: 0
                   }}
                 >
                   ✕

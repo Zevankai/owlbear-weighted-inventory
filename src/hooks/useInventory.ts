@@ -9,8 +9,6 @@ import type { Vector2 } from '@owlbear-rodeo/sdk';
 const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
 // Player favorites (stored in room metadata with player-specific keys)
 const FAVORITES_KEY_PREFIX = 'com.weighted-inventory/favorites/';
-// Player theme (stored in room metadata with player-specific keys)
-const THEME_KEY_PREFIX = 'com.weighted-inventory/theme/';
 // Over-encumbered visual effect attachment ID
 const OVERBURDENED_ATTACHMENT_ID = 'com.weighted-inventory/overburdened-indicator';
 // Legacy keys for migration
@@ -18,7 +16,6 @@ const LEGACY_ROOM_KEY = 'com.weighted-inventory/room-data';
 const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
 
 const getFavoritesKey = (playerId: string) => `${FAVORITES_KEY_PREFIX}${playerId}`;
-const getThemeKey = (playerId: string) => `${THEME_KEY_PREFIX}${playerId}`;
 
 // Helper to calculate the center position of a token (pure utility function)
 const getTokenCenter = (token: Item): Vector2 => {
@@ -114,7 +111,18 @@ export function useInventory() {
       data = await migrateLegacyData(token);
     }
 
-    setCharacterData(data || DEFAULT_CHARACTER_DATA);
+    const finalData = data || DEFAULT_CHARACTER_DATA;
+    setCharacterData(finalData);
+
+    // Load theme from token data (per-token theme, not per-player)
+    if (finalData.theme) {
+      setTheme(finalData.theme);
+      console.log('[Theme] Loaded token theme:', finalData.theme);
+    } else {
+      setTheme(DEFAULT_THEME);
+      console.log('[Theme] Using default theme for this token');
+    }
+
     setLoading(false);
   }, []);
 
@@ -161,15 +169,8 @@ export function useInventory() {
         console.log('[Favorites] Loaded', savedFavorites.length, 'favorites');
       }
 
-      // Load theme
-      const themeKey = getThemeKey(currentPlayerId);
-      const savedTheme = roomMetadata[themeKey] as ThemeColors | undefined;
-      if (savedTheme && mounted) {
-        setTheme(savedTheme);
-        console.log('[Theme] Loaded theme:', savedTheme);
-      } else {
-        console.log('[Theme] Using default theme');
-      }
+      // Theme is now loaded from token metadata (per-token), not room metadata (per-player)
+      // It will be set when a token is selected in handleSelection
 
       const selection = await OBR.player.getSelection();
       if (selection && selection.length > 0) {
@@ -303,14 +304,16 @@ export function useInventory() {
 
   const isFavorited = tokenId ? favorites.some(f => f.id === tokenId) : false;
 
-  // Update theme
+  // Update theme (now saved to token metadata, not room metadata)
   const updateTheme = useCallback(async (newTheme: ThemeColors) => {
+    if (!tokenId) return;
+
     setTheme(newTheme);
-    const playerId = await OBR.player.getId();
-    const themeKey = getThemeKey(playerId);
-    await OBR.room.setMetadata({ [themeKey]: newTheme });
-    console.log('[Theme] Saved theme:', newTheme);
-  }, []);
+
+    // Save theme to token's character data
+    await updateData({ theme: newTheme });
+    console.log('[Theme] Saved theme to token:', newTheme);
+  }, [tokenId, updateData]);
 
   // Update over-encumbered visual effect
   const updateOverburdenedEffect = useCallback(async (isOverburdened: boolean) => {

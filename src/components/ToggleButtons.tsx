@@ -1,13 +1,11 @@
 interface ToggleButtonsProps {
   textMode: 'dark' | 'light';
-  isWideMode: boolean;
   onTextModeToggle: () => void;
   onWidthToggle: () => void;
 }
 
 export function ToggleButtons({
   textMode,
-  isWideMode,
   onTextModeToggle,
   onWidthToggle
 }: ToggleButtonsProps) {
@@ -40,7 +38,7 @@ export function ToggleButtons({
       >
         {textMode === 'dark' ? '☀️' : '🌙'}
       </button>
-      {/* Width Toggle Button */}
+      {/* Expand Window Button */}
       <button
         onClick={onWidthToggle}
         style={{
@@ -56,9 +54,9 @@ export function ToggleButtons({
           justifyContent: 'center',
           transition: 'all 0.2s'
         }}
-        title={isWideMode ? 'Shrink Width' : 'Expand Width'}
+        title="Open Expanded Inventory Window"
       >
-        {isWideMode ? '←' : '→'}
+        ⛶
       </button>
     </div>
   );

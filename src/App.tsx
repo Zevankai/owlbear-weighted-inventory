@@ -6,7 +6,7 @@ import './App.css';
 // Data & Types
 import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
-import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, MAIN_POPOVER_ID, TRADE_POPOVER_ID, DEFAULT_POPOVER_WIDTH, WIDE_POPOVER_WIDTH } from './constants';
+import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
@@ -34,9 +34,6 @@ function App() {
   const [viewingFavorites, setViewingFavorites] = useState(false);
   const [allClaimedTokens, setAllClaimedTokens] = useState<Array<{id: string; name: string; image?: string}>>([]);
 
-  // State for UI width toggle (double width on click)
-  const [isWideMode, setIsWideMode] = useState(false);
-  
   // State for text mode (dark text for light backgrounds)
   const [textMode, setTextMode] = useState<'dark' | 'light'>('dark');
   // 1. Load Inventory Data
@@ -91,16 +88,14 @@ function App() {
     }
   }, [textMode]);
 
-  // Toggle width function - resizes popover
-  const toggleWidth = async () => {
-    const newWideMode = !isWideMode;
-    setIsWideMode(newWideMode);
-    
-    try {
-      await OBR.popover.setWidth(MAIN_POPOVER_ID, newWideMode ? WIDE_POPOVER_WIDTH : DEFAULT_POPOVER_WIDTH);
-    } catch (err) {
-      console.error('Failed to resize popover:', err);
-    }
+  // Toggle width function - opens expanded inventory window
+  const toggleWidth = () => {
+    OBR.popover.open({
+      id: EXPANDED_POPOVER_ID,
+      url: "/expanded",
+      height: 700,
+      width: 900,
+    });
   };
 
   // Toggle text mode handler
@@ -999,7 +994,6 @@ function App() {
         {/* Width Toggle and Text Mode Buttons */}
         <ToggleButtons
           textMode={textMode}
-          isWideMode={isWideMode}
           onTextModeToggle={toggleTextMode}
           onWidthToggle={toggleWidth}
         />
@@ -2011,7 +2005,6 @@ function App() {
       {/* Width Toggle and Text Mode Buttons */}
       <ToggleButtons
         textMode={textMode}
-        isWideMode={isWideMode}
         onTextModeToggle={toggleTextMode}
         onWidthToggle={toggleWidth}
       />

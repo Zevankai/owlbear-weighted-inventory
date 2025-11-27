@@ -31,13 +31,14 @@ function App() {
 
   // State for viewing favorites
   const [viewingFavorites, setViewingFavorites] = useState(false);
+  const [allClaimedTokens, setAllClaimedTokens] = useState<Array<{id: string; name: string; image?: string}>>([]);
 
   // 1. Load Inventory Data
   const {
     tokenId, tokenName, tokenImage, characterData, updateData, loading,
     favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme,
     updateOverburdenedEffect, playerId, playerRole, playerClaimedTokenId,
-    playerClaimedTokenInfo, claimToken, unclaimToken, unclaimTokenById,
+    claimToken, unclaimToken, unclaimTokenById,
     removeFavoriteById, canEditToken, checkProximity
   } = useInventory();
 
@@ -70,6 +71,32 @@ function App() {
       document.documentElement.style.setProperty('--nav-bg', `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.8)`);
     }
   }, [theme]);
+
+  // Load all claimed tokens when viewing favorites
+  useEffect(() => {
+    if (!viewingFavorites || !playerId) return;
+
+    const loadAllClaimedTokens = async () => {
+      try {
+        const allTokens = await OBR.scene.items.getItems();
+        const claimedByPlayer = allTokens
+          .filter(token => {
+            const data = token.metadata['com.weighted-inventory/data'] as CharacterData | undefined;
+            return data?.claimedBy === playerId;
+          })
+          .map(token => ({
+            id: token.id,
+            name: token.name || 'Unnamed Token',
+            image: (token as any).image?.url
+          }));
+        setAllClaimedTokens(claimedByPlayer);
+      } catch (err) {
+        console.error('Failed to load claimed tokens:', err);
+      }
+    };
+
+    loadAllClaimedTokens();
+  }, [viewingFavorites, playerId]);
 
   // --- VIRTUAL CONTEXT SWITCHING ---
   // Determine which data object we are currently viewing (Player or a specific Storage)
@@ -745,8 +772,8 @@ function App() {
             </div>
           )}
 
-          {/* Claimed Token Section - shown separately at the top */}
-          {playerClaimedTokenId && playerClaimedTokenInfo && (
+          {/* Claimed Tokens Section - shown separately at the top */}
+          {allClaimedTokens.length > 0 && (
             <div style={{marginBottom: '16px'}}>
               <h3 style={{
                 fontSize: '10px',
@@ -756,68 +783,73 @@ function App() {
                 letterSpacing: '0.5px',
                 fontWeight: 'bold'
               }}>
-                <span style={{color: '#0f0'}}>🎭</span> Your Claimed Token
+                <span style={{color: '#0f0'}}>🎭</span> Your Claimed Tokens ({allClaimedTokens.length})
               </h3>
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px',
-                background: 'rgba(0, 255, 0, 0.05)',
-                border: '1px solid rgba(0, 255, 0, 0.3)',
-                borderRadius: '6px',
-                color: 'var(--text-main)'
-              }}>
-                {playerClaimedTokenInfo.image && (
-                  <div 
+              {allClaimedTokens.map(token => (
+                <div key={token.id} style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '10px',
+                  background: 'rgba(0, 255, 0, 0.05)',
+                  border: '1px solid rgba(0, 255, 0, 0.3)',
+                  borderRadius: '6px',
+                  color: 'var(--text-main)',
+                  marginBottom: '8px'
+                }}>
+                  {token.image && (
+                    <div
+                      onClick={() => {
+                        loadTokenById(token.id);
+                        setViewingFavorites(false);
+                      }}
+                      style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        border: '2px solid #0f0',
+                        flexShrink: 0,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <img src={token.image} alt={token.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                    </div>
+                  )}
+                  <div
                     onClick={() => {
-                      loadTokenById(playerClaimedTokenId);
+                      loadTokenById(token.id);
                       setViewingFavorites(false);
                     }}
+                    style={{fontWeight: 'bold', fontSize: '13px', flex: 1, cursor: 'pointer'}}
+                  >
+                    {token.name}
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm(`Unclaim "${token.name}"? You can reclaim it later.`)) {
+                        unclaimTokenById(token.id);
+                        // Refresh the list
+                        setAllClaimedTokens(prev => prev.filter(t => t.id !== token.id));
+                      }
+                    }}
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      border: '2px solid #0f0',
-                      flexShrink: 0,
-                      cursor: 'pointer'
+                      background: 'rgba(255, 0, 0, 0.1)',
+                      border: '1px solid rgba(255, 0, 0, 0.5)',
+                      color: '#f66',
+                      padding: '4px 8px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '10px',
+                      fontWeight: 'bold',
+                      flexShrink: 0
                     }}
                   >
-                    <img src={playerClaimedTokenInfo.image} alt={playerClaimedTokenInfo.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                  </div>
-                )}
-                <div 
-                  onClick={() => {
-                    loadTokenById(playerClaimedTokenId);
-                    setViewingFavorites(false);
-                  }}
-                  style={{fontWeight: 'bold', fontSize: '13px', flex: 1, cursor: 'pointer'}}
-                >
-                  {playerClaimedTokenInfo.name}
+                    UNCLAIM
+                  </button>
                 </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (window.confirm(`Unclaim "${playerClaimedTokenInfo.name}"? You can reclaim it later.`)) {
-                      unclaimTokenById(playerClaimedTokenId);
-                    }
-                  }}
-                  style={{
-                    background: 'rgba(255, 0, 0, 0.1)',
-                    border: '1px solid rgba(255, 0, 0, 0.5)',
-                    color: '#f66',
-                    padding: '4px 8px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '10px',
-                    fontWeight: 'bold',
-                    flexShrink: 0
-                  }}
-                >
-                  UNCLAIM
-                </button>
-              </div>
+              ))}
             </div>
           )}
 
@@ -1074,12 +1106,11 @@ function App() {
       visibleTabs.splice(searchIdx, 0, { id: 'Transfer', label: 'TRANSFER' });
   }
 
-  // Hide tabs for non-owners when viewing another player's claimed token
-  // Note: Unclaimed tokens (!characterData?.claimedBy) are accessible to everyone for editing,
-  // since the GM hasn't assigned them to a specific player yet
-  const isOwnerOrGM = playerRole === 'GM' || characterData?.claimedBy === playerId || !characterData?.claimedBy;
+  // Hide tabs for players viewing unclaimed tokens or other players' claimed tokens
+  // Players can only see Home tab for these tokens
+  const isOwnerOrGM = playerRole === 'GM' || characterData?.claimedBy === playerId;
   if (!isOwnerOrGM && !viewingStorageId) {
-    // Non-owners can only see Home tab (read-only view)
+    // Non-owners and viewers of unclaimed tokens can only see Home tab (read-only view)
     visibleTabs = visibleTabs.filter(t => t.id === 'Home');
   }
 

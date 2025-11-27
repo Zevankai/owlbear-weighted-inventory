@@ -18,6 +18,7 @@ import { hexToRgb } from './utils/color';
 // Components
 import { GMOverviewTab } from './components/tabs/GMOverviewTab';
 import { HomeTab } from './components/tabs/HomeTab';
+import { ReputationTab } from './components/tabs/ReputationTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 
@@ -132,8 +133,6 @@ function App() {
   const tradeWindowOpenedForIdRef = useRef<string | null>(null);
   const [showTradeRequest, setShowTradeRequest] = useState(false);
   const [pendingTradeRequest, setPendingTradeRequest] = useState<ActiveTrade | null>(null);
-  // Player's claimed token info
-  const [playerClaimedTokenName, setPlayerClaimedTokenName] = useState<string | null>(null);
 
   // Open separate trade window - defined early to be available in useEffect
   const openTradeWindow = (tradeId: string) => {
@@ -195,31 +194,6 @@ function App() {
 
     return () => clearInterval(interval);
   }, [ready, playerId]);
-
-  // Load player's claimed token name
-  useEffect(() => {
-    if (!playerClaimedTokenId) {
-      setPlayerClaimedTokenName(null);
-      return;
-    }
-
-    const loadClaimedTokenData = async () => {
-      try {
-        const tokens = await OBR.scene.items.getItems([playerClaimedTokenId]);
-        if (tokens.length > 0) {
-          setPlayerClaimedTokenName(tokens[0].name || 'My Token');
-        }
-      } catch (err) {
-        console.error('Failed to load claimed token data:', err);
-      }
-    };
-
-    loadClaimedTokenData();
-
-    // Refresh every 2 seconds to catch changes
-    const interval = setInterval(loadClaimedTokenData, 2000);
-    return () => clearInterval(interval);
-  }, [playerClaimedTokenId]);
 
   // Other player data is now loaded in TradeWindow.tsx for the separate trade window
 
@@ -963,14 +937,20 @@ function App() {
 
   // Start player-to-player trade (request)
   const handleStartP2PTrade = async (otherPlayerTokenId: string) => {
-    // Check if player has a claimed token
-    if (!playerClaimedTokenId || !playerId || !playerClaimedTokenName) {
-      alert('You must claim a token before you can trade! Select your character token and click "CLAIM TOKEN".');
+    // Check if player has a claimed token and is viewing a claimed token
+    if (!tokenId || !playerId || !characterData) {
+      alert('You must select your character token to trade!');
       return;
     }
 
-    // Check proximity between player's claimed token and other player's token
-    const isNear = await checkProximity(playerClaimedTokenId, otherPlayerTokenId);
+    // Verify the currently selected token is claimed by this player
+    if (characterData.claimedBy !== playerId) {
+      alert('You can only trade from a token you have claimed! Claim this token first.');
+      return;
+    }
+
+    // Check proximity between currently selected token and other player's token
+    const isNear = await checkProximity(tokenId, otherPlayerTokenId);
     if (!isNear) {
       alert('Your character must be near the other player to trade!');
       return;
@@ -999,9 +979,9 @@ function App() {
     const trade: ActiveTrade = {
       id: uuidv4(),
       status: 'pending-acceptance',
-      player1TokenId: playerClaimedTokenId,
+      player1TokenId: tokenId,
       player1Id: playerId,
-      player1Name: playerClaimedTokenName,
+      player1Name: tokenName || 'Unknown',
       player2TokenId: otherPlayerTokenId,
       player2Id: otherPlayerId,
       player2Name: otherTokenName,
@@ -1074,6 +1054,11 @@ function App() {
   // Add GM tab (always visible to GMs)
   if (playerRole === 'GM') {
     baseTabs.push({ id: 'GM', label: 'GM' });
+  }
+
+  // Add Reputation tab for NPC tokens (GM only)
+  if (playerRole === 'GM' && characterData?.packType === 'NPC' && !viewingStorageId) {
+    baseTabs.push({ id: 'Reputation', label: 'REP' });
   }
 
   let visibleTabs = baseTabs;
@@ -1938,6 +1923,15 @@ function App() {
             handleCancelTrade={handleCancelTrade}
             loadTokenById={loadTokenById}
             setActiveTab={setActiveTab}
+          />
+        )}
+
+        {/* === REPUTATION TAB === */}
+        {activeTab === 'Reputation' && playerRole === 'GM' && characterData?.packType === 'NPC' && (
+          <ReputationTab
+            characterData={characterData}
+            updateData={updateData}
+            playerRole={playerRole}
           />
         )}
       </main>

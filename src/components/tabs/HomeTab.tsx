@@ -1,4 +1,5 @@
 import type { CharacterData, PackType, ActiveTrade } from '../../types';
+import { ReputationDisplay } from '../ReputationDisplay';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '80px';
@@ -363,6 +364,11 @@ export function HomeTab({
             updateData({ externalStorages: newStorages });
           }} className="search-input" rows={3} />
         </div>
+      )}
+
+      {/* Reputation Display - show for NPC tokens with reputation data */}
+      {!viewingStorageId && characterData?.packType === 'NPC' && characterData?.reputation && (
+        <ReputationDisplay reputation={characterData.reputation} />
       )}
 
       {/* Token Claiming - at the bottom of the dashboard */}

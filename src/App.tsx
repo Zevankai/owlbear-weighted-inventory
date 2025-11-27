@@ -6,7 +6,7 @@ import './App.css';
 // Data & Types
 import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
-import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS } from './constants';
+import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, MAIN_POPOVER_ID, TRADE_POPOVER_ID, DEFAULT_POPOVER_WIDTH, WIDE_POPOVER_WIDTH } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
@@ -21,6 +21,7 @@ import { HomeTab } from './components/tabs/HomeTab';
 import { ReputationTab } from './components/tabs/ReputationTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
+import { ToggleButtons } from './components/ToggleButtons';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -96,11 +97,14 @@ function App() {
     setIsWideMode(newWideMode);
     
     try {
-      await OBR.popover.setWidth("com.weighted-inventory.popover", newWideMode ? 800 : 400);
+      await OBR.popover.setWidth(MAIN_POPOVER_ID, newWideMode ? WIDE_POPOVER_WIDTH : DEFAULT_POPOVER_WIDTH);
     } catch (err) {
       console.error('Failed to resize popover:', err);
     }
   };
+
+  // Toggle text mode handler
+  const toggleTextMode = () => setTextMode(textMode === 'dark' ? 'light' : 'dark');
 
   // Load all claimed tokens when viewing favorites
   useEffect(() => {
@@ -197,7 +201,7 @@ function App() {
     if (tradeWindowOpenedForIdRef.current === tradeId) return;
 
     OBR.popover.open({
-      id: "com.weighted-inventory.trade-window",
+      id: TRADE_POPOVER_ID,
       url: "/trade",
       height: 600,
       width: 800,
@@ -992,56 +996,13 @@ function App() {
           )}
         </div>
 
-        {/* Width Toggle and Text Mode Buttons - Bottom Right Corner */}
-        <div style={{
-          position: 'fixed',
-          bottom: '8px',
-          right: '8px',
-          display: 'flex',
-          gap: '4px',
-          zIndex: 100
-        }}>
-          {/* Text Mode Toggle (Light/Dark) */}
-          <button
-            onClick={() => setTextMode(textMode === 'dark' ? 'light' : 'dark')}
-            style={{
-              background: 'rgba(0,0,0,0.6)',
-              border: '1px solid var(--glass-border)',
-              borderRadius: '4px',
-              padding: '4px 8px',
-              cursor: 'pointer',
-              color: 'var(--text-main)',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
-            title={textMode === 'dark' ? 'Switch to Light Text Mode' : 'Switch to Dark Text Mode'}
-          >
-            {textMode === 'dark' ? '☀️' : '🌙'}
-          </button>
-          {/* Width Toggle Button */}
-          <button
-            onClick={toggleWidth}
-            style={{
-              background: 'rgba(0,0,0,0.6)',
-              border: '1px solid var(--glass-border)',
-              borderRadius: '4px',
-              padding: '4px 8px',
-              cursor: 'pointer',
-              color: 'var(--text-main)',
-              fontSize: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s'
-            }}
-            title={isWideMode ? 'Shrink Width' : 'Expand Width'}
-          >
-            {isWideMode ? '←' : '→'}
-          </button>
-        </div>
+        {/* Width Toggle and Text Mode Buttons */}
+        <ToggleButtons
+          textMode={textMode}
+          isWideMode={isWideMode}
+          onTextModeToggle={toggleTextMode}
+          onWidthToggle={toggleWidth}
+        />
       </div>
     );
   }
@@ -2047,56 +2008,13 @@ function App() {
         )}
       </main>
 
-      {/* Width Toggle and Text Mode Buttons - Bottom Right Corner */}
-      <div style={{
-        position: 'fixed',
-        bottom: '8px',
-        right: '8px',
-        display: 'flex',
-        gap: '4px',
-        zIndex: 100
-      }}>
-        {/* Text Mode Toggle (Light/Dark) */}
-        <button
-          onClick={() => setTextMode(textMode === 'dark' ? 'light' : 'dark')}
-          style={{
-            background: 'rgba(0,0,0,0.6)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: '4px',
-            padding: '4px 8px',
-            cursor: 'pointer',
-            color: 'var(--text-main)',
-            fontSize: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s'
-          }}
-          title={textMode === 'dark' ? 'Switch to Light Text Mode' : 'Switch to Dark Text Mode'}
-        >
-          {textMode === 'dark' ? '☀️' : '🌙'}
-        </button>
-        {/* Width Toggle Button */}
-        <button
-          onClick={toggleWidth}
-          style={{
-            background: 'rgba(0,0,0,0.6)',
-            border: '1px solid var(--glass-border)',
-            borderRadius: '4px',
-            padding: '4px 8px',
-            cursor: 'pointer',
-            color: 'var(--text-main)',
-            fontSize: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s'
-          }}
-          title={isWideMode ? 'Shrink Width' : 'Expand Width'}
-        >
-          {isWideMode ? '←' : '→'}
-        </button>
-      </div>
+      {/* Width Toggle and Text Mode Buttons */}
+      <ToggleButtons
+        textMode={textMode}
+        isWideMode={isWideMode}
+        onTextModeToggle={toggleTextMode}
+        onWidthToggle={toggleWidth}
+      />
 
       {/* Trade Request Notification */}
       <TradeRequestNotification

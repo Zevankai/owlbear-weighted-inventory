@@ -150,3 +150,11 @@ export const DEFAULT_CHARACTER_DATA: CharacterData = {
 
 // Room metadata keys for trading
 export const ACTIVE_TRADE_KEY = 'com.weighted-inventory/active-trade';
+
+// Popover IDs
+export const MAIN_POPOVER_ID = 'com.weighted-inventory.popover';
+export const TRADE_POPOVER_ID = 'com.weighted-inventory.trade-window';
+
+// Default UI dimensions
+export const DEFAULT_POPOVER_WIDTH = 400;
+export const WIDE_POPOVER_WIDTH = 800;

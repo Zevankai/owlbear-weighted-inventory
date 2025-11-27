@@ -4,6 +4,7 @@ import App from './App'
 import TradeWindow from './TradeWindow'
 import './index.css'
 import OBR from '@owlbear-rodeo/sdk'
+import { MAIN_POPOVER_ID, DEFAULT_POPOVER_WIDTH } from './constants'
 
 OBR.onReady(() => {
   OBR.contextMenu.create({
@@ -21,10 +22,10 @@ OBR.onReady(() => {
     ],
     onClick() {
       OBR.popover.open({
-        id: "com.weighted-inventory.popover",
+        id: MAIN_POPOVER_ID,
         url: "/",
         height: 600,
-        width: 400,
+        width: DEFAULT_POPOVER_WIDTH,
       });
     },
   });

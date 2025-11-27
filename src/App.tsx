@@ -6,7 +6,7 @@ import './App.css';
 // Data & Types
 import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
-import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS } from './constants';
+import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, MAIN_POPOVER_ID, TRADE_POPOVER_ID, DEFAULT_POPOVER_WIDTH, WIDE_POPOVER_WIDTH } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
@@ -21,6 +21,7 @@ import { HomeTab } from './components/tabs/HomeTab';
 import { ReputationTab } from './components/tabs/ReputationTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
+import { ToggleButtons } from './components/ToggleButtons';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -33,6 +34,11 @@ function App() {
   const [viewingFavorites, setViewingFavorites] = useState(false);
   const [allClaimedTokens, setAllClaimedTokens] = useState<Array<{id: string; name: string; image?: string}>>([]);
 
+  // State for UI width toggle (double width on click)
+  const [isWideMode, setIsWideMode] = useState(false);
+  
+  // State for text mode (dark text for light backgrounds)
+  const [textMode, setTextMode] = useState<'dark' | 'light'>('dark');
   // 1. Load Inventory Data
   const {
     tokenId, tokenName, tokenImage, characterData, updateData, loading,
@@ -71,6 +77,34 @@ function App() {
       document.documentElement.style.setProperty('--nav-bg', `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.8)`);
     }
   }, [theme]);
+
+  // Apply text mode (light/dark) to CSS variables
+  useEffect(() => {
+    if (textMode === 'light') {
+      // Light mode: dark text for light backgrounds
+      document.documentElement.style.setProperty('--text-main', '#1a1a2e');
+      document.documentElement.style.setProperty('--text-muted', '#4a4a6a');
+    } else {
+      // Dark mode: light text for dark backgrounds (default)
+      document.documentElement.style.setProperty('--text-main', '#ffffff');
+      document.documentElement.style.setProperty('--text-muted', '#a0a0b0');
+    }
+  }, [textMode]);
+
+  // Toggle width function - resizes popover
+  const toggleWidth = async () => {
+    const newWideMode = !isWideMode;
+    setIsWideMode(newWideMode);
+    
+    try {
+      await OBR.popover.setWidth(MAIN_POPOVER_ID, newWideMode ? WIDE_POPOVER_WIDTH : DEFAULT_POPOVER_WIDTH);
+    } catch (err) {
+      console.error('Failed to resize popover:', err);
+    }
+  };
+
+  // Toggle text mode handler
+  const toggleTextMode = () => setTextMode(textMode === 'dark' ? 'light' : 'dark');
 
   // Load all claimed tokens when viewing favorites
   useEffect(() => {
@@ -167,9 +201,9 @@ function App() {
     if (tradeWindowOpenedForIdRef.current === tradeId) return;
 
     OBR.popover.open({
-      id: "com.weighted-inventory.trade-window",
+      id: TRADE_POPOVER_ID,
       url: "/trade",
-      height: 800,
+      height: 600,
       width: 800,
     });
 
@@ -961,6 +995,14 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* Width Toggle and Text Mode Buttons */}
+        <ToggleButtons
+          textMode={textMode}
+          isWideMode={isWideMode}
+          onTextModeToggle={toggleTextMode}
+          onWidthToggle={toggleWidth}
+        />
       </div>
     );
   }
@@ -1077,8 +1119,9 @@ function App() {
 
   const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
     { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
+    { id: 'Create', label: 'CREATE' },
     { id: 'Search', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> },
-    { id: 'Create', label: 'CREATE' }, { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
+    { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
   ];
 
   // Add GM tab (always visible to GMs)
@@ -1964,6 +2007,14 @@ function App() {
           />
         )}
       </main>
+
+      {/* Width Toggle and Text Mode Buttons */}
+      <ToggleButtons
+        textMode={textMode}
+        isWideMode={isWideMode}
+        onTextModeToggle={toggleTextMode}
+        onWidthToggle={toggleWidth}
+      />
 
       {/* Trade Request Notification */}
       <TradeRequestNotification

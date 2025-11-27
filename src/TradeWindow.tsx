@@ -3,8 +3,7 @@ import OBR from '@owlbear-rodeo/sdk';
 import { TradeModal } from './components/TradeModal';
 import type { ActiveTrade, CharacterData, Item, Currency } from './types';
 import { getTotalCopperPieces, deductCopperPieces, addCopperPieces } from './utils/currency';
-
-const ACTIVE_TRADE_KEY = 'com.weighted-inventory/active-trade';
+import { ACTIVE_TRADE_KEY, TRADE_POPOVER_ID } from './constants';
 
 export default function TradeWindow() {
   const [activeTrade, setActiveTrade] = useState<ActiveTrade | null>(null);
@@ -33,7 +32,7 @@ export default function TradeWindow() {
 
         if (!trade) {
           // Trade was cancelled or completed, close window
-          OBR.popover.close("com.weighted-inventory.trade-window");
+          OBR.popover.close(TRADE_POPOVER_ID);
           return;
         }
 
@@ -220,7 +219,7 @@ export default function TradeWindow() {
       // Clear trade and close window
       await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
       alert('Trade completed successfully!');
-      OBR.popover.close("com.weighted-inventory.trade-window");
+      OBR.popover.close(TRADE_POPOVER_ID);
     } catch (err) {
       console.error('Failed to execute trade:', err);
       alert(`Trade failed! ${err instanceof Error ? err.message : 'Check console for details.'}`);
@@ -232,7 +231,7 @@ export default function TradeWindow() {
     if (!activeTrade) return;
 
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: undefined });
-    OBR.popover.close("com.weighted-inventory.trade-window");
+    OBR.popover.close(TRADE_POPOVER_ID);
   };
 
   if (loading) {

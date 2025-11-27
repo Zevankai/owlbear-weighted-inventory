@@ -190,19 +190,6 @@ export function ReputationDisplay({ reputation }: ReputationDisplayProps) {
           </div>
         </div>
       )}
-
-      {/* No reputation data visible */}
-      {!reputation.showPartyAverage && visibleEntries.length === 0 && (
-        <div style={{
-          textAlign: 'center',
-          padding: '12px',
-          fontSize: '11px',
-          color: 'var(--text-muted)',
-          fontStyle: 'italic'
-        }}>
-          No reputation information available
-        </div>
-      )}
     </div>
   );
 }

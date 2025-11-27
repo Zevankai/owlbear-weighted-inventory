@@ -118,17 +118,21 @@ export function ReputationTab({ characterData, updateData, playerRole }: Reputat
   // Only GM can edit reputation
   if (playerRole !== 'GM') {
     return (
-      <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <p>Only the GM can manage NPC reputation.</p>
+      <div className="section">
+        <p style={{ textAlign: 'center', color: 'var(--text-muted)' }}>
+          Only the GM can manage NPC reputation.
+        </p>
       </div>
     );
   }
 
   return (
-    <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '16px', height: '100%', overflow: 'auto' }}>
-      <div>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--accent-gold)' }}>
-          INDIVIDUAL SCORES
+    <div className="section">
+      <h2>NPC Reputation</h2>
+
+      <div style={{ marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '13px', color: 'var(--accent-gold)', marginBottom: '12px', textTransform: 'uppercase' }}>
+          Individual Scores
         </h3>
 
         {reputation.entries.length === 0 ? (
@@ -264,13 +268,10 @@ export function ReputationTab({ characterData, updateData, playerRole }: Reputat
         </button>
       </div>
 
-      {/* Divider */}
-      <div style={{ borderTop: '1px solid var(--border)', margin: '8px 0' }} />
-
       {/* Party Average Preview */}
-      <div>
-        <h3 style={{ margin: '0 0 12px 0', fontSize: '14px', color: 'var(--accent-gold)' }}>
-          PARTY AVERAGE PREVIEW
+      <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid var(--border)' }}>
+        <h3 style={{ fontSize: '13px', color: 'var(--accent-gold)', marginBottom: '12px', textTransform: 'uppercase' }}>
+          Party Average Preview
         </h3>
 
         <div style={{

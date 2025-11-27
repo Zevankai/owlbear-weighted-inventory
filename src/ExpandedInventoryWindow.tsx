@@ -532,7 +532,9 @@ export default function ExpandedInventoryWindow() {
                           min="1"
                           disabled={!canEditToken()}
                           onChange={(e) => {
-                            const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, qty: parseInt(e.target.value)} : i);
+                            const parsedQty = parseInt(e.target.value);
+                            if (isNaN(parsedQty) || parsedQty < 1) return;
+                            const newInv = characterData.inventory.map(i => i.id === item.id ? {...i, qty: parsedQty} : i);
                             updateData({inventory: newInv});
                           }}
                           style={{width: '40px', background: '#222', border: '1px solid #444', color: 'white', textAlign: 'center', padding: '4px'}}
@@ -674,7 +676,11 @@ export default function ExpandedInventoryWindow() {
                             notes: '',
                             ac: repoItem.ac,
                             damage: repoItem.damage,
-                            equippedSlot: null
+                            equippedSlot: null,
+                            charges: undefined,
+                            maxCharges: undefined,
+                            damageModifier: '',
+                            hitModifier: ''
                           };
                           updateData({ inventory: [...characterData.inventory, createdItem] });
                           setRepoSearch('');

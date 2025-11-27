@@ -994,7 +994,6 @@ function App() {
         {/* Width Toggle and Text Mode Buttons */}
         <ToggleButtons
           textMode={textMode}
-          isWideMode={false}
           onTextModeToggle={toggleTextMode}
           onWidthToggle={toggleWidth}
         />
@@ -2006,7 +2005,6 @@ function App() {
       {/* Width Toggle and Text Mode Buttons */}
       <ToggleButtons
         textMode={textMode}
-        isWideMode={false}
         onTextModeToggle={toggleTextMode}
         onWidthToggle={toggleWidth}
       />

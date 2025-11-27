@@ -1,6 +1,5 @@
 interface ToggleButtonsProps {
   textMode: 'dark' | 'light';
-  isWideMode: boolean;
   onTextModeToggle: () => void;
   onWidthToggle: () => void;
 }

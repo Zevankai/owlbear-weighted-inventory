@@ -9,6 +9,12 @@ import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType } from './types';
 import { HomeTab } from './components/tabs/HomeTab';
 
+// Storage types that support equipment slots (weapons, body, quick)
+const STORAGE_TYPES_WITH_EQUIPMENT: StorageType[] = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
+
+// Tab IDs that require equipment slot functionality
+const EQUIPMENT_TAB_IDS: Tab[] = ['Weapons', 'Body', 'Quick'];
+
 export default function ExpandedInventoryWindow() {
   const [loading, setLoading] = useState(true);
   const [tokenId, setTokenId] = useState<string | null>(null);
@@ -519,10 +525,54 @@ export default function ExpandedInventoryWindow() {
     setFilterText('');
   };
 
+  // Helper function to add item from repository
+  const handleAddFromRepository = (repoItem: typeof ITEM_REPOSITORY[0]) => {
+    if (!currentDisplayData) return;
+    const createdItem: Item = {
+      id: uuidv4(),
+      name: repoItem.name,
+      category: repoItem.category,
+      type: repoItem.type,
+      weight: repoItem.weight,
+      qty: 1,
+      value: repoItem.value,
+      properties: repoItem.properties || '',
+      requiresAttunement: repoItem.requiresAttunement || false,
+      isAttuned: false,
+      notes: '',
+      ac: repoItem.ac,
+      damage: repoItem.damage,
+      damageModifier: '',
+      hitModifier: '',
+      equippedSlot: null,
+      charges: undefined,
+      maxCharges: undefined
+    };
+    handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] });
+  };
+
+  // Helper function to format vault currency display
+  const formatVaultCurrency = (vCurrency: Currency): string => {
+    const parts: string[] = [];
+    if (vCurrency.gp > 0) parts.push(`${vCurrency.gp} GP`);
+    if (vCurrency.sp > 0) parts.push(`${vCurrency.sp} SP`);
+    if (vCurrency.cp > 0) parts.push(`${vCurrency.cp} CP`);
+    if (vCurrency.pp > 0) parts.push(`${vCurrency.pp} PP`);
+    return parts.length > 0 ? parts.join(' ') : 'Empty';
+  };
+
   // Close the expanded window
   const handleClose = () => {
     OBR.popover.close(EXPANDED_POPOVER_ID);
   };
+
+  if (loading) {
+    return (
+      <div className="loading">
+        Loading expanded inventory...
+      </div>
+    );
+  }
 
   if (!tokenId || !characterData || !currentDisplayData) {
     return (
@@ -580,9 +630,8 @@ export default function ExpandedInventoryWindow() {
   if (viewingStorageId) {
     visibleTabs = visibleTabs.filter(t => t.id !== 'External');
     const activeStorageType = characterData.externalStorages.find(s => s.id === viewingStorageId)?.type;
-    const typesWithEquip = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
-    if (!activeStorageType || !typesWithEquip.includes(activeStorageType)) {
-      visibleTabs = visibleTabs.filter(t => !['Weapons', 'Body', 'Quick'].includes(t.id));
+    if (!activeStorageType || !STORAGE_TYPES_WITH_EQUIPMENT.includes(activeStorageType)) {
+      visibleTabs = visibleTabs.filter(t => !EQUIPMENT_TAB_IDS.includes(t.id));
     }
     const searchIdx = visibleTabs.findIndex(t => t.id === 'Search');
     visibleTabs.splice(searchIdx, 0, { id: 'Transfer', label: 'TRANSFER' });
@@ -952,7 +1001,7 @@ export default function ExpandedInventoryWindow() {
                         <div style={{fontWeight:'bold', color:'var(--text-main)'}}>{repoItem.name}</div>
                         <div style={{fontSize:'10px', color:'#888'}}>{repoItem.type} | {repoItem.weight}u {repoItem.damage ? `| ${repoItem.damage}` : ''}</div>
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); if (!currentDisplayData) return; const createdItem: Item = {id: uuidv4(), name: repoItem.name, category: repoItem.category, type: repoItem.type, weight: repoItem.weight, qty: 1, value: repoItem.value, properties: repoItem.properties || '', requiresAttunement: repoItem.requiresAttunement || false, isAttuned: false, notes: '', ac: repoItem.ac, damage: repoItem.damage, damageModifier: '', hitModifier: '', equippedSlot: null, charges: undefined, maxCharges: undefined}; handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] }); }} style={{background: 'var(--accent-gold)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginLeft: '8px'}}>ADD</button>
+                      <button onClick={(e) => { e.stopPropagation(); handleAddFromRepository(repoItem); }} style={{background: 'var(--accent-gold)', color: 'black', border: 'none', padding: '4px 12px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', cursor: 'pointer', marginLeft: '8px'}}>ADD</button>
                     </div>
                   ))}
                 </div>
@@ -1065,7 +1114,7 @@ export default function ExpandedInventoryWindow() {
               {characterData.vaults.length === 0 && <p style={{fontSize:'11px', color:'#666'}}>No vaults created.</p>}
               {characterData.vaults.map(vault => { const vCurrency = vault.currency || { cp: 0, sp: 0, gp: 0, pp: 0 }; return (
                 <div key={vault.id} style={{background:'rgba(255,255,255,0.05)', padding:'12px', borderRadius:'4px', marginBottom:'8px'}}>
-                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}><div style={{fontWeight:'bold', color:'var(--text-main)'}}>{vault.name}</div><div style={{fontWeight:'bold', color:'var(--accent-gold)'}}>{vCurrency.gp > 0 ? `${vCurrency.gp} GP ` : ''}{vCurrency.sp > 0 ? `${vCurrency.sp} SP ` : ''}{vCurrency.cp > 0 ? `${vCurrency.cp} CP ` : ''}{vCurrency.pp > 0 ? `${vCurrency.pp} PP` : ''}{Object.values(vCurrency).every(v => v===0) ? 'Empty' : ''}</div></div>
+                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}><div style={{fontWeight:'bold', color:'var(--text-main)'}}>{vault.name}</div><div style={{fontWeight:'bold', color:'var(--accent-gold)'}}>{formatVaultCurrency(vCurrency)}</div></div>
                   <div style={{display:'flex', gap:'4px'}}><button onClick={() => transferVaultFunds(vault.id, 'deposit')} style={{flex:1, background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px', borderRadius:'4px', cursor:'pointer'}}>DEPOSIT</button><button onClick={() => transferVaultFunds(vault.id, 'withdraw')} style={{flex:1, background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px', borderRadius:'4px', cursor:'pointer'}}>WITHDRAW</button><button onClick={() => deleteVault(vault.id)} style={{background:'#333', border:'none', color:'var(--danger)', fontSize:'10px', padding:'6px 12px', borderRadius:'4px', cursor:'pointer'}}>X</button></div>
                 </div>
               );})}

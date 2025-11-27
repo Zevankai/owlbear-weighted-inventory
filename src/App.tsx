@@ -90,9 +90,10 @@ function App() {
 
   // Toggle width function - opens expanded inventory window
   const toggleWidth = () => {
+    const url = tokenId ? `/expanded?tokenId=${encodeURIComponent(tokenId)}` : "/expanded";
     OBR.popover.open({
       id: EXPANDED_POPOVER_ID,
-      url: "/expanded",
+      url,
       height: 700,
       width: 900,
     });

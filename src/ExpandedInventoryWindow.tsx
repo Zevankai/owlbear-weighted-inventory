@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useMemo, useRef } from 'react';
 import OBR from '@owlbear-rodeo/sdk';
 import { v4 as uuidv4 } from 'uuid';
 import './App.css';
@@ -77,6 +77,15 @@ export default function ExpandedInventoryWindow() {
 
   const stats = usePackLogic(currentDisplayData);
 
+  // Get tokenId from URL parameter (passed when opening the expanded window)
+  // Memoize to avoid parsing URL on every render
+  const urlTokenId = useMemo(() => {
+    return new URLSearchParams(window.location.search).get('tokenId');
+  }, []);
+  
+  // Track if we've completed initial load (to prefer URL tokenId on first load)
+  const hasInitialLoadRef = useRef(false);
+
   // Initialize OBR and load data
   useEffect(() => {
     OBR.onReady(async () => {
@@ -94,11 +103,21 @@ export default function ExpandedInventoryWindow() {
 
     const pollData = async () => {
       try {
+        // First try to get the current selection
         const selection = await OBR.player.getSelection();
-        if (!selection || selection.length === 0) return;
+        
+        // On initial load, prefer URL tokenId to ensure correct token is shown
+        // After initial load, prefer current selection for responsive updates
+        let targetId: string | null;
+        if (!hasInitialLoadRef.current && urlTokenId) {
+          targetId = urlTokenId;
+          hasInitialLoadRef.current = true;
+        } else {
+          targetId = (selection && selection.length > 0) ? selection[0] : urlTokenId;
+        }
+        if (!targetId) return;
 
-        const selectedId = selection[0];
-        const items = await OBR.scene.items.getItems([selectedId]);
+        const items = await OBR.scene.items.getItems([targetId]);
         if (items.length === 0) return;
 
         const token = items[0];
@@ -119,7 +138,7 @@ export default function ExpandedInventoryWindow() {
     const interval = setInterval(pollData, 2000);
 
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, urlTokenId]);
 
   // Update token data
   const updateData = async (updates: Partial<CharacterData>) => {

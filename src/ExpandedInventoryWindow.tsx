@@ -77,6 +77,9 @@ export default function ExpandedInventoryWindow() {
 
   const stats = usePackLogic(currentDisplayData);
 
+  // Get tokenId from URL parameter (passed when opening the expanded window)
+  const urlTokenId = new URLSearchParams(window.location.search).get('tokenId');
+
   // Initialize OBR and load data
   useEffect(() => {
     OBR.onReady(async () => {
@@ -94,11 +97,14 @@ export default function ExpandedInventoryWindow() {
 
     const pollData = async () => {
       try {
+        // First try to get the current selection
         const selection = await OBR.player.getSelection();
-        if (!selection || selection.length === 0) return;
+        
+        // Use the URL tokenId as fallback if no selection (or use it on first load)
+        const targetId = (selection && selection.length > 0) ? selection[0] : urlTokenId;
+        if (!targetId) return;
 
-        const selectedId = selection[0];
-        const items = await OBR.scene.items.getItems([selectedId]);
+        const items = await OBR.scene.items.getItems([targetId]);
         if (items.length === 0) return;
 
         const token = items[0];
@@ -119,7 +125,7 @@ export default function ExpandedInventoryWindow() {
     const interval = setInterval(pollData, 2000);
 
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, urlTokenId]);
 
   // Update token data
   const updateData = async (updates: Partial<CharacterData>) => {

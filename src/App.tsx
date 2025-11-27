@@ -33,6 +33,11 @@ function App() {
   const [viewingFavorites, setViewingFavorites] = useState(false);
   const [allClaimedTokens, setAllClaimedTokens] = useState<Array<{id: string; name: string; image?: string}>>([]);
 
+  // State for UI width toggle (double width on click)
+  const [isWideMode, setIsWideMode] = useState(false);
+  
+  // State for text mode (dark text for light backgrounds)
+  const [textMode, setTextMode] = useState<'dark' | 'light'>('dark');
   // 1. Load Inventory Data
   const {
     tokenId, tokenName, tokenImage, characterData, updateData, loading,
@@ -71,6 +76,31 @@ function App() {
       document.documentElement.style.setProperty('--nav-bg', `rgba(${bgRgb.r}, ${bgRgb.g}, ${bgRgb.b}, 0.8)`);
     }
   }, [theme]);
+
+  // Apply text mode (light/dark) to CSS variables
+  useEffect(() => {
+    if (textMode === 'light') {
+      // Light mode: dark text for light backgrounds
+      document.documentElement.style.setProperty('--text-main', '#1a1a2e');
+      document.documentElement.style.setProperty('--text-muted', '#4a4a6a');
+    } else {
+      // Dark mode: light text for dark backgrounds (default)
+      document.documentElement.style.setProperty('--text-main', '#ffffff');
+      document.documentElement.style.setProperty('--text-muted', '#a0a0b0');
+    }
+  }, [textMode]);
+
+  // Toggle width function - resizes popover
+  const toggleWidth = async () => {
+    const newWideMode = !isWideMode;
+    setIsWideMode(newWideMode);
+    
+    try {
+      await OBR.popover.setWidth("com.weighted-inventory.popover", newWideMode ? 800 : 400);
+    } catch (err) {
+      console.error('Failed to resize popover:', err);
+    }
+  };
 
   // Load all claimed tokens when viewing favorites
   useEffect(() => {
@@ -169,7 +199,7 @@ function App() {
     OBR.popover.open({
       id: "com.weighted-inventory.trade-window",
       url: "/trade",
-      height: 800,
+      height: 600,
       width: 800,
     });
 
@@ -961,6 +991,57 @@ function App() {
             </div>
           )}
         </div>
+
+        {/* Width Toggle and Text Mode Buttons - Bottom Right Corner */}
+        <div style={{
+          position: 'fixed',
+          bottom: '8px',
+          right: '8px',
+          display: 'flex',
+          gap: '4px',
+          zIndex: 100
+        }}>
+          {/* Text Mode Toggle (Light/Dark) */}
+          <button
+            onClick={() => setTextMode(textMode === 'dark' ? 'light' : 'dark')}
+            style={{
+              background: 'rgba(0,0,0,0.6)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '4px',
+              padding: '4px 8px',
+              cursor: 'pointer',
+              color: 'var(--text-main)',
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+            title={textMode === 'dark' ? 'Switch to Light Text Mode' : 'Switch to Dark Text Mode'}
+          >
+            {textMode === 'dark' ? '☀️' : '🌙'}
+          </button>
+          {/* Width Toggle Button */}
+          <button
+            onClick={toggleWidth}
+            style={{
+              background: 'rgba(0,0,0,0.6)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '4px',
+              padding: '4px 8px',
+              cursor: 'pointer',
+              color: 'var(--text-main)',
+              fontSize: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              transition: 'all 0.2s'
+            }}
+            title={isWideMode ? 'Shrink Width' : 'Expand Width'}
+          >
+            {isWideMode ? '←' : '→'}
+          </button>
+        </div>
       </div>
     );
   }
@@ -1077,8 +1158,9 @@ function App() {
 
   const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
     { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
+    { id: 'Create', label: 'CREATE' },
     { id: 'Search', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> },
-    { id: 'Create', label: 'CREATE' }, { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
+    { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
   ];
 
   // Add GM tab (always visible to GMs)
@@ -1964,6 +2046,57 @@ function App() {
           />
         )}
       </main>
+
+      {/* Width Toggle and Text Mode Buttons - Bottom Right Corner */}
+      <div style={{
+        position: 'fixed',
+        bottom: '8px',
+        right: '8px',
+        display: 'flex',
+        gap: '4px',
+        zIndex: 100
+      }}>
+        {/* Text Mode Toggle (Light/Dark) */}
+        <button
+          onClick={() => setTextMode(textMode === 'dark' ? 'light' : 'dark')}
+          style={{
+            background: 'rgba(0,0,0,0.6)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '4px',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            color: 'var(--text-main)',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}
+          title={textMode === 'dark' ? 'Switch to Light Text Mode' : 'Switch to Dark Text Mode'}
+        >
+          {textMode === 'dark' ? '☀️' : '🌙'}
+        </button>
+        {/* Width Toggle Button */}
+        <button
+          onClick={toggleWidth}
+          style={{
+            background: 'rgba(0,0,0,0.6)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '4px',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            color: 'var(--text-main)',
+            fontSize: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}
+          title={isWideMode ? 'Shrink Width' : 'Expand Width'}
+        >
+          {isWideMode ? '←' : '→'}
+        </button>
+      </div>
 
       {/* Trade Request Notification */}
       <TradeRequestNotification

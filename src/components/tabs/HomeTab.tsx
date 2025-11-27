@@ -2,8 +2,8 @@ import type { CharacterData, PackType, ActiveTrade } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 
 // Token image sizing constants
-const TOKEN_SIZE_EDITABLE = '80px';
-const TOKEN_SIZE_READONLY = '80px';
+const TOKEN_SIZE_EDITABLE = '160px';
+const TOKEN_SIZE_READONLY = '160px';
 
 // Description box width constants  
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
@@ -306,8 +306,8 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Show stats - hide for non-owners viewing claimed tokens, unless they're the GM */}
-      {(viewingStorageId || playerRole === 'GM' || !characterData.claimedBy || characterData.claimedBy === playerId) && (
+      {/* Show stats - only show to GM or token owner */}
+      {(viewingStorageId || playerRole === 'GM' || characterData.claimedBy === playerId) && (
         <>
           <div className="totals-grid">
             <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>

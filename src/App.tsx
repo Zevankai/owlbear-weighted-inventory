@@ -969,20 +969,14 @@ function App() {
 
   // Start player-to-player trade (request)
   const handleStartP2PTrade = async (otherPlayerTokenId: string) => {
-    // Check if player has a claimed token and is viewing a claimed token
-    if (!tokenId || !playerId || !characterData) {
-      alert('You must select your character token to trade!');
+    // Check if current player has a claimed token
+    if (!playerClaimedTokenId || !playerId) {
+      alert('You must claim a token before you can trade! Find your character token and click "CLAIM TOKEN".');
       return;
     }
 
-    // Verify the currently selected token is claimed by this player
-    if (characterData.claimedBy !== playerId) {
-      alert('You can only trade from a token you have claimed! Claim this token first.');
-      return;
-    }
-
-    // Check proximity between currently selected token and other player's token
-    const isNear = await checkProximity(tokenId, otherPlayerTokenId);
+    // Check proximity between player's claimed token and other player's token
+    const isNear = await checkProximity(playerClaimedTokenId, otherPlayerTokenId);
     if (!isNear) {
       alert('Your character must be near the other player to trade!');
       return;
@@ -1007,13 +1001,17 @@ function App() {
       return;
     }
 
+    // Get player's claimed token name
+    const playerTokens = await OBR.scene.items.getItems([playerClaimedTokenId]);
+    const playerTokenName = playerTokens.length > 0 ? playerTokens[0].name || 'Unknown' : 'Unknown';
+
     // Start P2P trade with pending-acceptance status
     const trade: ActiveTrade = {
       id: uuidv4(),
       status: 'pending-acceptance',
-      player1TokenId: tokenId,
+      player1TokenId: playerClaimedTokenId,
       player1Id: playerId,
-      player1Name: tokenName || 'Unknown',
+      player1Name: playerTokenName,
       player2TokenId: otherPlayerTokenId,
       player2Id: otherPlayerId,
       player2Name: otherTokenName,

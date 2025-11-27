@@ -367,7 +367,10 @@ export function HomeTab({
       )}
 
       {/* Reputation Display - show for NPC tokens with reputation data */}
-      {!viewingStorageId && characterData?.packType === 'NPC' && characterData?.reputation && (
+      {!viewingStorageId &&
+       characterData?.packType === 'NPC' &&
+       characterData?.reputation &&
+       (characterData.reputation.showPartyAverage || characterData.reputation.entries.some(e => e.visibleToPlayer)) && (
         <ReputationDisplay reputation={characterData.reputation} />
       )}
 

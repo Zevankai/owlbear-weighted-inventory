@@ -5,9 +5,8 @@ import { ReputationDisplay } from '../ReputationDisplay';
 const TOKEN_SIZE_EDITABLE = '160px';
 const TOKEN_SIZE_READONLY = '160px';
 
-// Description box width constants  
+// Description box width constants
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
-const DESCRIPTION_WIDTH_READONLY = '100%';
 
 interface Stats {
   totalWeight: number;
@@ -222,8 +221,8 @@ export function HomeTab({
 
       {!viewingStorageId ? (
         <>
-          {/* Only show edit controls if player can edit this token */}
-          {canEditToken() && (
+          {/* Only show edit controls if player is GM or owns this token */}
+          {(playerRole === 'GM' || characterData.claimedBy === playerId) && (
             <>
               <div style={{marginBottom: '12px'}}>
                 <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
@@ -336,24 +335,24 @@ export function HomeTab({
         </>
       )}
 
-      {/* Show description - editable if can edit, read-only otherwise */}
-      <div style={{marginTop: '12px', width: canEditToken() ? DESCRIPTION_WIDTH_EDITABLE : DESCRIPTION_WIDTH_READONLY, alignSelf: 'stretch'}}>
+      {/* Show description - editable only if GM or owner */}
+      <div style={{marginTop: '12px', width: DESCRIPTION_WIDTH_EDITABLE, alignSelf: 'stretch'}}>
         <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
           Description
         </label>
         <textarea
           value={currentDisplayData.condition}
-          onChange={(e) => canEditToken() && handleUpdateData({ condition: e.target.value })}
+          onChange={(e) => (playerRole === 'GM' || characterData.claimedBy === playerId) && handleUpdateData({ condition: e.target.value })}
           className="search-input"
           rows={2}
-          disabled={!canEditToken()}
+          disabled={!(playerRole === 'GM' || characterData.claimedBy === playerId)}
           style={{
             width: '100%',
             minHeight: '50px',
             resize: 'vertical',
             boxSizing: 'border-box',
             opacity: 1,
-            cursor: canEditToken() ? 'text' : 'default',
+            cursor: (playerRole === 'GM' || characterData.claimedBy === playerId) ? 'text' : 'default',
             fontSize: '13px'
           }}
         />

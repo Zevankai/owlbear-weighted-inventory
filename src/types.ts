@@ -5,7 +5,7 @@ export type Currency = {
   pp: number;
 };
 
-export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM';
+export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation';
 
 export type PackType =
   | 'NPC' | 'Simple' | 'Standard' | 'Warrior' | 'Explorer'
@@ -80,6 +80,18 @@ export interface ActiveTrade {
   timestamp: number;
 }
 
+export interface ReputationEntry {
+  id: string;              // UUID for React keys
+  label: string;           // Player/character name
+  value: number;           // 0-100
+  visibleToPlayer: boolean; // GM controls per-entry visibility
+}
+
+export interface Reputation {
+  entries: ReputationEntry[];
+  showPartyAverage: boolean; // GM controls if average slider is visible to players
+}
+
 export interface CharacterData {
   packType: PackType;
   inventory: Item[];
@@ -90,4 +102,5 @@ export interface CharacterData {
   condition: string;
   claimedBy?: string;    // Player ID who claimed this token
   claimingEnabled?: boolean;  // GM controls if token can be claimed
+  reputation?: Reputation;  // NPC reputation tracking (only for packType === 'NPC')
 }

@@ -8,8 +8,11 @@ import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab } from './types';
+import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
+
+// Lore constants
+import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/lore';
 
 // Utilities
 import { hexToRgb } from './utils/color';
@@ -19,6 +22,8 @@ import { hexToRgb } from './utils/color';
 import { GMOverviewTab } from './components/tabs/GMOverviewTab';
 import { HomeTab } from './components/tabs/HomeTab';
 import { ReputationTab } from './components/tabs/ReputationTab';
+import { LoreTab } from './components/tabs/LoreTab';
+import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { ToggleButtons } from './components/ToggleButtons';
@@ -37,6 +42,9 @@ function App() {
   // State for viewing favorites
   const [viewingFavorites, setViewingFavorites] = useState(false);
   const [allClaimedTokens, setAllClaimedTokens] = useState<Array<{id: string; name: string; image?: string}>>([]);
+
+  // State for lore tokens - track active lore tab separately
+  const [activeLoreTab, setActiveLoreTab] = useState<LoreTabId>('overview');
 
   // State for text mode (dark text for light backgrounds)
   const [textMode, setTextMode] = useState<'dark' | 'light'>('dark');
@@ -1287,12 +1295,52 @@ function App() {
     visibleTabs = visibleTabs.filter(t => t.id === 'Home');
   }
 
-  // Lore tokens have a special minimal UI - only show Home tab (and GM tab for GMs)
+  // Lore tokens have a completely different UI with lore-specific tabs
+  // This variable holds the lore tabs for rendering
+  let loreTabs: Array<{ id: LoreTabId; label: string; visible: boolean }> = [];
+  
   if (characterData?.tokenType === 'lore') {
-    visibleTabs = baseTabs.filter(t => t.id === 'Home' || (t.id === 'GM' && playerRole === 'GM'));
+    // Initialize lore settings if not present
+    if (!characterData.loreSettings) {
+      updateData({ loreSettings: { loreType: 'custom', tabs: generateDefaultLoreSettings() } });
+    }
+    
+    // Build lore tabs from settings
+    if (characterData.loreSettings) {
+      const enabledTabs = characterData.loreSettings.tabs
+        .filter(t => t.enabled)
+        .sort((a, b) => a.order - b.order);
+      
+      loreTabs = enabledTabs
+        .filter(t => playerRole === 'GM' || t.visibleToPlayers)
+        .map(t => ({
+          id: t.tabId,
+          label: LORE_TAB_DEFINITIONS[t.tabId]?.label || t.tabId,
+          visible: true,
+        }));
+    }
+    
+    // For lore tokens, don't use the standard tabs
+    visibleTabs = [];
   }
 
   const activeStorageDef = viewingStorageId ? STORAGE_DEFINITIONS[characterData.externalStorages.find(s => s.id === viewingStorageId)!.type] : null;
+
+  // Handler for updating lore entries
+  const handleUpdateLoreEntries = (tabId: LoreTabId, entries: LoreEntry[]) => {
+    if (!characterData?.loreSettings) return;
+    
+    const updatedTabs = characterData.loreSettings.tabs.map(tab =>
+      tab.tabId === tabId ? { ...tab, entries } : tab
+    );
+    
+    updateData({
+      loreSettings: {
+        ...characterData.loreSettings,
+        tabs: updatedTabs,
+      },
+    });
+  };
 
   return (
     <div className="app-container" style={viewingStorageId ? {border: '2px solid var(--accent-gold)'} : {}}>
@@ -1303,8 +1351,35 @@ function App() {
           </div>
       )}
 
-      {/* Only show tab bar if there's more than one tab */}
-      {visibleTabs.length > 1 && (
+      {/* Lore Token Navigation */}
+      {characterData?.tokenType === 'lore' && loreTabs.length > 0 && (
+        <nav className="nav-bar">
+          {loreTabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`nav-btn ${activeLoreTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveLoreTab(tab.id)}
+              title={tab.label}
+            >
+              {tab.label.toUpperCase()}
+            </button>
+          ))}
+          {/* GM Settings Tab */}
+          {playerRole === 'GM' && (
+            <button
+              className={`nav-btn ${activeTab === 'LoreSettings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('LoreSettings')}
+              title="Lore Settings"
+              style={{ marginLeft: 'auto' }}
+            >
+              ⚙
+            </button>
+          )}
+        </nav>
+      )}
+
+      {/* Standard Tab Navigation (non-lore tokens) */}
+      {characterData?.tokenType !== 'lore' && visibleTabs.length > 1 && (
         <nav className="nav-bar">
           {visibleTabs.map((tab) => <button key={tab.id} className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)} title={tab.id}>{tab.icon ? tab.icon : tab.label}</button>)}
         </nav>
@@ -2139,6 +2214,29 @@ function App() {
             characterData={characterData}
             updateData={updateData}
             playerRole={playerRole}
+          />
+        )}
+
+        {/* === LORE TABS === */}
+        {characterData?.tokenType === 'lore' && characterData.loreSettings && activeTab !== 'LoreSettings' && (
+          (() => {
+            const tabConfig = characterData.loreSettings.tabs.find(t => t.tabId === activeLoreTab);
+            if (!tabConfig) return null;
+            return (
+              <LoreTab
+                tabConfig={tabConfig}
+                playerRole={playerRole}
+                onUpdateEntries={handleUpdateLoreEntries}
+              />
+            );
+          })()
+        )}
+
+        {/* === LORE SETTINGS TAB (GM Only) === */}
+        {activeTab === 'LoreSettings' && playerRole === 'GM' && characterData?.tokenType === 'lore' && (
+          <LoreSettingsTab
+            characterData={characterData}
+            updateData={updateData}
           />
         )}
       </main>

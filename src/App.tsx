@@ -117,9 +117,11 @@ function App() {
   // Check if player can expand the token's inventory
   // GMs can always expand, players can only expand tokens they have claimed
   // Party tokens can be expanded by all players
+  // Lore tokens can be expanded by GMs only (handled by first check)
   const canExpandToken = () => {
     if (playerRole === 'GM') return true;
     if (characterData?.tokenType === 'party') return true;
+    if (characterData?.tokenType === 'lore') return false; // Non-GMs cannot expand lore tokens
     if (characterData?.claimedBy === playerId) return true;
     return false;
   };
@@ -128,6 +130,11 @@ function App() {
   const getExpandDisabledReason = () => {
     if (!characterData) return 'No token selected';
     if (characterData.tokenType === 'party') return ''; // Party tokens are always expandable
+    if (characterData.tokenType === 'lore') {
+      // GM can always expand (handled by canExpandToken returning true for GM)
+      // If we reach here, player is not GM
+      return 'Lore tokens can only be expanded by GM';
+    }
     if (!characterData.claimedBy) return 'Claim this token first to expand';
     if (characterData.claimedBy !== playerId) return 'This token is claimed by another player';
     return '';
@@ -1389,7 +1396,8 @@ function App() {
       )}
 
       <main className="content">
-        {activeTab === 'Home' && stats && (
+        {/* HomeTab - show for non-lore tokens when Home tab is active, OR for lore tokens when overview tab is active */}
+        {activeTab === 'Home' && stats && (characterData?.tokenType !== 'lore' || activeLoreTab === 'overview') && (
           <HomeTab
             stats={stats}
             viewingStorageId={viewingStorageId}
@@ -2220,8 +2228,8 @@ function App() {
           />
         )}
 
-        {/* === LORE TABS === */}
-        {characterData?.tokenType === 'lore' && characterData.loreSettings && activeTab !== 'LoreSettings' && (
+        {/* === LORE TABS (non-overview) === */}
+        {characterData?.tokenType === 'lore' && characterData.loreSettings && activeTab !== 'LoreSettings' && activeLoreTab !== 'overview' && (
           (() => {
             const tabConfig = characterData.loreSettings.tabs.find(t => t.tabId === activeLoreTab);
             if (!tabConfig) return null;

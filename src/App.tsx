@@ -108,8 +108,10 @@ function App() {
 
   // Check if player can expand the token's inventory
   // GMs can always expand, players can only expand tokens they have claimed
+  // Party tokens can be expanded by all players
   const canExpandToken = () => {
     if (playerRole === 'GM') return true;
+    if (characterData?.tokenType === 'party') return true;
     if (characterData?.claimedBy === playerId) return true;
     return false;
   };
@@ -117,6 +119,7 @@ function App() {
   // Get reason why expand is disabled
   const getExpandDisabledReason = () => {
     if (!characterData) return 'No token selected';
+    if (characterData.tokenType === 'party') return ''; // Party tokens are always expandable
     if (!characterData.claimedBy) return 'Claim this token first to expand';
     if (characterData.claimedBy !== playerId) return 'This token is claimed by another player';
     return '';
@@ -1276,7 +1279,8 @@ function App() {
 
   // Hide tabs for players viewing unclaimed tokens or other players' claimed tokens
   // Players can only see Home tab for these tokens
-  const isOwnerOrGM = playerRole === 'GM' || characterData?.claimedBy === playerId;
+  // Party tokens are accessible to all players
+  const isOwnerOrGM = playerRole === 'GM' || characterData?.claimedBy === playerId || characterData?.tokenType === 'party';
   if (!isOwnerOrGM && !viewingStorageId) {
     // Non-owners and viewers of unclaimed tokens can only see Home tab (read-only view)
     visibleTabs = visibleTabs.filter(t => t.id === 'Home');

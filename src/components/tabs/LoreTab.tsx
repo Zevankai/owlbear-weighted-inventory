@@ -304,7 +304,7 @@ function RelationshipsFields({ entry }: { entry: LoreEntry }) {
       background: `${relationshipColors[entry.relationship]}20`,
       color: relationshipColors[entry.relationship],
     }}>
-      {entry.relationship === 'ally' ? '💚' : entry.relationship === 'enemy' ? '❤️' : '💛'} {entry.relationship.toUpperCase()}
+      {entry.relationship === 'ally' ? '💚' : entry.relationship === 'enemy' ? '💔' : '💛'} {entry.relationship.toUpperCase()}
     </span>
   );
 }

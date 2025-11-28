@@ -239,6 +239,10 @@ export function useInventory() {
   }, [tokenId, handleSelection]);
 
   // Auto-favorite Lore and NPC tokens for GM
+  // Use a ref to track favorites for the check to avoid circular dependency
+  const favoritesRef = useRef<FavoriteEntry[]>([]);
+  favoritesRef.current = favorites;
+  
   useEffect(() => {
     const autoFavorite = async () => {
       // Only auto-favorite for GMs viewing lore or NPC tokens
@@ -249,7 +253,8 @@ export function useInventory() {
       if (tokenType !== 'lore' && tokenType !== 'npc') return;
       
       // Check if already favorited or already auto-favorited this session
-      const isAlreadyFavorited = favorites.some(f => f.id === tokenId);
+      // Use ref to get current favorites without adding to dependencies
+      const isAlreadyFavorited = favoritesRef.current.some(f => f.id === tokenId);
       if (isAlreadyFavorited) return;
       if (autoFavoritedTokensRef.current.has(tokenId)) return;
       
@@ -264,7 +269,7 @@ export function useInventory() {
         tokenType: tokenType
       };
       
-      const newFavorites = [...favorites, newFavorite];
+      const newFavorites = [...favoritesRef.current, newFavorite];
       setFavorites(newFavorites);
       
       // Save to room metadata
@@ -275,7 +280,7 @@ export function useInventory() {
     };
     
     autoFavorite();
-  }, [tokenId, tokenName, tokenImage, characterData, playerRole, favorites]);
+  }, [tokenId, tokenName, tokenImage, characterData, playerRole]);
 
   const updateData = useCallback(async (updates: Partial<CharacterData>) => {
     const idToSave = tokenId;

@@ -207,12 +207,6 @@ export default function ExpandedInventoryWindow() {
     }
   };
 
-  // Update theme
-  const updateTheme = (newTheme: { accent: string; background: string }) => {
-    setTheme(newTheme);
-    updateData({ theme: newTheme });
-  };
-
   // Check if player can edit this token
   const canEditToken = () => {
     if (playerRole === 'GM') return true;
@@ -833,7 +827,7 @@ export default function ExpandedInventoryWindow() {
           <HomeTab
             stats={stats}
             viewingStorageId={viewingStorageId}
-            setShowDebug={() => {}}
+            setShowSettings={() => {}}
             loadDebugInfo={() => {}}
             characterData={characterData}
             playerRole={playerRole}
@@ -853,8 +847,6 @@ export default function ExpandedInventoryWindow() {
             handleStartP2PTrade={() => {}}
             updateData={updateData}
             PACK_DEFINITIONS={PACK_DEFINITIONS}
-            theme={theme}
-            updateTheme={updateTheme}
             currentDisplayData={currentDisplayData}
             activeStorageDef={activeStorageDef}
           />

@@ -29,11 +29,6 @@ interface Stats {
   };
 }
 
-interface Theme {
-  accent: string;
-  background: string;
-}
-
 interface StorageDef {
   capacity: number;
 }
@@ -41,7 +36,7 @@ interface StorageDef {
 interface HomeTabProps {
   stats: Stats;
   viewingStorageId: string | null;
-  setShowDebug: (show: boolean) => void;
+  setShowSettings: (show: boolean) => void;
   loadDebugInfo: () => void;
   characterData: CharacterData;
   playerRole: string;
@@ -61,8 +56,6 @@ interface HomeTabProps {
   handleStartP2PTrade: (tokenId: string) => void;
   updateData: (updates: Partial<CharacterData>) => void;
   PACK_DEFINITIONS: Record<string, { capacity: number; utilitySlots: number }>;
-  theme: Theme;
-  updateTheme: (theme: Theme) => void;
   currentDisplayData: CharacterData;
   activeStorageDef: StorageDef | null;
   hasClaimedToken?: boolean;
@@ -71,7 +64,7 @@ interface HomeTabProps {
 export function HomeTab({
   stats,
   viewingStorageId,
-  setShowDebug,
+  setShowSettings,
   loadDebugInfo,
   characterData,
   playerRole,
@@ -91,8 +84,6 @@ export function HomeTab({
   handleStartP2PTrade,
   updateData,
   PACK_DEFINITIONS,
-  theme,
-  updateTheme,
   currentDisplayData,
   activeStorageDef,
   hasClaimedToken
@@ -150,23 +141,25 @@ export function HomeTab({
               )}
             </>
           )}
-          {/* Debug button */}
-          <button
-            onClick={() => { setShowDebug(true); loadDebugInfo(); }}
-            style={{
-              background: 'transparent',
-              color: '#666',
-              border: '1px solid #333',
-              padding: '2px 6px',
-              borderRadius: '3px',
-              cursor: 'pointer',
-              fontSize: '9px',
-              fontWeight: 'normal'
-            }}
-            title="Storage Debug Info"
-          >
-            ⚙
-          </button>
+          {/* Settings button - only show for users who can edit the token */}
+          {canEditToken() && (
+            <button
+              onClick={() => { setShowSettings(true); loadDebugInfo(); }}
+              style={{
+                background: 'transparent',
+                color: '#666',
+                border: '1px solid #333',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontSize: '9px',
+                fontWeight: 'normal'
+              }}
+              title="Settings"
+            >
+              ⚙
+            </button>
+          )}
         </div>
       </div>
 
@@ -270,118 +263,6 @@ export function HomeTab({
                 <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
                   {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
                 </select>
-              </div>
-
-              {/* Theme Customization */}
-              <div style={{marginBottom: '12px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid var(--glass-border)'}}>
-                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '8px'}}>🎨 Theme Colors</label>
-                <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
-                  <div>
-                    <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Accent</label>
-                    <input
-                      type="color"
-                      value={theme.accent}
-                      onChange={(e) => updateTheme({ ...theme, accent: e.target.value })}
-                      style={{
-                        width: '100%',
-                        height: '40px',
-                        border: '1px solid var(--glass-border)',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        background: 'transparent'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{fontSize: '11px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px'}}>Background</label>
-                    <input
-                      type="color"
-                      value={theme.background}
-                      onChange={(e) => updateTheme({ ...theme, background: e.target.value })}
-                      style={{
-                        width: '100%',
-                        height: '40px',
-                        border: '1px solid var(--glass-border)',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        background: 'transparent'
-                      }}
-                    />
-                  </div>
-                </div>
-                <button
-                  onClick={() => updateTheme({ accent: '#f0e130', background: '#0f0f1e' })}
-                  style={{
-                    marginTop: '8px',
-                    width: '100%',
-                    padding: '6px',
-                    background: 'rgba(255,255,255,0.05)',
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: '4px',
-                    color: 'var(--text-muted)',
-                    fontSize: '10px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                >
-                  Reset to Default
-                </button>
-              </div>
-
-              {/* Cover Photo URL */}
-              <div style={{marginBottom: '12px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid var(--glass-border)'}}>
-                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '8px'}}>🖼️ Cover Photo</label>
-                <input
-                  type="text"
-                  value={characterData.coverPhotoUrl || ''}
-                  onChange={(e) => updateData({ coverPhotoUrl: e.target.value || undefined })}
-                  placeholder="Paste image URL here..."
-                  className="search-input"
-                  style={{marginTop: 0, marginBottom: '8px'}}
-                />
-                {characterData.coverPhotoUrl && (
-                  <>
-                    {/* Preview */}
-                    <div style={{
-                      width: '100%',
-                      height: '80px',
-                      borderRadius: '4px',
-                      overflow: 'hidden',
-                      marginBottom: '8px',
-                      border: '1px solid var(--glass-border)'
-                    }}>
-                      <img
-                        src={characterData.coverPhotoUrl}
-                        alt="Cover preview"
-                        style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                    {/* Remove button */}
-                    <button
-                      onClick={() => updateData({ coverPhotoUrl: undefined })}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(255,0,0,0.1)',
-                        border: '1px solid rgba(255,0,0,0.3)',
-                        borderRadius: '4px',
-                        color: '#f66',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.2)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.1)'}
-                    >
-                      Remove Cover Photo
-                    </button>
-                  </>
-                )}
               </div>
             </>
           )}

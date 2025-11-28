@@ -342,6 +342,8 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
   const [editingEntry, setEditingEntry] = useState<LoreEntry | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+  // Track which image entries have failed to load
+  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
 
   const isGM = playerRole === 'GM';
   const tabDef = LORE_TAB_DEFINITIONS[tabConfig.tabId];
@@ -593,7 +595,7 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
                 justifyContent: 'center',
                 overflow: 'hidden',
               }}>
-                {entry.imageUrl ? (
+                {entry.imageUrl && !failedImageIds.has(entry.id) ? (
                   <img
                     src={entry.imageUrl}
                     alt={entry.caption || entry.title}
@@ -604,16 +606,14 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
                       cursor: 'pointer',
                     }}
                     onClick={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      const parent = (e.target as HTMLImageElement).parentElement;
-                      if (parent) {
-                        parent.innerHTML = '<span style="color: #888; font-size: 11px;">Image failed to load</span>';
-                      }
+                    onError={() => {
+                      setFailedImageIds(prev => new Set(prev).add(entry.id));
                     }}
                   />
                 ) : (
-                  <span style={{ color: '#888', fontSize: '11px' }}>No image URL</span>
+                  <span style={{ color: '#888', fontSize: '11px' }}>
+                    {entry.imageUrl ? 'Image failed to load' : 'No image URL'}
+                  </span>
                 )}
               </div>
               

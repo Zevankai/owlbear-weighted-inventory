@@ -174,7 +174,7 @@ export function HomeTab({
           overflow: 'hidden',
           borderRadius: '8px',
           marginBottom: '12px',
-          minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : '220px',
+          minHeight: '240px',
           paddingBottom: '24px'
         }}>
           {/* Cover photo as background */}
@@ -245,7 +245,7 @@ export function HomeTab({
 
             {/* Start P2P Trade Button */}
             {characterData && !activeTrade && tokenId &&
-              characterData.claimedBy && characterData.claimedBy !== playerId && (
+              characterData.claimedBy && (
               <div style={{marginTop: '8px', textAlign: 'center'}}>
                 <button
                   onClick={() => handleStartP2PTrade(tokenId)}
@@ -260,7 +260,7 @@ export function HomeTab({
                     fontWeight: 'bold'
                   }}
                 >
-                  TRADE WITH PLAYER
+                  TRADE
                 </button>
               </div>
             )}

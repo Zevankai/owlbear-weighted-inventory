@@ -243,6 +243,22 @@ export function HomeTab({
               {tokenName || 'Unknown Character'}
             </div>
 
+            {/* Token Type Badge - only show for non-player tokens */}
+            {characterData.tokenType && characterData.tokenType !== 'player' && (
+              <div style={{
+                fontSize: '9px',
+                color: characterData.tokenType === 'npc' ? '#ff9800' : 
+                       characterData.tokenType === 'party' ? '#4caf50' : 
+                       '#9c27b0',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                textAlign: 'center',
+                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined
+              }}>
+                {characterData.tokenType} Token
+              </div>
+            )}
+
             {/* Start P2P Trade Button */}
             {characterData && !activeTrade && tokenId &&
               characterData.claimedBy && onOpenTradePartnerModal && (

@@ -2172,6 +2172,7 @@ function App() {
         loadDebugInfo={loadDebugInfo}
         cleanupLegacyData={cleanupLegacyData}
         tokenId={tokenId}
+        playerRole={playerRole}
       />
     </div>
   );

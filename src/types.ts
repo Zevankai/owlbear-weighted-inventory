@@ -5,6 +5,8 @@ export type Currency = {
   pp: number;
 };
 
+export type TokenType = 'player' | 'npc' | 'party' | 'lore';
+
 export interface Theme {
   accent: string;
   background: string;
@@ -98,6 +100,7 @@ export interface Reputation {
 }
 
 export interface CharacterData {
+  tokenType: TokenType;  // Type of token: player (default), npc, party, or lore
   packType: PackType;
   inventory: Item[];
   currency: Currency;

@@ -112,6 +112,13 @@ export function useInventory() {
     }
 
     const finalData = data || DEFAULT_CHARACTER_DATA;
+    
+    // Migration: ensure tokenType exists (default to 'player' for existing tokens)
+    if (!finalData.tokenType) {
+      finalData.tokenType = 'player';
+      console.log('[Migration] Added default tokenType "player" to token data');
+    }
+    
     setCharacterData(finalData);
 
     // Load theme from token data (per-token theme, not per-player)
@@ -190,6 +197,10 @@ export function useInventory() {
       if (updatedToken) {
         const newData = updatedToken.metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
         if (newData) {
+          // Migration: ensure tokenType exists for synced data
+          if (!newData.tokenType) {
+            newData.tokenType = 'player';
+          }
           setCharacterData(newData);
         }
       }

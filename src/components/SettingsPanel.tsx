@@ -1,4 +1,4 @@
-import type { CharacterData, Theme } from '../types';
+import type { CharacterData, Theme, TokenType } from '../types';
 
 interface DebugInfo {
   roomKeys: string[];
@@ -21,6 +21,7 @@ interface SettingsPanelProps {
   loadDebugInfo: () => void;
   cleanupLegacyData: () => void;
   tokenId: string | null;
+  playerRole: 'GM' | 'PLAYER';
 }
 
 export function SettingsPanel({
@@ -33,7 +34,8 @@ export function SettingsPanel({
   debugInfo,
   loadDebugInfo,
   cleanupLegacyData,
-  tokenId
+  tokenId,
+  playerRole
 }: SettingsPanelProps) {
   if (!isOpen) return null;
 
@@ -181,6 +183,46 @@ export function SettingsPanel({
               Reset to Default
             </button>
           </div>
+
+          {/* Token Type Section - GM Only */}
+          {playerRole === 'GM' && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              background: 'rgba(0,0,0,0.2)',
+              borderRadius: '6px',
+              border: '1px solid var(--glass-border)'
+            }}>
+              <label style={{
+                display: 'block',
+                fontSize: '11px',
+                color: 'var(--accent-gold)',
+                textTransform: 'uppercase',
+                marginBottom: '10px',
+                fontWeight: 'bold'
+              }}>
+                🎭 Token Type
+              </label>
+              <select
+                value={characterData.tokenType || 'player'}
+                onChange={(e) => updateData({ tokenType: e.target.value as TokenType })}
+                className="search-input"
+                style={{ marginTop: '4px', fontWeight: 'bold' }}
+              >
+                <option value="player">Player Token</option>
+                <option value="npc">NPC Token</option>
+                <option value="party">Party Token</option>
+                <option value="lore">Lore Token</option>
+              </select>
+              <p style={{ fontSize: '10px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+                {characterData.tokenType === 'player' && 'Standard token claimable by one player'}
+                {characterData.tokenType === 'npc' && 'GM-controlled NPC with inventory'}
+                {characterData.tokenType === 'party' && 'Shared inventory accessible by all players'}
+                {characterData.tokenType === 'lore' && 'Information token (no inventory)'}
+                {!characterData.tokenType && 'Standard token claimable by one player'}
+              </p>
+            </div>
+          )}
 
           {/* Cover Photo Section */}
           <div style={{

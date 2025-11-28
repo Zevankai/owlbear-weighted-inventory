@@ -137,6 +137,7 @@ export const ITEM_CATEGORIES: ItemCategory[] = [
 ];
 
 export const DEFAULT_CHARACTER_DATA: CharacterData = {
+  tokenType: 'player',
   packType: 'Standard',
   inventory: [],
   currency: { cp: 0, sp: 0, gp: 0, pp: 0 },

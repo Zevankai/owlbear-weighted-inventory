@@ -65,6 +65,10 @@ export interface LoreEntry {
   // Goals tab fields
   progress?: number;            // Progress percentage (0-100)
   priority?: 'low' | 'medium' | 'high';
+  
+  // Images tab fields
+  imageUrl?: string;            // URL to an image for the images gallery
+  caption?: string;             // Caption for the image
 }
 
 export interface LoreTabConfig {

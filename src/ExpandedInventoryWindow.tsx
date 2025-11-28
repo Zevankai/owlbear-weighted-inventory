@@ -669,11 +669,11 @@ export default function ExpandedInventoryWindow() {
 
   // Permission check: Only GMs and players who claimed the token can view expanded inventory
   // Party tokens are accessible to all players
-  // Lore tokens can be expanded by GMs only (handled by first check)
+  // Lore tokens can be expanded by all players (to read lore content)
   const canViewExpandedInventory = () => {
     if (playerRole === 'GM') return true;
     if (characterData.tokenType === 'party') return true;
-    if (characterData.tokenType === 'lore') return false; // Non-GMs cannot expand lore tokens
+    if (characterData.tokenType === 'lore') return true; // All players can expand lore tokens
     if (characterData.claimedBy === playerId) return true;
     return false;
   };

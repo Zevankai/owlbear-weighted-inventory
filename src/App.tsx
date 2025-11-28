@@ -1170,7 +1170,8 @@ function App() {
           image: (item as { image?: { url: string } }).image
         })),
         playerClaimedTokenId,
-        playerId
+        playerId,
+        playerRole
       );
 
       // Filter to nearby partners only

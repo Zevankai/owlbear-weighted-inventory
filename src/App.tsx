@@ -1198,8 +1198,9 @@ function App() {
   const handlePartnerSelected = async (partner: TradePartner) => {
     setShowTradePartnerModal(false);
 
-    if (partner.ownerType === 'self') {
-      // Instant trade - open trade window directly for trading between own tokens
+    if (partner.ownerType === 'self' || partner.ownerType === 'party') {
+      // Instant trade - open trade window directly for trading between own tokens or party tokens
+      // Party tokens are accessible to everyone, so no acceptance needed
       await handleStartDirectTrade(partner.tokenId);
     } else {
       // Send trade request for other players and NPCs

@@ -130,26 +130,79 @@ export default function TradeWindow() {
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
   };
 
+  // Check if this is a self-trade (same player owns both tokens)
+  const isSelfTrade = activeTrade?.player1Id === activeTrade?.player2Id;
+
+  // Handle adding an item from the other side (self-trade only)
+  const handleAddItemOther = async (item: Item) => {
+    if (!activeTrade || !isSelfTrade) return;
+
+    // Check if item is already offered
+    if (activeTrade.player2OfferedItems.some(i => i.id === item.id)) return;
+
+    const updatedTrade: ActiveTrade = {
+      ...activeTrade,
+      player2OfferedItems: [...activeTrade.player2OfferedItems, item],
+      player2Confirmed: false
+    };
+
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+  };
+
+  // Handle removing an item from the other side (self-trade only)
+  const handleRemoveItemOther = async (item: Item) => {
+    if (!activeTrade || !isSelfTrade) return;
+
+    const updatedTrade: ActiveTrade = {
+      ...activeTrade,
+      player2OfferedItems: activeTrade.player2OfferedItems.filter(i => i.id !== item.id),
+      player2Confirmed: false
+    };
+
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+  };
+
+  // Handle updating coins for the other side (self-trade only)
+  const handleUpdateCoinsOther = async (coins: Currency) => {
+    if (!activeTrade || !isSelfTrade) return;
+
+    const updatedTrade: ActiveTrade = {
+      ...activeTrade,
+      player2OfferedCoins: coins,
+      player2Confirmed: false
+    };
+
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
+  };
+
   // Handle confirming the trade
   const handleConfirm = async () => {
     if (!activeTrade || !playerId) return;
 
     const isPlayer1 = activeTrade.player1Id === playerId;
 
+    // For self-trade, confirm both sides at once
+    // For normal trade, only confirm the current player's side
+    let player2Confirmed: boolean;
+    if (isSelfTrade) {
+      player2Confirmed = true;
+    } else if (isPlayer1) {
+      player2Confirmed = activeTrade.player2Confirmed;
+    } else {
+      player2Confirmed = true;
+    }
+
     const updatedTrade: ActiveTrade = {
       ...activeTrade,
-      ...(isPlayer1
-        ? { player1Confirmed: true }
-        : { player2Confirmed: true }
-      )
+      player1Confirmed: true,
+      player2Confirmed
     };
 
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });
 
-    // Check if both players have confirmed
-    const bothConfirmed = isPlayer1
-      ? updatedTrade.player1Confirmed && activeTrade.player2Confirmed
-      : activeTrade.player1Confirmed && updatedTrade.player2Confirmed;
+    // For self-trade, execute immediately since both sides are confirmed
+    // For normal trade, check if both players have confirmed
+    const bothConfirmed = isSelfTrade || (updatedTrade.player1Confirmed && updatedTrade.player2Confirmed);
 
     if (bothConfirmed) {
       await executeTrade(updatedTrade);
@@ -294,6 +347,10 @@ export default function TradeWindow() {
         onCancel={handleCancel}
         myConfirmed={myConfirmed}
         theirConfirmed={theirConfirmed}
+        isSelfTrade={isSelfTrade}
+        onAddItemOther={handleAddItemOther}
+        onRemoveItemOther={handleRemoveItemOther}
+        onUpdateCoinsOther={handleUpdateCoinsOther}
       />
     </div>
   );

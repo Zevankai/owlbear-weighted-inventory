@@ -22,6 +22,10 @@ interface TradeModalProps {
   onCancel: () => void;
   myConfirmed: boolean;
   theirConfirmed: boolean;
+  isSelfTrade?: boolean;
+  onAddItemOther?: (item: Item) => void;
+  onRemoveItemOther?: (item: Item) => void;
+  onUpdateCoinsOther?: (coins: Currency) => void;
 }
 
 export function TradeModal({
@@ -43,7 +47,11 @@ export function TradeModal({
   onConfirm,
   onCancel,
   myConfirmed,
-  theirConfirmed
+  theirConfirmed,
+  isSelfTrade = false,
+  onAddItemOther,
+  onRemoveItemOther,
+  onUpdateCoinsOther
 }: TradeModalProps) {
   if (!isOpen) return null;
 
@@ -64,8 +72,18 @@ export function TradeModal({
     onUpdateCoins({ ...myOfferedCoins, [coinType]: newValue });
   };
 
+  // Handle coin changes for the other side (self-trade only)
+  const handleCoinChangeOther = (coinType: keyof Currency, value: number) => {
+    if (!onUpdateCoinsOther) return;
+    const newValue = Math.max(0, Math.min(value, otherPlayerCurrency[coinType]));
+    onUpdateCoinsOther({ ...theirOfferedCoins, [coinType]: newValue });
+  };
+
   // Check if item is already in my offered items
   const isItemOffered = (itemId: string) => myOfferedItems.some(i => i.id === itemId);
+
+  // Check if item is already in their offered items (for self-trade)
+  const isItemOfferedOther = (itemId: string) => theirOfferedItems.some(i => i.id === itemId);
 
   return (
     <>
@@ -411,7 +429,7 @@ export function TradeModal({
               {otherPlayerName}'s Inventory
             </h3>
             
-            {/* Their items list (read-only) */}
+            {/* Their items list (interactive for self-trade, read-only otherwise) */}
             <div style={{
               flex: 1,
               overflowY: 'auto',
@@ -423,7 +441,7 @@ export function TradeModal({
                 <p style={{fontSize: '11px', color: '#666', fontStyle: 'italic'}}>No items visible</p>
               ) : (
                 otherPlayerInventory.map(item => {
-                  const offered = theirOfferedItems.some(i => i.id === item.id);
+                  const offered = isItemOfferedOther(item.id);
                   return (
                     <div
                       key={item.id}
@@ -453,8 +471,44 @@ export function TradeModal({
                           {item.value || 'No value'}
                         </div>
                       </div>
-                      {offered && (
-                        <span style={{fontSize: '9px', color: '#0c0'}}>OFFERED</span>
+                      {isSelfTrade ? (
+                        offered ? (
+                          <button
+                            onClick={() => onRemoveItemOther?.(item)}
+                            style={{
+                              background: 'rgba(255,100,100,0.3)',
+                              border: 'none',
+                              color: '#ff6666',
+                              padding: '4px 8px',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '10px',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            −
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onAddItemOther?.(item)}
+                            style={{
+                              background: 'rgba(100,200,100,0.3)',
+                              border: 'none',
+                              color: '#66ff66',
+                              padding: '4px 8px',
+                              borderRadius: '3px',
+                              cursor: 'pointer',
+                              fontSize: '10px',
+                              fontWeight: 'bold'
+                            }}
+                          >
+                            +
+                          </button>
+                        )
+                      ) : (
+                        offered && (
+                          <span style={{fontSize: '9px', color: '#0c0'}}>OFFERED</span>
+                        )
                       )}
                     </div>
                   );
@@ -462,10 +516,10 @@ export function TradeModal({
               )}
             </div>
 
-            {/* Their Coins (read-only display) */}
+            {/* Their Coins (interactive for self-trade, read-only otherwise) */}
             <div style={{borderTop: '1px solid var(--border)', paddingTop: '8px'}}>
               <div style={{fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase'}}>
-                Their Coins
+                {isSelfTrade ? 'Their Coins (click to offer)' : 'Their Coins'}
               </div>
               <div style={{display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px'}}>
                 {(['cp', 'sp', 'gp', 'pp'] as const).map(coinType => (
@@ -473,16 +527,41 @@ export function TradeModal({
                     <label style={{fontSize: '9px', color: '#888', display: 'block', textTransform: 'uppercase'}}>
                       {coinType}
                     </label>
-                    <div style={{
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      color: '#888',
-                      padding: '4px',
-                      background: 'rgba(0,0,0,0.3)',
-                      borderRadius: '3px'
-                    }}>
-                      {otherPlayerCurrency[coinType]}
-                    </div>
+                    {isSelfTrade ? (
+                      <>
+                        <div style={{fontSize: '10px', color: '#666', marginBottom: '2px'}}>
+                          Have: {otherPlayerCurrency[coinType]}
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          max={otherPlayerCurrency[coinType]}
+                          value={theirOfferedCoins[coinType]}
+                          onChange={(e) => handleCoinChangeOther(coinType, parseInt(e.target.value) || 0)}
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            background: 'rgba(0,0,0,0.4)',
+                            border: '1px solid #444',
+                            borderRadius: '3px',
+                            color: 'white',
+                            textAlign: 'center',
+                            fontSize: '11px'
+                          }}
+                        />
+                      </>
+                    ) : (
+                      <div style={{
+                        fontSize: '12px',
+                        fontWeight: 'bold',
+                        color: '#888',
+                        padding: '4px',
+                        background: 'rgba(0,0,0,0.3)',
+                        borderRadius: '3px'
+                      }}>
+                        {otherPlayerCurrency[coinType]}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -513,21 +592,23 @@ export function TradeModal({
                 background: myConfirmed ? '#0f0' : '#666'
               }} />
               <span style={{color: myConfirmed ? '#0f0' : '#aaa'}}>
-                You: {myConfirmed ? 'Confirmed' : 'Pending'}
+                {isSelfTrade ? 'Status' : 'You'}: {myConfirmed ? 'Confirmed' : 'Pending'}
               </span>
             </div>
-            <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
-              <span style={{
-                display: 'inline-block',
-                width: '12px',
-                height: '12px',
-                borderRadius: '50%',
-                background: theirConfirmed ? '#0f0' : '#666'
-              }} />
-              <span style={{color: theirConfirmed ? '#0f0' : '#aaa'}}>
-                {otherPlayerName}: {theirConfirmed ? 'Confirmed' : 'Pending'}
-              </span>
-            </div>
+            {!isSelfTrade && (
+              <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                <span style={{
+                  display: 'inline-block',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  background: theirConfirmed ? '#0f0' : '#666'
+                }} />
+                <span style={{color: theirConfirmed ? '#0f0' : '#aaa'}}>
+                  {otherPlayerName}: {theirConfirmed ? 'Confirmed' : 'Pending'}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -576,7 +657,10 @@ export function TradeModal({
             textAlign: 'center',
             fontStyle: 'italic'
           }}>
-            * Both players must confirm for the trade to execute automatically
+            {isSelfTrade 
+              ? '* Self-trade: Confirm to transfer items between your tokens'
+              : '* Both players must confirm for the trade to execute automatically'
+            }
           </p>
         </div>
       </div>

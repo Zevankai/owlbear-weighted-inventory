@@ -175,7 +175,7 @@ export function HomeTab({
           borderRadius: '8px',
           marginBottom: '12px',
           minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined,
-          paddingBottom: '8px'
+          paddingBottom: '24px'
         }}>
           {/* Cover photo as background */}
           {showCoverPhoto && characterData.coverPhotoUrl && (

@@ -292,7 +292,87 @@ export function HomeTab({
         </div>
       )}
 
-      {!viewingStorageId ? (
+      {/* === LORE TOKEN SPECIFIC UI === */}
+      {!viewingStorageId && characterData.tokenType === 'lore' && (
+        <>
+          {/* Main Lore Content - large text area */}
+          <div style={{marginTop: '12px', width: DESCRIPTION_WIDTH_EDITABLE, alignSelf: 'stretch'}}>
+            <label style={{display:'block', fontSize:'10px', color:'#9c27b0', textTransform:'uppercase', fontWeight: 'bold', marginBottom: '6px'}}>
+              📜 Lore Content
+            </label>
+            {/* Uses condition as fallback for backward compatibility with existing lore tokens that may have content stored in condition field */}
+            <textarea
+              value={characterData.loreContent || characterData.condition || ''}
+              onChange={(e) => {
+                if (playerRole === 'GM') {
+                  updateData({ loreContent: e.target.value });
+                }
+              }}
+              className="search-input"
+              rows={8}
+              disabled={playerRole !== 'GM'}
+              placeholder="Enter lore, history, or information here..."
+              style={{
+                width: '100%',
+                minHeight: '200px',
+                resize: 'vertical',
+                boxSizing: 'border-box',
+                opacity: 1,
+                cursor: playerRole === 'GM' ? 'text' : 'default',
+                fontSize: '13px',
+                lineHeight: '1.5'
+              }}
+            />
+          </div>
+
+          {/* GM-only Notes Section */}
+          {playerRole === 'GM' && (
+            <div style={{marginTop: '16px', width: DESCRIPTION_WIDTH_EDITABLE, alignSelf: 'stretch'}}>
+              <label style={{display:'block', fontSize:'10px', color:'var(--accent-gold)', textTransform:'uppercase', fontWeight: 'bold', marginBottom: '6px'}}>
+                🔒 GM Notes (hidden from players)
+              </label>
+              <textarea
+                value={characterData.gmNotes || ''}
+                onChange={(e) => updateData({ gmNotes: e.target.value })}
+                className="search-input"
+                rows={4}
+                placeholder="Private notes for GM only..."
+                style={{
+                  width: '100%',
+                  minHeight: '80px',
+                  resize: 'vertical',
+                  boxSizing: 'border-box',
+                  fontSize: '12px',
+                  background: 'rgba(240, 225, 48, 0.05)',
+                  borderColor: 'rgba(240, 225, 48, 0.3)'
+                }}
+              />
+            </div>
+          )}
+
+          {/* Lore Token Footer */}
+          <div style={{marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center'}}>
+            {/* Lore Token - View only for players */}
+            {playerRole !== 'GM' && (
+              <div style={{fontSize: '10px', color: '#9c27b0', fontStyle: 'italic'}}>
+                📜 Lore Token (view only)
+              </div>
+            )}
+
+            {/* Lore Token - GM message */}
+            {playerRole === 'GM' && (
+              <div style={{fontSize: '10px', color: '#9c27b0', fontStyle: 'italic'}}>
+                📜 Lore Token (You control this)
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* === STANDARD TOKEN UI (non-lore tokens) === */}
+      {characterData.tokenType !== 'lore' && (
+        <>
+          {!viewingStorageId ? (
         <>
           {/* Only show edit controls if player is GM, owns this token, or it's a party token */}
           {canUserEdit && (
@@ -410,20 +490,6 @@ export function HomeTab({
             </div>
           )}
 
-          {/* Lore Token - View only for players */}
-          {characterData.tokenType === 'lore' && playerRole !== 'GM' && (
-            <div style={{fontSize: '10px', color: '#9c27b0', fontStyle: 'italic'}}>
-              📜 Lore Token (view only)
-            </div>
-          )}
-
-          {/* Lore Token - GM message */}
-          {characterData.tokenType === 'lore' && playerRole === 'GM' && (
-            <div style={{fontSize: '10px', color: '#9c27b0', fontStyle: 'italic'}}>
-              📜 Lore Token (You control this)
-            </div>
-          )}
-
           {/* Standard player token claiming - only show for player-type tokens */}
           {(characterData.tokenType === 'player' || !characterData.tokenType) && (
             <>
@@ -505,6 +571,8 @@ export function HomeTab({
             </>
           )}
         </div>
+      )}
+        </>
       )}
     </div>
   );

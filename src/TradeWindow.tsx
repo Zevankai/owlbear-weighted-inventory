@@ -182,10 +182,20 @@ export default function TradeWindow() {
     const isPlayer1 = activeTrade.player1Id === playerId;
 
     // For self-trade, confirm both sides at once
+    // For normal trade, only confirm the current player's side
+    let player2Confirmed: boolean;
+    if (isSelfTrade) {
+      player2Confirmed = true;
+    } else if (isPlayer1) {
+      player2Confirmed = activeTrade.player2Confirmed;
+    } else {
+      player2Confirmed = true;
+    }
+
     const updatedTrade: ActiveTrade = {
       ...activeTrade,
       player1Confirmed: true,
-      player2Confirmed: isSelfTrade ? true : (isPlayer1 ? activeTrade.player2Confirmed : true)
+      player2Confirmed
     };
 
     await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: updatedTrade });

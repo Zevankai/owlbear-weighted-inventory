@@ -174,7 +174,7 @@ export function HomeTab({
           overflow: 'hidden',
           borderRadius: '8px',
           marginBottom: '12px',
-          minHeight: '240px',
+          minHeight: '280px',
           paddingBottom: '24px'
         }}>
           {/* Cover photo as background */}

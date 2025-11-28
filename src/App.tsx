@@ -1287,6 +1287,11 @@ function App() {
     visibleTabs = visibleTabs.filter(t => t.id === 'Home');
   }
 
+  // Lore tokens have a special minimal UI - only show Home tab (and GM tab for GMs)
+  if (characterData?.tokenType === 'lore') {
+    visibleTabs = baseTabs.filter(t => t.id === 'Home' || (t.id === 'GM' && playerRole === 'GM'));
+  }
+
   const activeStorageDef = viewingStorageId ? STORAGE_DEFINITIONS[characterData.externalStorages.find(s => s.id === viewingStorageId)!.type] : null;
 
   return (

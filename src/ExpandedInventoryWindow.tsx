@@ -210,6 +210,7 @@ export default function ExpandedInventoryWindow() {
   // Check if player can edit this token
   const canEditToken = () => {
     if (playerRole === 'GM') return true;
+    if (characterData?.tokenType === 'party') return true;
     if (characterData?.claimedBy === playerId) return true;
     return false;
   };
@@ -645,8 +646,10 @@ export default function ExpandedInventoryWindow() {
   }
 
   // Permission check: Only GMs and players who claimed the token can view expanded inventory
+  // Party tokens are accessible to all players
   const canViewExpandedInventory = () => {
     if (playerRole === 'GM') return true;
+    if (characterData.tokenType === 'party') return true;
     if (characterData.claimedBy === playerId) return true;
     return false;
   };

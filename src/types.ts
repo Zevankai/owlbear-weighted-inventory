@@ -113,4 +113,6 @@ export interface CharacterData {
   reputation?: Reputation;  // NPC reputation tracking (only for packType === 'NPC')
   theme?: Theme;  // Per-token theme colors (everyone sees the same theme for this token)
   coverPhotoUrl?: string;  // URL to an externally hosted cover/banner image
+  loreContent?: string;   // Main lore text for lore tokens
+  gmNotes?: string;       // GM-only notes (hidden from players)
 }

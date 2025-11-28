@@ -1,9 +1,4 @@
-import type { CharacterData } from '../types';
-
-interface Theme {
-  accent: string;
-  background: string;
-}
+import type { CharacterData, Theme } from '../types';
 
 interface DebugInfo {
   roomKeys: string[];

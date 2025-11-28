@@ -142,7 +142,7 @@ export function HomeTab({
             </>
           )}
           {/* Settings button - only show for users who can edit the token */}
-          {(playerRole === 'GM' || characterData.claimedBy === playerId) && (
+          {canEditToken() && (
             <button
               onClick={() => { setShowSettings(true); loadDebugInfo(); }}
               style={{

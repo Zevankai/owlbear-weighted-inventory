@@ -6,8 +6,11 @@ import './App.css';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID, STORAGE_DEFINITIONS, PACK_DEFINITIONS } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType } from './types';
+import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType, LoreTabId, LoreEntry } from './types';
 import { HomeTab } from './components/tabs/HomeTab';
+import { LoreTab } from './components/tabs/LoreTab';
+import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
+import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/lore';
 import { hexToRgb } from './utils/color';
 
 // Storage types that support equipment slots (weapons, body, quick)
@@ -24,6 +27,9 @@ export default function ExpandedInventoryWindow() {
   const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [playerId, setPlayerId] = useState<string>('');
   const [playerRole, setPlayerRole] = useState<'GM' | 'PLAYER'>('PLAYER');
+
+  // Lore tab state
+  const [activeLoreTab, setActiveLoreTab] = useState<LoreTabId>('overview');
 
   // Form States
   const [newItem, setNewItem] = useState<Partial<Item>>({
@@ -213,6 +219,22 @@ export default function ExpandedInventoryWindow() {
     if (characterData?.tokenType === 'party') return true;
     if (characterData?.claimedBy === playerId) return true;
     return false;
+  };
+
+  // Handler for updating lore entries
+  const handleUpdateLoreEntries = (tabId: LoreTabId, entries: LoreEntry[]) => {
+    if (!characterData?.loreSettings) return;
+    
+    const updatedTabs = characterData.loreSettings.tabs.map(tab =>
+      tab.tabId === tabId ? { ...tab, entries } : tab
+    );
+    
+    updateData({
+      loreSettings: {
+        ...characterData.loreSettings,
+        tabs: updatedTabs,
+      },
+    });
   };
 
   // Handle creating a new item
@@ -647,9 +669,11 @@ export default function ExpandedInventoryWindow() {
 
   // Permission check: Only GMs and players who claimed the token can view expanded inventory
   // Party tokens are accessible to all players
+  // Lore tokens can be expanded by GMs only (handled by first check)
   const canViewExpandedInventory = () => {
     if (playerRole === 'GM') return true;
     if (characterData.tokenType === 'party') return true;
+    if (characterData.tokenType === 'lore') return false; // Non-GMs cannot expand lore tokens
     if (characterData.claimedBy === playerId) return true;
     return false;
   };
@@ -720,6 +744,34 @@ export default function ExpandedInventoryWindow() {
 
   const activeStorageDef = viewingStorageId ? STORAGE_DEFINITIONS[characterData.externalStorages.find(s => s.id === viewingStorageId)!.type] : null;
 
+  // Build lore tabs for lore tokens
+  let loreTabs: Array<{ id: LoreTabId; label: string; visible: boolean }> = [];
+  
+  if (characterData?.tokenType === 'lore') {
+    // Initialize lore settings if not present
+    if (!characterData.loreSettings) {
+      updateData({ loreSettings: { loreType: 'custom', tabs: generateDefaultLoreSettings() } });
+    }
+    
+    // Build lore tabs from settings
+    if (characterData.loreSettings) {
+      const enabledTabs = characterData.loreSettings.tabs
+        .filter(t => t.enabled)
+        .sort((a, b) => a.order - b.order);
+      
+      loreTabs = enabledTabs
+        .filter(t => playerRole === 'GM' || t.visibleToPlayers)
+        .map(t => ({
+          id: t.tabId,
+          label: LORE_TAB_DEFINITIONS[t.tabId]?.label || t.tabId,
+          visible: true,
+        }));
+    }
+    
+    // For lore tokens, don't use the standard tabs
+    visibleTabs = [];
+  }
+
   return (
     <div className="app-container" style={{background: 'var(--bg-dark)', border: viewingStorageId ? '2px solid var(--accent-gold)' : 'none'}}>
       {/* Storage Viewing Banner */}
@@ -786,8 +838,13 @@ export default function ExpandedInventoryWindow() {
             <div>
               <h1 style={{margin: 0, fontSize: '18px', color: 'var(--accent-gold)'}}>{tokenName}</h1>
               <div style={{fontSize: '11px', color: 'var(--text-muted)'}}>
-                {viewingStorageId ? `Storage: ${characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}` : `${characterData.packType} Pack`} • {currentDisplayData.inventory.length} Items
-                {stats && ` • ${stats.totalWeight}/${activeStorageDef?.capacity || stats.maxCapacity}u`}
+                {characterData.tokenType === 'lore' 
+                  ? '📜 Lore Token'
+                  : viewingStorageId 
+                    ? `Storage: ${characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}` 
+                    : `${characterData.packType} Pack`}
+                {characterData.tokenType !== 'lore' && ` • ${currentDisplayData.inventory.length} Items`}
+                {characterData.tokenType !== 'lore' && stats && ` • ${stats.totalWeight}/${activeStorageDef?.capacity || stats.maxCapacity}u`}
               </div>
             </div>
           </div>
@@ -809,24 +866,56 @@ export default function ExpandedInventoryWindow() {
         </div>
       </div>
 
-      {/* Tab Navigation */}
-      <nav className="nav-bar" style={{padding: '8px 12px', gap: '4px'}}>
-        {visibleTabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`}
-            onClick={() => setActiveTab(tab.id)}
-            title={tab.id}
-          >
-            {tab.icon ? tab.icon : tab.label}
-          </button>
-        ))}
-      </nav>
+      {/* Lore Token Navigation */}
+      {characterData?.tokenType === 'lore' && loreTabs.length > 0 && (
+        <nav className="nav-bar" style={{padding: '8px 12px', gap: '4px'}}>
+          {loreTabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`nav-btn ${activeLoreTab === tab.id && activeTab !== 'LoreSettings' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveLoreTab(tab.id);
+                setActiveTab('Home'); // Reset from LoreSettings so lore content renders
+              }}
+              title={tab.label}
+            >
+              {tab.label.toUpperCase()}
+            </button>
+          ))}
+          {/* GM Settings Tab */}
+          {playerRole === 'GM' && (
+            <button
+              className={`nav-btn ${activeTab === 'LoreSettings' ? 'active' : ''}`}
+              onClick={() => setActiveTab('LoreSettings')}
+              title="Lore Settings"
+              style={{ marginLeft: 'auto' }}
+            >
+              ⚙
+            </button>
+          )}
+        </nav>
+      )}
+
+      {/* Standard Tab Navigation (non-lore tokens) */}
+      {characterData?.tokenType !== 'lore' && visibleTabs.length > 0 && (
+        <nav className="nav-bar" style={{padding: '8px 12px', gap: '4px'}}>
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              title={tab.id}
+            >
+              {tab.icon ? tab.icon : tab.label}
+            </button>
+          ))}
+        </nav>
+      )}
 
       {/* Main Content */}
       <main className="content" style={{flex: 1, overflow: 'auto', padding: '16px'}}>
-        {/* HOME TAB */}
-        {activeTab === 'Home' && stats && (
+        {/* HOME TAB - show for non-lore tokens when Home tab is active, OR for lore tokens when overview tab is active */}
+        {activeTab === 'Home' && stats && (characterData?.tokenType !== 'lore' || activeLoreTab === 'overview') && (
           <HomeTab
             stats={stats}
             viewingStorageId={viewingStorageId}
@@ -853,6 +942,29 @@ export default function ExpandedInventoryWindow() {
             activeStorageDef={activeStorageDef}
             showCoverPhoto={false}
             showTokenProfile={false}
+          />
+        )}
+
+        {/* LORE TABS (non-overview) */}
+        {characterData?.tokenType === 'lore' && characterData.loreSettings && activeTab !== 'LoreSettings' && activeLoreTab !== 'overview' && (
+          (() => {
+            const tabConfig = characterData.loreSettings.tabs.find(t => t.tabId === activeLoreTab);
+            if (!tabConfig) return null;
+            return (
+              <LoreTab
+                tabConfig={tabConfig}
+                playerRole={playerRole}
+                onUpdateEntries={handleUpdateLoreEntries}
+              />
+            );
+          })()
+        )}
+
+        {/* LORE SETTINGS TAB (GM Only) */}
+        {activeTab === 'LoreSettings' && playerRole === 'GM' && characterData?.tokenType === 'lore' && (
+          <LoreSettingsTab
+            characterData={characterData}
+            updateData={updateData}
           />
         )}
 

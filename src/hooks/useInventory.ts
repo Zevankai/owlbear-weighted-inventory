@@ -1,9 +1,17 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import OBR, { buildShape, isImage } from '@owlbear-rodeo/sdk';
 import type { Item } from '@owlbear-rodeo/sdk';
-import type { CharacterData } from '../types';
+import type { CharacterData, TokenType } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
 import type { Vector2 } from '@owlbear-rodeo/sdk';
+
+// Favorite entry type with token type for grouping
+export interface FavoriteEntry {
+  id: string;
+  name: string;
+  image?: string;
+  tokenType?: TokenType;
+}
 
 // Store data on each token's own metadata (16KB per token, not shared!)
 const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
@@ -49,12 +57,15 @@ export function useInventory() {
   const [tokenImage, setTokenImage] = useState<string | null>(null);
   const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<Array<{id: string; name: string; image?: string}>>([]);
+  const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [theme, setTheme] = useState<ThemeColors>(DEFAULT_THEME);
   const [playerId, setPlayerId] = useState<string | null>(null);
   const [playerRole, setPlayerRole] = useState<'GM' | 'PLAYER'>('PLAYER');
   const [playerClaimedTokenId, setPlayerClaimedTokenId] = useState<string | null>(null);
   const [playerClaimedTokenInfo, setPlayerClaimedTokenInfo] = useState<{name: string; image?: string} | null>(null);
+
+  // Track auto-favorited tokens to avoid re-adding on every selection
+  const autoFavoritedTokensRef = useRef<Set<string>>(new Set());
 
   // Helper to ensure tokenType exists (migration for existing tokens)
   const ensureTokenType = (data: CharacterData): CharacterData => {
@@ -227,6 +238,50 @@ export function useInventory() {
     };
   }, [tokenId, handleSelection]);
 
+  // Auto-favorite Lore and NPC tokens for GM
+  // Use a ref to track favorites for the check to avoid circular dependency
+  const favoritesRef = useRef<FavoriteEntry[]>([]);
+  favoritesRef.current = favorites;
+  
+  useEffect(() => {
+    const autoFavorite = async () => {
+      // Only auto-favorite for GMs viewing lore or NPC tokens
+      if (playerRole !== 'GM' || !tokenId || !tokenName || !characterData) return;
+      
+      // Check if this is a lore or NPC token
+      const tokenType = characterData.tokenType;
+      if (tokenType !== 'lore' && tokenType !== 'npc') return;
+      
+      // Check if already favorited or already auto-favorited this session
+      // Use ref to get current favorites without adding to dependencies
+      const isAlreadyFavorited = favoritesRef.current.some(f => f.id === tokenId);
+      if (isAlreadyFavorited) return;
+      if (autoFavoritedTokensRef.current.has(tokenId)) return;
+      
+      // Auto-add to favorites
+      console.log('[AutoFavorite] Auto-adding', tokenType, 'token:', tokenName);
+      autoFavoritedTokensRef.current.add(tokenId);
+      
+      const newFavorite: FavoriteEntry = {
+        id: tokenId,
+        name: tokenName,
+        image: tokenImage || undefined,
+        tokenType: tokenType
+      };
+      
+      const newFavorites = [...favoritesRef.current, newFavorite];
+      setFavorites(newFavorites);
+      
+      // Save to room metadata
+      const currentPlayerId = await OBR.player.getId();
+      const favoritesKey = getFavoritesKey(currentPlayerId);
+      await OBR.room.setMetadata({ [favoritesKey]: newFavorites });
+      console.log('[AutoFavorite] Added to favorites');
+    };
+    
+    autoFavorite();
+  }, [tokenId, tokenName, tokenImage, characterData, playerRole]);
+
   const updateData = useCallback(async (updates: Partial<CharacterData>) => {
     const idToSave = tokenId;
     console.log('[updateData] Called for token:', idToSave);
@@ -281,28 +336,33 @@ export function useInventory() {
     if (!tokenId || !tokenName) return;
 
     const isFavorited = favorites.some(f => f.id === tokenId);
-    let newFavorites: Array<{id: string; name: string; image?: string}>;
+    let newFavorites: FavoriteEntry[];
 
     if (isFavorited) {
       // Remove from favorites
       console.log('[Favorites] Removing', tokenName, 'from favorites');
       newFavorites = favorites.filter(f => f.id !== tokenId);
     } else {
-      // Add to favorites
+      // Add to favorites (include tokenType)
       console.log('[Favorites] Adding', tokenName, 'to favorites');
-      newFavorites = [...favorites, { id: tokenId, name: tokenName, image: tokenImage || undefined }];
+      newFavorites = [...favorites, { 
+        id: tokenId, 
+        name: tokenName, 
+        image: tokenImage || undefined,
+        tokenType: characterData?.tokenType || 'player'
+      }];
     }
 
     console.log('[Favorites] New favorites list:', newFavorites);
     setFavorites(newFavorites);
 
     // Save to room metadata with player-specific key
-    const playerId = await OBR.player.getId();
-    const favoritesKey = getFavoritesKey(playerId);
+    const currentPlayerId = await OBR.player.getId();
+    const favoritesKey = getFavoritesKey(currentPlayerId);
     console.log('[Favorites] Saving to room metadata with key:', favoritesKey);
     await OBR.room.setMetadata({ [favoritesKey]: newFavorites });
     console.log('[Favorites] Save complete');
-  }, [tokenId, tokenName, tokenImage, favorites]);
+  }, [tokenId, tokenName, tokenImage, favorites, characterData?.tokenType]);
 
   // Remove a favorite by ID (for removing from favorites menu)
   const removeFavoriteById = useCallback(async (targetTokenId: string) => {

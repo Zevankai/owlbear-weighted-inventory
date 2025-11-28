@@ -23,6 +23,7 @@ export type LoreTabId =
 
 export type LoreType = 'town' | 'dungeon' | 'tavern' | 'shop' | 'item' | 'faction' | 'region' | 'custom';
 
+// Extended LoreEntry with optional specialized fields for different tab types
 export interface LoreEntry {
   id: string;
   title: string;
@@ -30,6 +31,40 @@ export interface LoreEntry {
   visibleToPlayers: boolean;
   createdAt: string;
   order: number;
+  
+  // Rumors tab fields
+  heardFrom?: string;           // Attribution source for rumors
+  
+  // Quests tab fields
+  isCompleted?: boolean;        // Quest completion status
+  reward?: string;              // Quest reward
+  difficulty?: 'trivial' | 'easy' | 'medium' | 'hard' | 'deadly';
+  
+  // People tab fields
+  portraitUrl?: string;         // Avatar/portrait image URL
+  role?: string;                // Role/title of the person
+  relationship?: 'ally' | 'neutral' | 'enemy' | 'unknown';
+  
+  // History tab fields
+  date?: string;                // Date/era for timeline
+  
+  // Dangers tab fields
+  threatLevel?: 'low' | 'moderate' | 'high' | 'extreme';
+  
+  // Services/Menu tab fields
+  price?: string;               // Price for services/menu items
+  availability?: 'available' | 'limited' | 'unavailable';
+  quantity?: string;            // Stock/quantity indicator
+  
+  // Secrets tab fields
+  isRevealed?: boolean;         // Whether secret has been revealed to players
+  
+  // Members tab fields
+  rank?: string;                // Rank within organization
+  
+  // Goals tab fields
+  progress?: number;            // Progress percentage (0-100)
+  priority?: 'low' | 'medium' | 'high';
 }
 
 export interface LoreTabConfig {

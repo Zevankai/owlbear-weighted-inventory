@@ -8,7 +8,7 @@ import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry } from './types';
+import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry, TokenType } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
 
 // Lore constants
@@ -31,6 +31,17 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { TradePartnerModal } from './components/TradePartnerModal';
 import type { TradePartner } from './components/TradePartnerModal';
 import { mapItemsToTradePartners } from './utils/tradePartners';
+
+// Token type group labels for favorites display
+const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
+  player: 'Player Tokens',
+  npc: 'NPC Tokens',
+  party: 'Party Tokens',
+  lore: 'Lore Tokens'
+};
+
+// Token type display order for favorites grouping
+const TOKEN_TYPE_ORDER: TokenType[] = ['player', 'npc', 'party', 'lore'];
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -117,9 +128,11 @@ function App() {
   // Check if player can expand the token's inventory
   // GMs can always expand, players can only expand tokens they have claimed
   // Party tokens can be expanded by all players
+  // Lore tokens can be expanded by GMs only (handled by first check)
   const canExpandToken = () => {
     if (playerRole === 'GM') return true;
     if (characterData?.tokenType === 'party') return true;
+    if (characterData?.tokenType === 'lore') return false; // Non-GMs cannot expand lore tokens
     if (characterData?.claimedBy === playerId) return true;
     return false;
   };
@@ -128,6 +141,11 @@ function App() {
   const getExpandDisabledReason = () => {
     if (!characterData) return 'No token selected';
     if (characterData.tokenType === 'party') return ''; // Party tokens are always expandable
+    if (characterData.tokenType === 'lore') {
+      // GM can always expand (handled by canExpandToken returning true for GM)
+      // If we reach here, player is not GM
+      return 'Lore tokens can only be expanded by GM';
+    }
     if (!characterData.claimedBy) return 'Claim this token first to expand';
     if (characterData.claimedBy !== playerId) return 'This token is claimed by another player';
     return '';
@@ -931,85 +949,114 @@ function App() {
               }}>
                 <span style={{color: 'var(--accent-gold)'}}>⭐</span> Favorite Tokens
               </h3>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                gap: '8px'
-              }}>
-                {favorites.map(fav => (
-                  <div
-                    key={fav.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px',
-                      background: 'rgba(255,255,255,0.05)',
-                      border: '1px solid var(--border)',
-                      borderRadius: '6px',
-                      color: 'var(--text-main)',
-                      transition: 'all 0.2s'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-                      e.currentTarget.style.borderColor = 'var(--accent-gold)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                      e.currentTarget.style.borderColor = 'var(--border)';
-                    }}
-                  >
-                    {fav.image && (
-                      <div 
-                        onClick={() => {
-                          loadTokenById(fav.id);
-                          setViewingFavorites(false);
-                        }}
-                        style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '50%',
-                          overflow: 'hidden',
-                          border: '2px solid var(--accent-gold)',
-                          flexShrink: 0,
-                          cursor: 'pointer'
-                        }}
-                      >
-                        <img src={fav.image} alt={fav.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-                      </div>
-                    )}
-                    <div 
-                      onClick={() => {
-                        loadTokenById(fav.id);
-                        setViewingFavorites(false);
-                      }}
-                      style={{fontWeight: 'bold', fontSize: '13px', flex: 1, cursor: 'pointer'}}
-                    >
-                      {fav.name}
+              {/* Group favorites by token type */}
+              {TOKEN_TYPE_ORDER.map(tokenType => {
+                const groupFavorites = favorites.filter(f => (f.tokenType || 'player') === tokenType);
+                if (groupFavorites.length === 0) return null;
+                
+                const typeColors: Record<TokenType, string> = {
+                  player: '#4a9eff',
+                  npc: '#ff9800',
+                  party: '#4caf50',
+                  lore: '#9c27b0'
+                };
+                
+                return (
+                  <div key={tokenType} style={{ marginBottom: '16px' }}>
+                    <div style={{
+                      fontSize: '9px',
+                      color: typeColors[tokenType],
+                      marginBottom: '6px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px',
+                      fontWeight: 'bold',
+                      borderBottom: `1px solid ${typeColors[tokenType]}40`,
+                      paddingBottom: '4px'
+                    }}>
+                      ── {TOKEN_TYPE_LABELS[tokenType]} ──
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeFavoriteById(fav.id);
-                      }}
-                      style={{
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        border: '1px solid var(--border)',
-                        color: '#888',
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        fontSize: '10px',
-                        fontWeight: 'bold',
-                        flexShrink: 0
-                      }}
-                      title="Remove from favorites"
-                    >
-                      ✕
-                    </button>
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+                      gap: '8px'
+                    }}>
+                      {groupFavorites.map(fav => (
+                        <div
+                          key={fav.id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            padding: '10px',
+                            background: 'rgba(255,255,255,0.05)',
+                            border: `1px solid ${typeColors[tokenType]}40`,
+                            borderRadius: '6px',
+                            color: 'var(--text-main)',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+                            e.currentTarget.style.borderColor = typeColors[tokenType];
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                            e.currentTarget.style.borderColor = `${typeColors[tokenType]}40`;
+                          }}
+                        >
+                          {fav.image && (
+                            <div 
+                              onClick={() => {
+                                loadTokenById(fav.id);
+                                setViewingFavorites(false);
+                              }}
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                borderRadius: '50%',
+                                overflow: 'hidden',
+                                border: `2px solid ${typeColors[tokenType]}`,
+                                flexShrink: 0,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              <img src={fav.image} alt={fav.name} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                            </div>
+                          )}
+                          <div 
+                            onClick={() => {
+                              loadTokenById(fav.id);
+                              setViewingFavorites(false);
+                            }}
+                            style={{fontWeight: 'bold', fontSize: '13px', flex: 1, cursor: 'pointer'}}
+                          >
+                            {fav.name}
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeFavoriteById(fav.id);
+                            }}
+                            style={{
+                              background: 'rgba(255, 255, 255, 0.05)',
+                              border: '1px solid var(--border)',
+                              color: '#888',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '10px',
+                              fontWeight: 'bold',
+                              flexShrink: 0
+                            }}
+                            title="Remove from favorites"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           )}
 
@@ -1389,7 +1436,8 @@ function App() {
       )}
 
       <main className="content">
-        {activeTab === 'Home' && stats && (
+        {/* HomeTab - show for non-lore tokens when Home tab is active, OR for lore tokens when overview tab is active */}
+        {activeTab === 'Home' && stats && (characterData?.tokenType !== 'lore' || activeLoreTab === 'overview') && (
           <HomeTab
             stats={stats}
             viewingStorageId={viewingStorageId}
@@ -2220,8 +2268,8 @@ function App() {
           />
         )}
 
-        {/* === LORE TABS === */}
-        {characterData?.tokenType === 'lore' && characterData.loreSettings && activeTab !== 'LoreSettings' && (
+        {/* === LORE TABS (non-overview) === */}
+        {characterData?.tokenType === 'lore' && characterData.loreSettings && activeTab !== 'LoreSettings' && activeLoreTab !== 'overview' && (
           (() => {
             const tabConfig = characterData.loreSettings.tabs.find(t => t.tabId === activeLoreTab);
             if (!tabConfig) return null;

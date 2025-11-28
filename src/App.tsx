@@ -1357,8 +1357,11 @@ function App() {
           {loreTabs.map((tab) => (
             <button
               key={tab.id}
-              className={`nav-btn ${activeLoreTab === tab.id ? 'active' : ''}`}
-              onClick={() => setActiveLoreTab(tab.id)}
+              className={`nav-btn ${activeLoreTab === tab.id && activeTab !== 'LoreSettings' ? 'active' : ''}`}
+              onClick={() => {
+                setActiveLoreTab(tab.id);
+                setActiveTab('Home'); // Reset from LoreSettings so lore content renders
+              }}
               title={tab.label}
             >
               {tab.label.toUpperCase()}

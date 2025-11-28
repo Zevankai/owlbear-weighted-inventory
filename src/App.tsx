@@ -102,6 +102,22 @@ function App() {
   // Toggle text mode handler
   const toggleTextMode = () => setTextMode(textMode === 'dark' ? 'light' : 'dark');
 
+  // Check if player can expand the token's inventory
+  // GMs can always expand, players can only expand tokens they have claimed
+  const canExpandToken = () => {
+    if (playerRole === 'GM') return true;
+    if (characterData?.claimedBy === playerId) return true;
+    return false;
+  };
+
+  // Get reason why expand is disabled
+  const getExpandDisabledReason = () => {
+    if (!characterData) return 'No token selected';
+    if (!characterData.claimedBy) return 'Claim this token first to expand';
+    if (characterData.claimedBy !== playerId) return 'This token is claimed by another player';
+    return '';
+  };
+
   // Load all claimed tokens when viewing favorites
   useEffect(() => {
     if (!viewingFavorites || !playerId) return;
@@ -997,6 +1013,8 @@ function App() {
           textMode={textMode}
           onTextModeToggle={toggleTextMode}
           onWidthToggle={toggleWidth}
+          canExpand={canExpandToken()}
+          expandDisabledReason={getExpandDisabledReason()}
         />
       </div>
     );
@@ -2008,6 +2026,8 @@ function App() {
         textMode={textMode}
         onTextModeToggle={toggleTextMode}
         onWidthToggle={toggleWidth}
+        canExpand={canExpandToken()}
+        expandDisabledReason={getExpandDisabledReason()}
       />
 
       {/* Trade Request Notification */}

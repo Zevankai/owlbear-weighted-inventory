@@ -107,4 +107,5 @@ export interface CharacterData {
     accent: string;
     background: string;
   };
+  coverPhotoUrl?: string;  // URL to an externally hosted cover/banner image
 }

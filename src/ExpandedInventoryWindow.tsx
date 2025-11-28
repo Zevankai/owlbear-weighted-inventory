@@ -650,6 +650,46 @@ export default function ExpandedInventoryWindow() {
     );
   }
 
+  // Permission check: Only GMs and players who claimed the token can view expanded inventory
+  const canViewExpandedInventory = () => {
+    if (playerRole === 'GM') return true;
+    if (characterData.claimedBy === playerId) return true;
+    return false;
+  };
+
+  if (!canViewExpandedInventory()) {
+    return (
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: '100vh',
+        background: 'var(--bg-dark)',
+        color: 'var(--text-main)'
+      }}>
+        <div style={{fontSize: '48px', marginBottom: '16px'}}>🔒</div>
+        <p style={{fontSize: '16px', marginBottom: '8px'}}>You don't have permission to view this inventory.</p>
+        <p style={{fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px'}}>You must claim this token first.</p>
+        <button
+          onClick={handleClose}
+          style={{
+            padding: '10px 20px',
+            background: 'var(--border)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}
+        >
+          Close
+        </button>
+      </div>
+    );
+  }
+
   const filteredInventory = currentDisplayData.inventory.filter(item =>
     item.name.toLowerCase().includes(filterText.toLowerCase())
   );
@@ -693,50 +733,83 @@ export default function ExpandedInventoryWindow() {
         </div>
       )}
 
-      {/* Header */}
+      {/* Header with Cover Photo */}
       <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '12px 16px',
+        position: 'relative',
+        overflow: 'hidden',
         borderBottom: '1px solid var(--glass-border)',
-        background: 'rgba(0,0,0,0.3)'
       }}>
-        <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-          {tokenImage && (
-            <div style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              border: '2px solid var(--accent-gold)'
-            }}>
-              <img src={tokenImage} alt={tokenName || ''} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
-            </div>
-          )}
-          <div>
-            <h1 style={{margin: 0, fontSize: '18px', color: 'var(--accent-gold)'}}>{tokenName}</h1>
-            <div style={{fontSize: '11px', color: 'var(--text-muted)'}}>
-              {viewingStorageId ? `Storage: ${characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}` : `${characterData.packType} Pack`} • {currentDisplayData.inventory.length} Items
-              {stats && ` • ${stats.totalWeight}/${activeStorageDef?.capacity || stats.maxCapacity}u`}
+        {/* Cover photo as background */}
+        {characterData.coverPhotoUrl && !viewingStorageId && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundImage: `url(${characterData.coverPhotoUrl})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            opacity: 0.3,
+          }} />
+        )}
+        {/* Gradient overlay for readability */}
+        {characterData.coverPhotoUrl && !viewingStorageId && (
+          <div style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.8) 100%)',
+          }} />
+        )}
+        {/* Header content on top */}
+        <div style={{
+          position: 'relative',
+          zIndex: 1,
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: characterData.coverPhotoUrl && !viewingStorageId ? '20px 16px' : '12px 16px',
+          background: characterData.coverPhotoUrl && !viewingStorageId ? 'transparent' : 'rgba(0,0,0,0.3)'
+        }}>
+          <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+            {tokenImage && (
+              <div style={{
+                width: characterData.coverPhotoUrl && !viewingStorageId ? '50px' : '40px',
+                height: characterData.coverPhotoUrl && !viewingStorageId ? '50px' : '40px',
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '2px solid var(--accent-gold)'
+              }}>
+                <img src={tokenImage} alt={tokenName || ''} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+              </div>
+            )}
+            <div>
+              <h1 style={{margin: 0, fontSize: '18px', color: 'var(--accent-gold)'}}>{tokenName}</h1>
+              <div style={{fontSize: '11px', color: 'var(--text-muted)'}}>
+                {viewingStorageId ? `Storage: ${characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}` : `${characterData.packType} Pack`} • {currentDisplayData.inventory.length} Items
+                {stats && ` • ${stats.totalWeight}/${activeStorageDef?.capacity || stats.maxCapacity}u`}
+              </div>
             </div>
           </div>
+          <button
+            onClick={handleClose}
+            style={{
+              background: 'var(--border)',
+              color: 'white',
+              border: 'none',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            CLOSE
+          </button>
         </div>
-        <button
-          onClick={handleClose}
-          style={{
-            background: 'var(--border)',
-            color: 'white',
-            border: 'none',
-            padding: '8px 16px',
-            borderRadius: '4px',
-            cursor: 'pointer',
-            fontSize: '12px',
-            fontWeight: 'bold'
-          }}
-        >
-          CLOSE
-        </button>
       </div>
 
       {/* Tab Navigation */}

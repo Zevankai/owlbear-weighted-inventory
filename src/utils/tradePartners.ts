@@ -1,6 +1,9 @@
 import type { CharacterData } from '../types';
 import type { TradePartner, OwnerType } from '../components/TradePartnerModal';
 
+// Special constant for party token claimedBy field
+const PARTY_TOKEN_MARKER = '__party__';
+
 // Helper function to get trade partners from OBR items
 export function mapItemsToTradePartners(
   items: Array<{ id: string; name: string; metadata: Record<string, unknown>; image?: { url: string } }>,
@@ -34,20 +37,21 @@ export function mapItemsToTradePartners(
         tokenId: item.id,
         tokenName: item.name || 'Unknown',
         tokenImage: item.image?.url || null,
-        claimedBy: 'party',  // Special marker for party tokens
-        ownerType: 'party' as OwnerType
+        claimedBy: PARTY_TOKEN_MARKER,  // Special marker for party tokens
+        ownerType: 'party'
       });
       continue;
     }
 
-    // Player tokens: Must be claimed
+    // Player and NPC tokens (tokenType !== 'party' and !== 'lore'): Must be claimed
     const claimedBy = data.claimedBy;
     if (!claimedBy) continue;
 
     let ownerType: OwnerType;
     if (claimedBy === playerId) {
       ownerType = 'self';
-    } else if (data.packType === 'NPC') {
+    } else if (tokenType === 'npc') {
+      // NPC tokens use tokenType for consistency
       ownerType = 'npc';
     } else {
       ownerType = 'other-player';

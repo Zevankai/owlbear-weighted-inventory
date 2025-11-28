@@ -92,6 +92,14 @@ export function HomeTab({
   showCoverPhoto = true,
   showTokenProfile = true
 }: HomeTabProps) {
+  // Helper to check if user can edit this token (GM, owner, or party token)
+  const canUserEdit = playerRole === 'GM' || characterData.claimedBy === playerId || characterData.tokenType === 'party';
+  
+  // Helper to check if trade button should be shown
+  const showTradeButton = !activeTrade && tokenId && 
+    (characterData.claimedBy || characterData.tokenType === 'party') && 
+    onOpenTradePartnerModal;
+
   return (
     <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '8px'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
@@ -259,35 +267,35 @@ export function HomeTab({
               </div>
             )}
 
-            {/* Start P2P Trade Button */}
-            {characterData && !activeTrade && tokenId &&
-              characterData.claimedBy && onOpenTradePartnerModal && (
-              <div style={{marginTop: '8px', textAlign: 'center'}}>
-                <button
-                  onClick={onOpenTradePartnerModal}
-                  style={{
-                    background: '#4a9eff',
-                    border: 'none',
-                    color: 'white',
-                    padding: '8px 16px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 'bold'
-                  }}
-                >
-                  TRADE
-                </button>
-              </div>
-            )}
           </div>
+        </div>
+      )}
+
+      {/* Start P2P Trade Button - MOVED OUTSIDE/below cover photo */}
+      {!viewingStorageId && showTokenProfile && characterData && showTradeButton && (
+        <div style={{marginBottom: '12px', textAlign: 'center'}}>
+          <button
+            onClick={onOpenTradePartnerModal}
+            style={{
+              background: '#4a9eff',
+              border: 'none',
+              color: 'white',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold'
+            }}
+          >
+            TRADE
+          </button>
         </div>
       )}
 
       {!viewingStorageId ? (
         <>
-          {/* Only show edit controls if player is GM or owns this token */}
-          {(playerRole === 'GM' || characterData.claimedBy === playerId) && (
+          {/* Only show edit controls if player is GM, owns this token, or it's a party token */}
+          {canUserEdit && (
             <>
               <div style={{marginBottom: '12px'}}>
                 <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
@@ -312,8 +320,8 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Show stats - only show to GM or token owner */}
-      {(viewingStorageId || playerRole === 'GM' || characterData.claimedBy === playerId) && (
+      {/* Show stats - only show to GM, token owner, or for party tokens */}
+      {(viewingStorageId || canUserEdit) && (
         <>
           <div className="totals-grid">
             <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
@@ -342,24 +350,24 @@ export function HomeTab({
         </>
       )}
 
-      {/* Show description - editable only if GM or owner */}
+      {/* Show description - editable only if GM, owner, or party token */}
       <div style={{marginTop: '12px', width: DESCRIPTION_WIDTH_EDITABLE, alignSelf: 'stretch'}}>
         <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
           Description
         </label>
         <textarea
           value={currentDisplayData.condition}
-          onChange={(e) => (playerRole === 'GM' || characterData.claimedBy === playerId) && handleUpdateData({ condition: e.target.value })}
+          onChange={(e) => canUserEdit && handleUpdateData({ condition: e.target.value })}
           className="search-input"
           rows={2}
-          disabled={!(playerRole === 'GM' || characterData.claimedBy === playerId)}
+          disabled={!canUserEdit}
           style={{
             width: '100%',
             minHeight: '50px',
             resize: 'vertical',
             boxSizing: 'border-box',
             opacity: 1,
-            cursor: (playerRole === 'GM' || characterData.claimedBy === playerId) ? 'text' : 'default',
+            cursor: canUserEdit ? 'text' : 'default',
             fontSize: '13px'
           }}
         />

@@ -849,6 +849,7 @@ export default function ExpandedInventoryWindow() {
             PACK_DEFINITIONS={PACK_DEFINITIONS}
             currentDisplayData={currentDisplayData}
             activeStorageDef={activeStorageDef}
+            showCoverPhoto={false}
           />
         )}
 

@@ -59,6 +59,7 @@ interface HomeTabProps {
   currentDisplayData: CharacterData;
   activeStorageDef: StorageDef | null;
   hasClaimedToken?: boolean;
+  showCoverPhoto?: boolean;
 }
 
 export function HomeTab({
@@ -86,7 +87,8 @@ export function HomeTab({
   PACK_DEFINITIONS,
   currentDisplayData,
   activeStorageDef,
-  hasClaimedToken
+  hasClaimedToken,
+  showCoverPhoto = true
 }: HomeTabProps) {
   return (
     <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '8px'}}>
@@ -170,10 +172,10 @@ export function HomeTab({
           overflow: 'hidden',
           borderRadius: '8px',
           marginBottom: '12px',
-          minHeight: characterData.coverPhotoUrl ? '180px' : undefined
+          minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined
         }}>
           {/* Cover photo as background */}
-          {characterData.coverPhotoUrl && (
+          {showCoverPhoto && characterData.coverPhotoUrl && (
             <div style={{
               position: 'absolute',
               top: 0,
@@ -187,14 +189,14 @@ export function HomeTab({
             }} />
           )}
           {/* Gradient overlay for readability */}
-          {characterData.coverPhotoUrl && (
+          {showCoverPhoto && characterData.coverPhotoUrl && (
             <div style={{
               position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)',
             }} />
           )}
           {/* Token image and info on top */}
@@ -204,7 +206,9 @@ export function HomeTab({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: characterData.coverPhotoUrl ? '24px 16px' : '0'
+            justifyContent: 'center',
+            padding: showCoverPhoto && characterData.coverPhotoUrl ? '20px 16px 16px 16px' : '0',
+            minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined
           }}>
             {tokenImage && (
               <div style={{
@@ -214,8 +218,9 @@ export function HomeTab({
                 overflow: 'hidden',
                 border: '3px solid var(--accent-gold)',
                 background: 'transparent',
-                marginBottom: '6px',
-                alignSelf: 'center'
+                marginBottom: '8px',
+                alignSelf: 'center',
+                boxShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 4px 12px rgba(0,0,0,0.5)' : undefined
               }}>
                 <img
                   src={tokenImage}
@@ -224,7 +229,13 @@ export function HomeTab({
                 />
               </div>
             )}
-            <div style={{fontSize: '16px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
+            <div style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: 'var(--text-main)',
+              textAlign: 'center',
+              textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 2px 4px rgba(0,0,0,0.8)' : undefined
+            }}>
               {tokenName || 'Unknown Character'}
             </div>
 

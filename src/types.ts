@@ -12,7 +12,38 @@ export interface Theme {
   background: string;
 }
 
-export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation';
+export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation' | 'LoreSettings';
+
+// Lore system types
+export type LoreTabId = 
+  | 'overview' | 'history' | 'rumors' | 'quests' | 'people' 
+  | 'government' | 'geography' | 'economy' | 'culture' | 'dangers'
+  | 'services' | 'menu' | 'secrets' | 'properties' | 'legends'
+  | 'members' | 'goals' | 'resources' | 'relationships' | 'images' | 'notes';
+
+export type LoreType = 'town' | 'dungeon' | 'tavern' | 'shop' | 'item' | 'faction' | 'region' | 'custom';
+
+export interface LoreEntry {
+  id: string;
+  title: string;
+  content: string;
+  visibleToPlayers: boolean;
+  createdAt: string;
+  order: number;
+}
+
+export interface LoreTabConfig {
+  tabId: LoreTabId;
+  enabled: boolean;
+  visibleToPlayers: boolean;
+  order: number;
+  entries: LoreEntry[];
+}
+
+export interface LoreSettings {
+  loreType: LoreType;
+  tabs: LoreTabConfig[];
+}
 
 export type PackType =
   | 'NPC' | 'Simple' | 'Standard' | 'Warrior' | 'Explorer'
@@ -115,4 +146,5 @@ export interface CharacterData {
   coverPhotoUrl?: string;  // URL to an externally hosted cover/banner image
   loreContent?: string;   // Main lore text for lore tokens
   gmNotes?: string;       // GM-only notes (hidden from players)
+  loreSettings?: LoreSettings;  // Lore system settings (only for tokenType === 'lore')
 }

@@ -2,12 +2,16 @@ interface ToggleButtonsProps {
   textMode: 'dark' | 'light';
   onTextModeToggle: () => void;
   onWidthToggle: () => void;
+  canExpand?: boolean;
+  expandDisabledReason?: string;
 }
 
 export function ToggleButtons({
   textMode,
   onTextModeToggle,
-  onWidthToggle
+  onWidthToggle,
+  canExpand = true,
+  expandDisabledReason
 }: ToggleButtonsProps) {
   return (
     <div style={{
@@ -40,21 +44,23 @@ export function ToggleButtons({
       </button>
       {/* Expand Window Button */}
       <button
-        onClick={onWidthToggle}
+        onClick={canExpand ? onWidthToggle : undefined}
+        disabled={!canExpand}
         style={{
-          background: 'rgba(0,0,0,0.6)',
+          background: canExpand ? 'rgba(0,0,0,0.6)' : 'rgba(0,0,0,0.3)',
           border: '1px solid var(--glass-border)',
           borderRadius: '4px',
           padding: '4px 8px',
-          cursor: 'pointer',
-          color: 'var(--text-main)',
+          cursor: canExpand ? 'pointer' : 'not-allowed',
+          color: canExpand ? 'var(--text-main)' : '#666',
           fontSize: '12px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          transition: 'all 0.2s'
+          transition: 'all 0.2s',
+          opacity: canExpand ? 1 : 0.6
         }}
-        title="Open Expanded Inventory Window"
+        title={canExpand ? 'Open Expanded Inventory Window' : (expandDisabledReason || 'Cannot expand')}
       >
         ⛶
       </button>

@@ -170,52 +170,92 @@ export function HomeTab({
         </div>
       </div>
 
-      {/* --- TOKEN PROFILE --- */}
+      {/* --- TOKEN PROFILE WITH COVER PHOTO --- */}
       {!viewingStorageId && (
-        <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '12px'}}>
-          {tokenImage && (
+        <div style={{
+          position: 'relative',
+          overflow: 'hidden',
+          borderRadius: '8px',
+          marginBottom: '12px'
+        }}>
+          {/* Cover photo as background */}
+          {characterData.coverPhotoUrl && (
             <div style={{
-              width: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
-              height: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
-              borderRadius: '50%',
-              overflow: 'hidden',
-              border: '3px solid var(--accent-gold)',
-              background: 'transparent',
-              marginBottom: '6px',
-              alignSelf: 'center'
-            }}>
-              <img
-                src={tokenImage}
-                alt="Token"
-                style={{width: '100%', height: '100%', objectFit: 'cover'}}
-              />
-            </div>
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundImage: `url(${characterData.coverPhotoUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.4,
+            }} />
           )}
-          <div style={{fontSize: '16px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
-            {tokenName || 'Unknown Character'}
-          </div>
+          {/* Gradient overlay for readability */}
+          {characterData.coverPhotoUrl && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 100%)',
+            }} />
+          )}
+          {/* Token image and info on top */}
+          <div style={{
+            position: 'relative',
+            zIndex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: characterData.coverPhotoUrl ? '16px' : '0'
+          }}>
+            {tokenImage && (
+              <div style={{
+                width: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
+                height: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
+                borderRadius: '50%',
+                overflow: 'hidden',
+                border: '3px solid var(--accent-gold)',
+                background: 'transparent',
+                marginBottom: '6px',
+                alignSelf: 'center'
+              }}>
+                <img
+                  src={tokenImage}
+                  alt="Token"
+                  style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                />
+              </div>
+            )}
+            <div style={{fontSize: '16px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center'}}>
+              {tokenName || 'Unknown Character'}
+            </div>
 
-          {/* Start P2P Trade Button */}
-          {characterData && !activeTrade && tokenId &&
-            characterData.claimedBy && characterData.claimedBy !== playerId && (
-            <div style={{marginTop: '8px', textAlign: 'center'}}>
-              <button
-                onClick={() => handleStartP2PTrade(tokenId)}
-                style={{
-                  background: '#4a9eff',
-                  border: 'none',
-                  color: 'white',
-                  padding: '8px 16px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: 'bold'
-                }}
-              >
-                TRADE WITH PLAYER
-              </button>
-            </div>
-          )}
+            {/* Start P2P Trade Button */}
+            {characterData && !activeTrade && tokenId &&
+              characterData.claimedBy && characterData.claimedBy !== playerId && (
+              <div style={{marginTop: '8px', textAlign: 'center'}}>
+                <button
+                  onClick={() => handleStartP2PTrade(tokenId)}
+                  style={{
+                    background: '#4a9eff',
+                    border: 'none',
+                    color: 'white',
+                    padding: '8px 16px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    fontWeight: 'bold'
+                  }}
+                >
+                  TRADE WITH PLAYER
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -287,6 +327,60 @@ export function HomeTab({
                 >
                   Reset to Default
                 </button>
+              </div>
+
+              {/* Cover Photo URL */}
+              <div style={{marginBottom: '12px', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '6px', border: '1px solid var(--glass-border)'}}>
+                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase', marginBottom: '8px'}}>🖼️ Cover Photo</label>
+                <input
+                  type="text"
+                  value={characterData.coverPhotoUrl || ''}
+                  onChange={(e) => updateData({ coverPhotoUrl: e.target.value || undefined })}
+                  placeholder="Paste image URL here..."
+                  className="search-input"
+                  style={{marginTop: 0, marginBottom: '8px'}}
+                />
+                {characterData.coverPhotoUrl && (
+                  <>
+                    {/* Preview */}
+                    <div style={{
+                      width: '100%',
+                      height: '80px',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      marginBottom: '8px',
+                      border: '1px solid var(--glass-border)'
+                    }}>
+                      <img
+                        src={characterData.coverPhotoUrl}
+                        alt="Cover preview"
+                        style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    {/* Remove button */}
+                    <button
+                      onClick={() => updateData({ coverPhotoUrl: undefined })}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        background: 'rgba(255,0,0,0.1)',
+                        border: '1px solid rgba(255,0,0,0.3)',
+                        borderRadius: '4px',
+                        color: '#f66',
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.2)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.1)'}
+                    >
+                      Remove Cover Photo
+                    </button>
+                  </>
+                )}
               </div>
             </>
           )}

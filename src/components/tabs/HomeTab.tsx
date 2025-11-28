@@ -60,6 +60,7 @@ interface HomeTabProps {
   activeStorageDef: StorageDef | null;
   hasClaimedToken?: boolean;
   showCoverPhoto?: boolean;
+  showTokenProfile?: boolean;
 }
 
 export function HomeTab({
@@ -88,7 +89,8 @@ export function HomeTab({
   currentDisplayData,
   activeStorageDef,
   hasClaimedToken,
-  showCoverPhoto = true
+  showCoverPhoto = true,
+  showTokenProfile = true
 }: HomeTabProps) {
   return (
     <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '8px'}}>
@@ -166,13 +168,14 @@ export function HomeTab({
       </div>
 
       {/* --- TOKEN PROFILE WITH COVER PHOTO --- */}
-      {!viewingStorageId && (
+      {!viewingStorageId && showTokenProfile && (
         <div style={{
           position: 'relative',
           overflow: 'hidden',
           borderRadius: '8px',
           marginBottom: '12px',
-          minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined
+          minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined,
+          paddingBottom: '8px'
         }}>
           {/* Cover photo as background */}
           {showCoverPhoto && characterData.coverPhotoUrl && (
@@ -207,7 +210,7 @@ export function HomeTab({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: showCoverPhoto && characterData.coverPhotoUrl ? '20px 16px 16px 16px' : '0',
+            padding: showCoverPhoto && characterData.coverPhotoUrl ? '20px 16px 16px 16px' : '8px 0',
             minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined
           }}>
             {tokenImage && (
@@ -234,7 +237,8 @@ export function HomeTab({
               fontWeight: 'bold',
               color: 'var(--text-main)',
               textAlign: 'center',
-              textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 2px 4px rgba(0,0,0,0.8)' : undefined
+              textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 2px 4px rgba(0,0,0,0.8)' : undefined,
+              paddingBottom: '4px'
             }}>
               {tokenName || 'Unknown Character'}
             </div>

@@ -850,6 +850,7 @@ export default function ExpandedInventoryWindow() {
             currentDisplayData={currentDisplayData}
             activeStorageDef={activeStorageDef}
             showCoverPhoto={false}
+            showTokenProfile={false}
           />
         )}
 

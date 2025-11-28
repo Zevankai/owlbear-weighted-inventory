@@ -7,39 +7,38 @@ export function mapItemsToTradePartners(
   currentTokenId: string,
   playerId: string
 ): TradePartner[] {
-  return items
-    .filter(item => {
-      // Skip current token
-      if (item.id === currentTokenId) return false;
+  const partners: TradePartner[] = [];
+  
+  for (const item of items) {
+    // Skip current token
+    if (item.id === currentTokenId) continue;
 
-      // Get character data from metadata
-      const data = item.metadata?.['com.weighted-inventory/data'] as CharacterData | undefined;
-      if (!data) return false;
+    // Get character data from metadata
+    const data = item.metadata?.['com.weighted-inventory/data'] as CharacterData | undefined;
+    if (!data) continue;
 
-      // Must be claimed
-      if (!data.claimedBy) return false;
+    // Must be claimed - guard ensures claimedBy is string
+    const claimedBy = data.claimedBy;
+    if (!claimedBy) continue;
 
-      return true;
-    })
-    .map(item => {
-      const data = item.metadata['com.weighted-inventory/data'] as CharacterData;
+    let ownerType: OwnerType;
+    if (claimedBy === playerId) {
+      ownerType = 'self';
+    } else if (data.packType === 'NPC') {
+      ownerType = 'npc';
+    } else {
+      // TODO: Add party token check when implemented
+      ownerType = 'other-player';
+    }
 
-      let ownerType: OwnerType;
-      if (data.claimedBy === playerId) {
-        ownerType = 'self';
-      } else if (data.packType === 'NPC') {
-        ownerType = 'npc';
-      } else {
-        // TODO: Add party token check when implemented
-        ownerType = 'other-player';
-      }
-
-      return {
-        tokenId: item.id,
-        tokenName: item.name || 'Unknown',
-        tokenImage: item.image?.url || null,
-        claimedBy: data.claimedBy!, // Non-null assertion since we filtered above
-        ownerType
-      };
+    partners.push({
+      tokenId: item.id,
+      tokenName: item.name || 'Unknown',
+      tokenImage: item.image?.url || null,
+      claimedBy,
+      ownerType
     });
+  }
+  
+  return partners;
 }

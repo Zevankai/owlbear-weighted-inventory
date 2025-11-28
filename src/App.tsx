@@ -22,6 +22,7 @@ import { ReputationTab } from './components/tabs/ReputationTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { ToggleButtons } from './components/ToggleButtons';
+import { SettingsPanel } from './components/SettingsPanel';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -194,8 +195,8 @@ function App() {
 
   const [newVaultName, setNewVaultName] = useState('');
 
-  // Debug state
-  const [showDebug, setShowDebug] = useState(false);
+  // Settings state (replaces debug-only state)
+  const [showSettings, setShowSettings] = useState(false);
   const [debugInfo, setDebugInfo] = useState<any>(null);
 
   // Edit item state
@@ -1191,7 +1192,7 @@ function App() {
           <HomeTab
             stats={stats}
             viewingStorageId={viewingStorageId}
-            setShowDebug={setShowDebug}
+            setShowSettings={setShowSettings}
             loadDebugInfo={loadDebugInfo}
             characterData={characterData}
             playerRole={playerRole}
@@ -1211,8 +1212,6 @@ function App() {
             handleStartP2PTrade={handleStartP2PTrade}
             updateData={updateData}
             PACK_DEFINITIONS={PACK_DEFINITIONS}
-            theme={theme}
-            updateTheme={updateTheme}
             currentDisplayData={currentDisplayData}
             activeStorageDef={activeStorageDef}
             hasClaimedToken={!!playerClaimedTokenId}
@@ -2040,138 +2039,19 @@ function App() {
 
       {/* Trade Modal - Now handled in separate window (see TradeWindow.tsx) */}
 
-      {/* Debug Panel Modal */}
-      {showDebug && (
-        <>
-          {/* Backdrop */}
-          <div
-            onClick={() => setShowDebug(false)}
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              background: 'rgba(0,0,0,0.5)',
-              zIndex: 9998
-            }}
-          />
-          {/* Panel */}
-          <div style={{
-            position: 'fixed',
-            top: '50%',
-            left: '50%',
-            transform: 'translate(-50%, -50%)',
-            zIndex: 9999,
-            background: 'rgba(0,0,0,0.95)',
-            border: '2px solid #ff6b6b',
-            borderRadius: '8px',
-            padding: '12px',
-            width: 'min(500px, 90vw)',
-            height: 'min(600px, 80vh)',
-            display: 'flex',
-            flexDirection: 'column',
-            fontSize: '11px',
-            color: 'white'
-          }}>
-            <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '12px', alignItems: 'center', flexShrink: 0}}>
-              <strong style={{color: '#ff6b6b'}}>Storage Debug</strong>
-              <button
-                onClick={() => setShowDebug(false)}
-                style={{
-                  background: '#333',
-                  color: 'white',
-                  border: 'none',
-                  padding: '2px 8px',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  fontSize: '10px'
-                }}
-              >
-                CLOSE
-              </button>
-            </div>
-
-            <div style={{flex: 1, overflowY: 'auto'}}>
-            {debugInfo && (
-              <>
-                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
-                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>✨ Current Token Storage:</div>
-                  {tokenId ? (
-                    <>
-                      <div style={{fontSize: '14px', fontWeight: 'bold', color: debugInfo.tokenDataSize > 15000 ? '#ff6b6b' : '#51cf66'}}>
-                        {debugInfo.tokenDataSize} bytes / 16384 bytes
-                      </div>
-                      <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
-                        {((debugInfo.tokenDataSize / 16384) * 100).toFixed(1)}% used (this token only)
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{color: '#aaa', fontSize: '10px'}}>No token selected</div>
-                  )}
-                </div>
-
-                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
-                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Room Metadata (shared):</div>
-                  <div style={{fontSize: '12px', color: debugInfo.roomSize > 15000 ? '#ff6b6b' : '#51cf66'}}>
-                    {debugInfo.roomSize} bytes / 16384 bytes
-                  </div>
-                  <div style={{fontSize: '10px', color: '#aaa', marginTop: '2px'}}>
-                    Used by all extensions ({debugInfo.roomKeys.length} keys)
-                  </div>
-                </div>
-
-                <div style={{marginBottom: '8px', padding: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px'}}>
-                  <div style={{color: '#4dabf7', marginBottom: '4px'}}>Legacy Data:</div>
-                  {(debugInfo.hasLegacyRoomData || debugInfo.hasLegacyNameKeys) ? (
-                    <>
-                      <div style={{color: '#ff6b6b', fontWeight: 'bold'}}>
-                        ⚠️ FOUND {debugInfo.hasLegacyNameKeys ? `(${debugInfo.legacyNameKeys.length} old keys)` : ''}
-                      </div>
-                      <button
-                        onClick={cleanupLegacyData}
-                        style={{
-                          background: '#ff6b6b',
-                          color: 'white',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          fontWeight: 'bold',
-                          marginTop: '6px',
-                          width: '100%'
-                        }}
-                      >
-                        CLEANUP LEGACY DATA
-                      </button>
-                    </>
-                  ) : (
-                    <div style={{color: '#51cf66'}}>✓ Clean (using token storage)</div>
-                  )}
-                </div>
-
-                <button
-                  onClick={loadDebugInfo}
-                  style={{
-                    background: '#333',
-                    color: 'white',
-                    border: 'none',
-                    padding: '6px 12px',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    fontSize: '11px',
-                    width: '100%'
-                  }}
-                >
-                  REFRESH
-                </button>
-              </>
-            )}
-            </div>
-          </div>
-        </>
-      )}
+      {/* Settings Panel */}
+      <SettingsPanel
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        theme={theme}
+        updateTheme={updateTheme}
+        characterData={characterData}
+        updateData={updateData}
+        debugInfo={debugInfo}
+        loadDebugInfo={loadDebugInfo}
+        cleanupLegacyData={cleanupLegacyData}
+        tokenId={tokenId}
+      />
     </div>
   );
 }

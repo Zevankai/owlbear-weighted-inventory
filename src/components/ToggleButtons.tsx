@@ -11,7 +11,7 @@ export function ToggleButtons({
   onTextModeToggle,
   onWidthToggle,
   canExpand = true,
-  expandDisabledReason
+  expandDisabledReason = 'Cannot expand'
 }: ToggleButtonsProps) {
   return (
     <div style={{
@@ -60,7 +60,7 @@ export function ToggleButtons({
           transition: 'all 0.2s',
           opacity: canExpand ? 1 : 0.6
         }}
-        title={canExpand ? 'Open Expanded Inventory Window' : (expandDisabledReason || 'Cannot expand')}
+        title={canExpand ? 'Open Expanded Inventory Window' : expandDisabledReason}
       >
         ⛶
       </button>

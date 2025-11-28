@@ -114,7 +114,8 @@ function App() {
   const getExpandDisabledReason = () => {
     if (!characterData) return 'No token selected';
     if (!characterData.claimedBy) return 'Claim this token first to expand';
-    return 'You must claim this token to expand its inventory';
+    if (characterData.claimedBy !== playerId) return 'This token is claimed by another player';
+    return '';
   };
 
   // Load all claimed tokens when viewing favorites

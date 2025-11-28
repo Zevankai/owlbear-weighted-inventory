@@ -56,6 +56,14 @@ export function useInventory() {
   const [playerClaimedTokenId, setPlayerClaimedTokenId] = useState<string | null>(null);
   const [playerClaimedTokenInfo, setPlayerClaimedTokenInfo] = useState<{name: string; image?: string} | null>(null);
 
+  // Helper to ensure tokenType exists (migration for existing tokens)
+  const ensureTokenType = (data: CharacterData): CharacterData => {
+    if (!data.tokenType) {
+      return { ...data, tokenType: 'player' };
+    }
+    return data;
+  };
+
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
     const name = token.name || 'Unnamed';
@@ -114,17 +122,17 @@ export function useInventory() {
     const finalData = data || DEFAULT_CHARACTER_DATA;
     
     // Migration: ensure tokenType exists (default to 'player' for existing tokens)
-    if (!finalData.tokenType) {
-      finalData.tokenType = 'player';
+    const migratedData = ensureTokenType(finalData);
+    if (migratedData !== finalData) {
       console.log('[Migration] Added default tokenType "player" to token data');
     }
     
-    setCharacterData(finalData);
+    setCharacterData(migratedData);
 
     // Load theme from token data (per-token theme, not per-player)
-    if (finalData.theme) {
-      setTheme(finalData.theme);
-      console.log('[Theme] Loaded token theme:', finalData.theme);
+    if (migratedData.theme) {
+      setTheme(migratedData.theme);
+      console.log('[Theme] Loaded token theme:', migratedData.theme);
     } else {
       setTheme(DEFAULT_THEME);
       console.log('[Theme] Using default theme for this token');
@@ -198,10 +206,7 @@ export function useInventory() {
         const newData = updatedToken.metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
         if (newData) {
           // Migration: ensure tokenType exists for synced data
-          if (!newData.tokenType) {
-            newData.tokenType = 'player';
-          }
-          setCharacterData(newData);
+          setCharacterData(ensureTokenType(newData));
         }
       }
     });

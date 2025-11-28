@@ -844,7 +844,6 @@ export default function ExpandedInventoryWindow() {
             claimToken={async () => false}
             unclaimToken={() => {}}
             handleUpdateData={handleUpdateData}
-            handleStartP2PTrade={() => {}}
             updateData={updateData}
             PACK_DEFINITIONS={PACK_DEFINITIONS}
             currentDisplayData={currentDisplayData}

@@ -23,6 +23,9 @@ import { ReputationTab } from './components/tabs/ReputationTab';
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { ToggleButtons } from './components/ToggleButtons';
 import { SettingsPanel } from './components/SettingsPanel';
+import { TradePartnerModal } from './components/TradePartnerModal';
+import type { TradePartner } from './components/TradePartnerModal';
+import { mapItemsToTradePartners } from './utils/tradePartners';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -207,6 +210,11 @@ function App() {
   const tradeWindowOpenedForIdRef = useRef<string | null>(null);
   const [showTradeRequest, setShowTradeRequest] = useState(false);
   const [pendingTradeRequest, setPendingTradeRequest] = useState<ActiveTrade | null>(null);
+
+  // Trade partner modal state
+  const [showTradePartnerModal, setShowTradePartnerModal] = useState(false);
+  const [tradePartners, setTradePartners] = useState<TradePartner[]>([]);
+  const [loadingTradePartners, setLoadingTradePartners] = useState(false);
 
   // Open separate trade window - defined early to be available in useEffect
   const openTradeWindow = (tradeId: string) => {
@@ -1131,6 +1139,110 @@ function App() {
 
   // Trade offer management and execution now handled in TradeWindow.tsx
 
+  // Open trade partner modal and fetch nearby trade partners
+  const handleOpenTradePartnerModal = async () => {
+    // Check if current player has a claimed token
+    if (!playerClaimedTokenId || !playerId) {
+      alert('You must claim a token before you can trade! Find your character token and click "CLAIM TOKEN".');
+      return;
+    }
+
+    // Check if a trade is already active
+    if (activeTrade) {
+      alert('A trade is already in progress!');
+      return;
+    }
+
+    setShowTradePartnerModal(true);
+    setLoadingTradePartners(true);
+    setTradePartners([]);
+
+    try {
+      // Get all items from the scene
+      const items = await OBR.scene.items.getItems();
+
+      // Map items to trade partners
+      const allPartners = mapItemsToTradePartners(
+        items.map(item => ({
+          id: item.id,
+          name: item.name,
+          metadata: item.metadata,
+          image: (item as { image?: { url: string } }).image
+        })),
+        playerClaimedTokenId,
+        playerId
+      );
+
+      // Filter to nearby partners only
+      const nearbyPartners: TradePartner[] = [];
+      for (const partner of allPartners) {
+        const isNear = await checkProximity(playerClaimedTokenId, partner.tokenId);
+        if (isNear) {
+          nearbyPartners.push(partner);
+        }
+      }
+
+      setTradePartners(nearbyPartners);
+    } catch (err) {
+      console.error('Failed to load trade partners:', err);
+    } finally {
+      setLoadingTradePartners(false);
+    }
+  };
+
+  // Handle partner selection from the modal
+  const handlePartnerSelected = async (partner: TradePartner) => {
+    setShowTradePartnerModal(false);
+
+    if (partner.ownerType === 'self') {
+      // Instant trade - open trade window directly for trading between own tokens
+      await handleStartDirectTrade(partner.tokenId);
+    } else {
+      // Send trade request for other players and NPCs
+      await handleStartP2PTrade(partner.tokenId);
+    }
+  };
+
+  // Direct trade between player's own tokens (no request needed)
+  const handleStartDirectTrade = async (otherTokenId: string) => {
+    if (!playerClaimedTokenId || !playerId) return;
+
+    // Get both tokens' info
+    const tokens = await OBR.scene.items.getItems([playerClaimedTokenId, otherTokenId]);
+    const playerToken = tokens.find(t => t.id === playerClaimedTokenId);
+    const otherToken = tokens.find(t => t.id === otherTokenId);
+
+    if (!playerToken || !otherToken) {
+      alert('Could not find the tokens for trade.');
+      return;
+    }
+
+    const playerTokenName = playerToken.name || 'Unknown';
+    const otherTokenName = otherToken.name || 'Unknown';
+
+    // Start trade with 'active' status immediately (no acceptance needed)
+    const trade: ActiveTrade = {
+      id: uuidv4(),
+      status: 'active',
+      player1TokenId: playerClaimedTokenId,
+      player1Id: playerId,
+      player1Name: playerTokenName,
+      player2TokenId: otherTokenId,
+      player2Id: playerId,  // Same player owns both tokens
+      player2Name: otherTokenName,
+      player1OfferedItems: [],
+      player1OfferedCoins: { cp: 0, sp: 0, gp: 0, pp: 0 },
+      player2OfferedItems: [],
+      player2OfferedCoins: { cp: 0, sp: 0, gp: 0, pp: 0 },
+      player1Confirmed: false,
+      player2Confirmed: false,
+      timestamp: Date.now()
+    };
+
+    await OBR.room.setMetadata({ [ACTIVE_TRADE_KEY]: trade });
+    // The existing useEffect will detect the active trade and open the trade window
+  };
+
   const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
     { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
     { id: 'Create', label: 'CREATE' },
@@ -1209,7 +1321,7 @@ function App() {
             claimToken={claimToken}
             unclaimToken={unclaimToken}
             handleUpdateData={handleUpdateData}
-            handleStartP2PTrade={handleStartP2PTrade}
+            onOpenTradePartnerModal={handleOpenTradePartnerModal}
             updateData={updateData}
             PACK_DEFINITIONS={PACK_DEFINITIONS}
             currentDisplayData={currentDisplayData}
@@ -2027,6 +2139,15 @@ function App() {
         onWidthToggle={toggleWidth}
         canExpand={canExpandToken()}
         expandDisabledReason={getExpandDisabledReason()}
+      />
+
+      {/* Trade Partner Modal */}
+      <TradePartnerModal
+        isOpen={showTradePartnerModal}
+        onClose={() => setShowTradePartnerModal(false)}
+        onSelectPartner={handlePartnerSelected}
+        partners={tradePartners}
+        loading={loadingTradePartners}
       />
 
       {/* Trade Request Notification */}

@@ -53,7 +53,7 @@ interface HomeTabProps {
   claimToken: () => Promise<boolean | undefined>;
   unclaimToken: () => void;
   handleUpdateData: (updates: Partial<CharacterData>) => void;
-  handleStartP2PTrade: (tokenId: string) => void;
+  onOpenTradePartnerModal?: () => void;
   updateData: (updates: Partial<CharacterData>) => void;
   PACK_DEFINITIONS: Record<string, { capacity: number; utilitySlots: number }>;
   currentDisplayData: CharacterData;
@@ -83,7 +83,7 @@ export function HomeTab({
   claimToken,
   unclaimToken,
   handleUpdateData,
-  handleStartP2PTrade,
+  onOpenTradePartnerModal,
   updateData,
   PACK_DEFINITIONS,
   currentDisplayData,
@@ -245,10 +245,10 @@ export function HomeTab({
 
             {/* Start P2P Trade Button */}
             {characterData && !activeTrade && tokenId &&
-              characterData.claimedBy && (
+              characterData.claimedBy && onOpenTradePartnerModal && (
               <div style={{marginTop: '8px', textAlign: 'center'}}>
                 <button
-                  onClick={() => handleStartP2PTrade(tokenId)}
+                  onClick={onOpenTradePartnerModal}
                   style={{
                     background: '#4a9eff',
                     border: 'none',

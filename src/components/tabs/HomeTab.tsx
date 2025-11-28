@@ -176,7 +176,8 @@ export function HomeTab({
           position: 'relative',
           overflow: 'hidden',
           borderRadius: '8px',
-          marginBottom: '12px'
+          marginBottom: '12px',
+          minHeight: characterData.coverPhotoUrl ? '180px' : undefined
         }}>
           {/* Cover photo as background */}
           {characterData.coverPhotoUrl && (
@@ -189,7 +190,7 @@ export function HomeTab({
               backgroundImage: `url(${characterData.coverPhotoUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              opacity: 0.4,
+              opacity: 0.7,
             }} />
           )}
           {/* Gradient overlay for readability */}
@@ -200,7 +201,7 @@ export function HomeTab({
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.7) 100%)',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%)',
             }} />
           )}
           {/* Token image and info on top */}
@@ -210,7 +211,7 @@ export function HomeTab({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: characterData.coverPhotoUrl ? '16px' : '0'
+            padding: characterData.coverPhotoUrl ? '24px 16px' : '0'
           }}>
             {tokenImage && (
               <div style={{

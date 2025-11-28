@@ -750,7 +750,7 @@ export default function ExpandedInventoryWindow() {
             backgroundImage: `url(${characterData.coverPhotoUrl})`,
             backgroundSize: 'cover',
             backgroundPosition: 'center',
-            opacity: 0.3,
+            opacity: 0.6,
           }} />
         )}
         {/* Gradient overlay for readability */}
@@ -761,7 +761,7 @@ export default function ExpandedInventoryWindow() {
             left: 0,
             right: 0,
             bottom: 0,
-            background: 'linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.8) 100%)',
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%)',
           }} />
         )}
         {/* Header content on top */}
@@ -771,14 +771,14 @@ export default function ExpandedInventoryWindow() {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          padding: characterData.coverPhotoUrl && !viewingStorageId ? '20px 16px' : '12px 16px',
+          padding: characterData.coverPhotoUrl && !viewingStorageId ? '30px 16px' : '12px 16px',
           background: characterData.coverPhotoUrl && !viewingStorageId ? 'transparent' : 'rgba(0,0,0,0.3)'
         }}>
           <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
             {tokenImage && (
               <div style={{
-                width: characterData.coverPhotoUrl && !viewingStorageId ? '50px' : '40px',
-                height: characterData.coverPhotoUrl && !viewingStorageId ? '50px' : '40px',
+                width: characterData.coverPhotoUrl && !viewingStorageId ? '75px' : '40px',
+                height: characterData.coverPhotoUrl && !viewingStorageId ? '75px' : '40px',
                 borderRadius: '50%',
                 overflow: 'hidden',
                 border: '2px solid var(--accent-gold)'

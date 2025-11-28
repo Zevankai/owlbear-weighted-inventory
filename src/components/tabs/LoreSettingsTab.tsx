@@ -1,6 +1,9 @@
 import type { CharacterData, LoreType, LoreTabConfig } from '../../types';
 import { LORE_TAB_DEFINITIONS, LORE_PRESETS, LORE_TYPE_LABELS, generateLoreSettingsFromPreset } from '../../constants/lore';
 
+// Order offset for disabled tabs - places them after all enabled tabs
+const DISABLED_TAB_ORDER_OFFSET = 100;
+
 interface LoreSettingsTabProps {
   characterData: CharacterData;
   updateData: (updates: Partial<CharacterData>) => void;
@@ -28,7 +31,7 @@ export function LoreSettingsTab({ characterData, updateData }: LoreSettingsTabPr
     const updatedTabs = loreSettings.tabs.map((tab, index) => ({
       ...tab,
       enabled: presetTabs.includes(tab.tabId),
-      order: presetTabs.includes(tab.tabId) ? presetTabs.indexOf(tab.tabId) : index + 100,
+      order: presetTabs.includes(tab.tabId) ? presetTabs.indexOf(tab.tabId) : index + DISABLED_TAB_ORDER_OFFSET,
     }));
 
     updateData({

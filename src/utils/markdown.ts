@@ -24,8 +24,8 @@ export function parseMarkdown(text: string): string {
   // Bold: **text** -> <strong>text</strong>
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 
-  // Italic: *text* -> <em>text</em>
-  html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  // Italic: *text* -> <em>text</em> (avoid matching asterisks inside <strong> tags)
+  html = html.replace(/(?<!\*)\*([^*]+?)\*(?!\*)/g, '<em>$1</em>');
 
   // Underline: __text__ -> <u>text</u>
   html = html.replace(/__(.+?)__/g, '<u>$1</u>');
@@ -73,7 +73,7 @@ export function parseMarkdown(text: string): string {
         processedLines.push('</ol>');
         inOrderedList = false;
       }
-      // Convert newlines to <br> for non-list lines
+      // Non-list line - just add it (newlines handled after loop)
       processedLines.push(line);
     }
   }

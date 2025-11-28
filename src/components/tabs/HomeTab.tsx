@@ -387,80 +387,114 @@ export function HomeTab({
       {/* Token Claiming - at the bottom of the dashboard */}
       {!viewingStorageId && characterData && (
         <div style={{marginTop: 'auto', paddingTop: '12px', borderTop: '1px solid var(--glass-border)', display: 'flex', flexDirection: 'column', gap: '6px', alignItems: 'center'}}>
-          {characterData.claimedBy && (
-            <div style={{fontSize: '10px', color: '#aaa'}}>
-              {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}
+          
+          {/* NPC Token - GM controlled */}
+          {characterData.tokenType === 'npc' && (
+            <div style={{fontSize: '10px', color: '#ff9800', fontStyle: 'italic'}}>
+              🎭 NPC Token {playerRole === 'GM' ? '(You control this)' : '(GM controlled)'}
             </div>
           )}
-          {!characterData.claimedBy && (
+
+          {/* Party Token - Shared access */}
+          {characterData.tokenType === 'party' && (
+            <div style={{fontSize: '10px', color: '#4caf50', fontStyle: 'italic'}}>
+              👥 Party Token (shared by all players)
+            </div>
+          )}
+
+          {/* Lore Token - View only for players */}
+          {characterData.tokenType === 'lore' && playerRole !== 'GM' && (
+            <div style={{fontSize: '10px', color: '#9c27b0', fontStyle: 'italic'}}>
+              📜 Lore Token (view only)
+            </div>
+          )}
+
+          {/* Lore Token - GM message */}
+          {characterData.tokenType === 'lore' && playerRole === 'GM' && (
+            <div style={{fontSize: '10px', color: '#9c27b0', fontStyle: 'italic'}}>
+              📜 Lore Token (You control this)
+            </div>
+          )}
+
+          {/* Standard player token claiming - only show for player-type tokens */}
+          {(characterData.tokenType === 'player' || !characterData.tokenType) && (
             <>
-              {/* Show claiming status */}
-              {!characterData.claimingEnabled && playerRole !== 'GM' && (
-                <div style={{fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
-                  🔒 Claiming disabled (GM must enable)
+              {characterData.claimedBy && (
+                <div style={{fontSize: '10px', color: '#aaa'}}>
+                  {characterData.claimedBy === playerId ? 'You claimed this token' : 'Claimed by another player'}
                 </div>
               )}
-              {/* Claim button */}
-              {canEditToken() && (
+              {!characterData.claimedBy && (
+                <>
+                  {/* Show claiming status */}
+                  {!characterData.claimingEnabled && playerRole !== 'GM' && (
+                    <div style={{fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
+                      🔒 Claiming disabled (GM must enable)
+                    </div>
+                  )}
+                  {/* Claim button */}
+                  {canEditToken() && (
+                    <button
+                      onClick={async () => {
+                        const success = await claimToken();
+                        if (success === false) {
+                          alert('Claiming is not enabled for this token. Ask the GM to enable claiming first.');
+                        }
+                      }}
+                      style={{
+                        background: characterData.claimingEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(128,128,128,0.1)',
+                        border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
+                        color: characterData.claimingEnabled ? '#0f0' : '#888',
+                        padding: '6px 16px',
+                        borderRadius: '4px',
+                        cursor: characterData.claimingEnabled ? 'pointer' : 'not-allowed',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        opacity: characterData.claimingEnabled ? 1 : 0.5
+                      }}
+                    >
+                      CLAIM TOKEN
+                    </button>
+                  )}
+                </>
+              )}
+              {characterData.claimedBy === playerId && (
                 <button
-                  onClick={async () => {
-                    const success = await claimToken();
-                    if (success === false) {
-                      alert('Claiming is not enabled for this token. Ask the GM to enable claiming first.');
-                    }
-                  }}
+                  onClick={unclaimToken}
                   style={{
-                    background: characterData.claimingEnabled ? 'rgba(0,255,0,0.1)' : 'rgba(128,128,128,0.1)',
+                    background: 'rgba(255,0,0,0.1)',
+                    border: '1px solid #f00',
+                    color: '#f00',
+                    padding: '6px 16px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '11px'
+                  }}
+                >
+                  UNCLAIM TOKEN
+                </button>
+              )}
+
+              {/* GM Token Controls - only for player type tokens */}
+              {playerRole === 'GM' && (
+                <button
+                  onClick={() => handleUpdateData({ claimingEnabled: !characterData.claimingEnabled })}
+                  style={{
+                    background: characterData.claimingEnabled ? 'rgba(0,255,0,0.2)' : 'rgba(128,128,128,0.2)',
                     border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
                     color: characterData.claimingEnabled ? '#0f0' : '#888',
                     padding: '6px 16px',
                     borderRadius: '4px',
-                    cursor: characterData.claimingEnabled ? 'pointer' : 'not-allowed',
+                    cursor: 'pointer',
                     fontSize: '11px',
                     fontWeight: 'bold',
-                    opacity: characterData.claimingEnabled ? 1 : 0.5
+                    width: '220px'
                   }}
                 >
-                  CLAIM TOKEN
+                  {characterData.claimingEnabled ? '🔓 CLAIMING ENABLED' : '🔒 CLAIMING DISABLED'}
                 </button>
               )}
             </>
-          )}
-          {characterData.claimedBy === playerId && (
-            <button
-              onClick={unclaimToken}
-              style={{
-                background: 'rgba(255,0,0,0.1)',
-                border: '1px solid #f00',
-                color: '#f00',
-                padding: '6px 16px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px'
-              }}
-            >
-              UNCLAIM TOKEN
-            </button>
-          )}
-
-          {/* GM Token Controls */}
-          {playerRole === 'GM' && (
-            <button
-              onClick={() => handleUpdateData({ claimingEnabled: !characterData.claimingEnabled })}
-              style={{
-                background: characterData.claimingEnabled ? 'rgba(0,255,0,0.2)' : 'rgba(128,128,128,0.2)',
-                border: '1px solid ' + (characterData.claimingEnabled ? '#0f0' : '#888'),
-                color: characterData.claimingEnabled ? '#0f0' : '#888',
-                padding: '6px 16px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px',
-                fontWeight: 'bold',
-                width: '220px'
-              }}
-            >
-              {characterData.claimingEnabled ? '🔓 CLAIMING ENABLED' : '🔒 CLAIMING DISABLED'}
-            </button>
           )}
         </div>
       )}

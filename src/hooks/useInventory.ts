@@ -441,10 +441,17 @@ export function useInventory() {
     // GM can always edit
     if (playerRole === 'GM') return true;
 
-    // If token is unclaimed, anyone can edit
-    if (!characterData.claimedBy) return true;
+    // NPC tokens: GM only (players cannot edit)
+    if (characterData.tokenType === 'npc') return false;
 
-    // If claimed, only the claiming player can edit
+    // Party tokens: everyone can edit
+    if (characterData.tokenType === 'party') return true;
+
+    // Lore tokens: GM only (players can view but not edit)
+    if (characterData.tokenType === 'lore') return false;
+
+    // Player tokens (default): must be claimed by this player, or unclaimed
+    if (!characterData.claimedBy) return true;
     return characterData.claimedBy === playerId;
   }, [characterData, playerId, playerRole]);
 

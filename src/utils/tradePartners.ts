@@ -5,7 +5,8 @@ import type { TradePartner, OwnerType } from '../components/TradePartnerModal';
 export function mapItemsToTradePartners(
   items: Array<{ id: string; name: string; metadata: Record<string, unknown>; image?: { url: string } }>,
   currentTokenId: string,
-  playerId: string
+  playerId: string,
+  playerRole: 'GM' | 'PLAYER' = 'PLAYER'
 ): TradePartner[] {
   const partners: TradePartner[] = [];
   
@@ -17,7 +18,29 @@ export function mapItemsToTradePartners(
     const data = item.metadata?.['com.weighted-inventory/data'] as CharacterData | undefined;
     if (!data) continue;
 
-    // Must be claimed - guard ensures claimedBy is string
+    const tokenType = data.tokenType || 'player';
+    
+    // Handle different token types for trade partner visibility
+    
+    // NPC tokens: Only show as partners to GM
+    if (tokenType === 'npc' && playerRole !== 'GM') continue;
+
+    // Lore tokens: Cannot be traded with
+    if (tokenType === 'lore') continue;
+
+    // Party tokens: Show as partners to everyone (no claimedBy check needed)
+    if (tokenType === 'party') {
+      partners.push({
+        tokenId: item.id,
+        tokenName: item.name || 'Unknown',
+        tokenImage: item.image?.url || null,
+        claimedBy: 'party',  // Special marker for party tokens
+        ownerType: 'party' as OwnerType
+      });
+      continue;
+    }
+
+    // Player tokens: Must be claimed
     const claimedBy = data.claimedBy;
     if (!claimedBy) continue;
 
@@ -27,7 +50,6 @@ export function mapItemsToTradePartners(
     } else if (data.packType === 'NPC') {
       ownerType = 'npc';
     } else {
-      // TODO: Add party token check when implemented
       ownerType = 'other-player';
     }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface DebouncedInputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange' | 'value'> {
   value: string;
@@ -13,6 +13,12 @@ export const DebouncedInput: React.FC<DebouncedInputProps> = ({
   ...props
 }) => {
   const [localValue, setLocalValue] = useState(value);
+  const onChangeRef = useRef(onChange);
+  
+  // Keep ref updated with latest onChange
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   // Sync from parent when external value changes
   useEffect(() => {
@@ -23,12 +29,12 @@ export const DebouncedInput: React.FC<DebouncedInputProps> = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (localValue !== value) {
-        onChange(localValue);
+        onChangeRef.current(localValue);
       }
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [localValue, debounceMs, onChange, value]);
+  }, [localValue, debounceMs, value]);
 
   return (
     <input
@@ -52,6 +58,12 @@ export const DebouncedTextarea: React.FC<DebouncedTextareaProps> = ({
   ...props
 }) => {
   const [localValue, setLocalValue] = useState(value);
+  const onChangeRef = useRef(onChange);
+  
+  // Keep ref updated with latest onChange
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   // Sync from parent when external value changes
   useEffect(() => {
@@ -62,12 +74,12 @@ export const DebouncedTextarea: React.FC<DebouncedTextareaProps> = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       if (localValue !== value) {
-        onChange(localValue);
+        onChangeRef.current(localValue);
       }
     }, debounceMs);
 
     return () => clearTimeout(timer);
-  }, [localValue, debounceMs, onChange, value]);
+  }, [localValue, debounceMs, value]);
 
   return (
     <textarea

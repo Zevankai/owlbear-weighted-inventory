@@ -31,6 +31,7 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { TradePartnerModal } from './components/TradePartnerModal';
 import type { TradePartner } from './components/TradePartnerModal';
 import { mapItemsToTradePartners } from './utils/tradePartners';
+import { DebouncedInput, DebouncedTextarea } from './components/DebouncedInput';
 
 // Token type group labels for favorites display
 const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
@@ -1545,11 +1546,11 @@ function App() {
                                                 <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px'}}>
                                                     <div>
                                                         <label style={{display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '3px'}}>Name</label>
-                                                        <input className="search-input" style={{marginTop: 0}} value={item.name} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, name: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                        <DebouncedInput className="search-input" style={{marginTop: 0}} value={item.name} onChange={(val) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, name: val} : i); handleUpdateData({inventory: newInv}); }} />
                                                     </div>
                                                     <div>
                                                         <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Type</label>
-                                                        <input className="search-input" style={{marginTop: 0}} value={item.type} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, type: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                        <DebouncedInput className="search-input" style={{marginTop: 0}} value={item.type} onChange={(val) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, type: val} : i); handleUpdateData({inventory: newInv}); }} />
                                                     </div>
                                                     <div>
                                                         <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Weight</label>
@@ -1557,21 +1558,21 @@ function App() {
                                                     </div>
                                                     <div>
                                                         <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Value</label>
-                                                        <input className="search-input" style={{marginTop: 0}} value={item.value} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, value: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                        <DebouncedInput className="search-input" style={{marginTop: 0}} value={item.value} onChange={(val) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, value: val} : i); handleUpdateData({inventory: newInv}); }} />
                                                     </div>
                                                     {(item.category?.includes('Weapon') || item.category === 'Shield') && (
                                                         <>
                                                             <div>
                                                                 <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Damage</label>
-                                                                <input className="search-input" style={{marginTop: 0}} value={item.damage || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, damage: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                                                <DebouncedInput className="search-input" style={{marginTop: 0}} value={item.damage || ''} onChange={(val) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, damage: val} : i); handleUpdateData({inventory: newInv}); }} />
                                                             </div>
                                                             <div>
                                                                 <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Hit Modifier</label>
-                                                                <input className="search-input" style={{marginTop: 0}} value={item.hitModifier || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, hitModifier: e.target.value} : i); handleUpdateData({inventory: newInv}); }} placeholder="+0" />
+                                                                <DebouncedInput className="search-input" style={{marginTop: 0}} value={item.hitModifier || ''} onChange={(val) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, hitModifier: val} : i); handleUpdateData({inventory: newInv}); }} placeholder="+0" />
                                                             </div>
                                                             <div>
                                                                 <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Damage Modifier</label>
-                                                                <input className="search-input" style={{marginTop: 0}} value={item.damageModifier || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, damageModifier: e.target.value} : i); handleUpdateData({inventory: newInv}); }} placeholder="+0" />
+                                                                <DebouncedInput className="search-input" style={{marginTop: 0}} value={item.damageModifier || ''} onChange={(val) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, damageModifier: val} : i); handleUpdateData({inventory: newInv}); }} placeholder="+0" />
                                                             </div>
                                                         </>
                                                     )}
@@ -1583,16 +1584,13 @@ function App() {
                                                     )}
                                                     <div style={{gridColumn: 'span 2'}}>
                                                         <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Properties / Notes</label>
-                                                        <textarea
+                                                        <DebouncedTextarea
                                                             className="search-input"
                                                             style={{marginTop: 0, minHeight: '60px', resize: 'vertical'}}
                                                             value={item.properties || ''}
-                                                            onChange={(e) => {
-                                                                const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, properties: e.target.value} : i);
+                                                            onChange={(val) => {
+                                                                const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, properties: val} : i);
                                                                 handleUpdateData({inventory: newInv});
-                                                                // Auto-resize
-                                                                e.target.style.height = 'auto';
-                                                                e.target.style.height = e.target.scrollHeight + 'px';
                                                             }}
                                                         />
                                                     </div>

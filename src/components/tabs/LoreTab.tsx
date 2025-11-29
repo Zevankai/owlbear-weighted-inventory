@@ -342,6 +342,8 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
   const [editingEntry, setEditingEntry] = useState<LoreEntry | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
+  // Track which image entries have failed to load
+  const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
 
   const isGM = playerRole === 'GM';
   const tabDef = LORE_TAB_DEFINITIONS[tabConfig.tabId];
@@ -532,7 +534,7 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
               fontWeight: 'bold',
             }}
           >
-            + Add Entry
+            {tabConfig.tabId === 'images' ? '+ Add Image' : '+ Add Entry'}
           </button>
         )}
       </div>
@@ -545,7 +547,229 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
           color: 'var(--text-muted, #888)',
           fontStyle: 'italic',
         }}>
-          {isGM ? 'No entries yet. Click "+ Add Entry" to create one.' : 'No information available.'}
+          {isGM ? (tabConfig.tabId === 'images' ? 'No images yet. Click "+ Add Image" to add one.' : 'No entries yet. Click "+ Add Entry" to create one.') : 'No information available.'}
+        </div>
+      ) : tabConfig.tabId === 'images' ? (
+        /* === IMAGES GALLERY VIEW === */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gap: '12px',
+        }}>
+          {sortedEntries.map((entry, index) => (
+            <div
+              key={entry.id}
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: `1px solid ${entry.visibleToPlayers ? `${tabStyle.accentColor}40` : 'rgba(255, 100, 100, 0.3)'}`,
+                borderRadius: '8px',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              {/* Hidden indicator for GM */}
+              {isGM && !entry.visibleToPlayers && (
+                <div style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '4px',
+                  background: 'rgba(255, 0, 0, 0.8)',
+                  color: 'white',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  fontSize: '9px',
+                  fontWeight: 'bold',
+                  zIndex: 1,
+                }}>
+                  HIDDEN
+                </div>
+              )}
+              
+              {/* Image */}
+              <div style={{
+                width: '100%',
+                aspectRatio: '16/10',
+                background: 'rgba(0, 0, 0, 0.3)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+              }}>
+                {entry.imageUrl && !failedImageIds.has(entry.id) ? (
+                  <img
+                    src={entry.imageUrl}
+                    alt={entry.caption || entry.title}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      cursor: 'pointer',
+                    }}
+                    onClick={() => setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
+                    onError={() => {
+                      setFailedImageIds(prev => new Set(prev).add(entry.id));
+                    }}
+                  />
+                ) : (
+                  <span style={{ color: '#888', fontSize: '11px' }}>
+                    {entry.imageUrl ? 'Image failed to load' : 'No image URL'}
+                  </span>
+                )}
+              </div>
+              
+              {/* Caption */}
+              <div style={{
+                padding: '8px',
+                borderTop: `1px solid ${tabStyle.accentColor}20`,
+              }}>
+                <div style={{
+                  fontSize: '11px',
+                  color: 'var(--text-main, #fff)',
+                  marginBottom: isGM ? '8px' : '0',
+                }}>
+                  {entry.caption || entry.title || 'Untitled'}
+                </div>
+                
+                {/* GM Actions */}
+                {isGM && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '4px',
+                    flexWrap: 'wrap',
+                  }}>
+                    <button
+                      onClick={() => handleToggleVisibility(entry.id)}
+                      style={{
+                        background: entry.visibleToPlayers ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                        border: `1px solid ${entry.visibleToPlayers ? '#0f0' : '#f00'}`,
+                        color: entry.visibleToPlayers ? '#0f0' : '#f00',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title={entry.visibleToPlayers ? 'Hide from players' : 'Show to players'}
+                    >
+                      {entry.visibleToPlayers ? '👁' : '🔒'}
+                    </button>
+                    <button
+                      onClick={() => handleEditEntry(entry)}
+                      style={{
+                        background: '#333',
+                        border: 'none',
+                        color: '#888',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Edit"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleMoveEntry(entry.id, 'up')}
+                      disabled={index === 0}
+                      style={{
+                        background: '#333',
+                        border: 'none',
+                        color: index === 0 ? '#555' : '#888',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: index === 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Move left"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={() => handleMoveEntry(entry.id, 'down')}
+                      disabled={index === sortedEntries.length - 1}
+                      style={{
+                        background: '#333',
+                        border: 'none',
+                        color: index === sortedEntries.length - 1 ? '#555' : '#888',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: index === sortedEntries.length - 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Move right"
+                    >
+                      →
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEntry(entry.id)}
+                      style={{
+                        background: 'rgba(255, 0, 0, 0.1)',
+                        border: '1px solid #f00',
+                        color: '#f00',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Expanded Image View (Lightbox) */}
+              {expandedEntryId === entry.id && entry.imageUrl && (
+                <div
+                  onClick={() => setExpandedEntryId(null)}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.9)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    cursor: 'pointer',
+                    padding: '20px',
+                  }}
+                >
+                  <img
+                    src={entry.imageUrl}
+                    alt={entry.caption || entry.title}
+                    style={{
+                      maxWidth: '90%',
+                      maxHeight: '80%',
+                      objectFit: 'contain',
+                      borderRadius: '8px',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  {(entry.caption || entry.title) && (
+                    <div style={{
+                      marginTop: '12px',
+                      color: 'var(--text-main, #fff)',
+                      fontSize: '14px',
+                      textAlign: 'center',
+                    }}>
+                      {entry.caption || entry.title}
+                    </div>
+                  )}
+                  <div style={{
+                    marginTop: '12px',
+                    color: 'var(--text-muted, #888)',
+                    fontSize: '11px',
+                  }}>
+                    Click anywhere to close
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

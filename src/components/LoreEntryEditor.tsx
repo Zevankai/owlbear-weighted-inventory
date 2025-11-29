@@ -31,7 +31,7 @@ const TAB_FIELD_CONFIG: Record<LoreTabId, string[]> = {
   goals: ['progress', 'priority'],
   resources: [],
   relationships: ['relationship'],
-  images: [],
+  images: ['imageUrl', 'caption'],
   notes: [],
 };
 
@@ -58,6 +58,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
   const [rank, setRank] = useState(entry?.rank || '');
   const [progress, setProgress] = useState(entry?.progress ?? 0);
   const [priority, setPriority] = useState<LoreEntry['priority']>(entry?.priority);
+  
+  // Images tab fields
+  const [imageUrl, setImageUrl] = useState(entry?.imageUrl || '');
+  const [caption, setCaption] = useState(entry?.caption || '');
 
   const showField = (fieldName: string) => {
     if (!tabId) return false;
@@ -65,11 +69,17 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
   };
 
   const handleSave = () => {
-    if (!title.trim()) return;
+    // For images tab, require imageUrl instead of title
+    const isImagesTab = tabId === 'images';
+    if (isImagesTab) {
+      if (!imageUrl.trim()) return;
+    } else {
+      if (!title.trim()) return;
+    }
 
     const savedEntry: LoreEntry = {
       id: entry?.id || uuidv4(),
-      title: title.trim(),
+      title: isImagesTab ? (caption || 'Image') : title.trim(),
       content: content,
       visibleToPlayers,
       createdAt: entry?.createdAt || new Date().toISOString(),
@@ -91,6 +101,8 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
       ...(showField('rank') && rank ? { rank } : {}),
       ...(showField('progress') ? { progress } : {}),
       ...(showField('priority') && priority ? { priority } : {}),
+      ...(showField('imageUrl') && imageUrl ? { imageUrl } : {}),
+      ...(showField('caption') && caption ? { caption } : {}),
     };
 
     onSave(savedEntry);
@@ -149,27 +161,105 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
           </button>
         </div>
 
-        {/* Title Input */}
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '11px',
-            color: 'var(--text-muted, #888)',
-            marginBottom: '4px',
-            textTransform: 'uppercase',
-          }}>
-            Title
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="search-input"
-            placeholder="Entry title..."
-            style={{ width: '100%', boxSizing: 'border-box' }}
-            autoFocus
-          />
-        </div>
+        {/* Title Input - Hidden for images tab */}
+        {tabId !== 'images' && (
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              color: 'var(--text-muted, #888)',
+              marginBottom: '4px',
+              textTransform: 'uppercase',
+            }}>
+              Title
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className="search-input"
+              placeholder="Entry title..."
+              style={{ width: '100%', boxSizing: 'border-box' }}
+              autoFocus
+            />
+          </div>
+        )}
+
+        {/* === IMAGES TAB FIELDS === */}
+        
+        {/* Images: Image URL */}
+        {showField('imageUrl') && (
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              color: '#9c27b0',
+              marginBottom: '4px',
+              textTransform: 'uppercase',
+            }}>
+              🖼️ Image URL *
+            </label>
+            <input
+              type="text"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              className="search-input"
+              placeholder="https://example.com/image.jpg"
+              style={{ width: '100%', boxSizing: 'border-box' }}
+              autoFocus
+            />
+            {/* Image Preview */}
+            {imageUrl && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px',
+                background: 'rgba(0, 0, 0, 0.2)',
+                borderRadius: '4px',
+                textAlign: 'center',
+              }}>
+                <img
+                  src={imageUrl}
+                  alt="Preview"
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '200px',
+                    borderRadius: '4px',
+                    objectFit: 'contain',
+                  }}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                  onLoad={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'block';
+                  }}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Images: Caption */}
+        {showField('caption') && (
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              color: '#9c27b0',
+              marginBottom: '4px',
+              textTransform: 'uppercase',
+            }}>
+              Caption (optional)
+            </label>
+            <input
+              type="text"
+              value={caption}
+              onChange={(e) => setCaption(e.target.value)}
+              className="search-input"
+              placeholder="Image caption or description..."
+              style={{ width: '100%', boxSizing: 'border-box' }}
+            />
+          </div>
+        )}
 
         {/* === SPECIALIZED FIELDS === */}
         
@@ -556,38 +646,40 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
           </div>
         )}
 
-        {/* Content Textarea */}
-        <div style={{ marginBottom: '12px' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '11px',
-            color: 'var(--text-muted, #888)',
-            marginBottom: '4px',
-            textTransform: 'uppercase',
-          }}>
-            Content
-          </label>
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="search-input"
-            placeholder="Enter content here... (Supports basic markdown: **bold**, *italic*, __underline__, ~~strikethrough~~, - lists)"
-            rows={8}
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              resize: 'vertical',
-              minHeight: '120px',
-            }}
-          />
-          <div style={{
-            fontSize: '9px',
-            color: 'var(--text-muted, #888)',
-            marginTop: '4px',
-          }}>
-            Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, - bullet lists, 1. numbered lists
+        {/* Content Textarea - Optional for images tab */}
+        {tabId !== 'images' && (
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              color: 'var(--text-muted, #888)',
+              marginBottom: '4px',
+              textTransform: 'uppercase',
+            }}>
+              Content
+            </label>
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="search-input"
+              placeholder="Enter content here... (Supports basic markdown: **bold**, *italic*, __underline__, ~~strikethrough~~, - lists)"
+              rows={8}
+              style={{
+                width: '100%',
+                boxSizing: 'border-box',
+                resize: 'vertical',
+                minHeight: '120px',
+              }}
+            />
+            <div style={{
+              fontSize: '9px',
+              color: 'var(--text-muted, #888)',
+              marginTop: '4px',
+            }}>
+              Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, - bullet lists, 1. numbered lists
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Visibility Checkbox */}
         <div style={{ marginBottom: '16px' }}>
@@ -630,14 +722,14 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
           </button>
           <button
             onClick={handleSave}
-            disabled={!title.trim()}
+            disabled={tabId === 'images' ? !imageUrl.trim() : !title.trim()}
             style={{
-              background: title.trim() ? 'var(--accent-gold, #f0e130)' : '#555',
+              background: (tabId === 'images' ? imageUrl.trim() : title.trim()) ? 'var(--accent-gold, #f0e130)' : '#555',
               border: 'none',
-              color: title.trim() ? 'black' : '#888',
+              color: (tabId === 'images' ? imageUrl.trim() : title.trim()) ? 'black' : '#888',
               padding: '8px 16px',
               borderRadius: '4px',
-              cursor: title.trim() ? 'pointer' : 'not-allowed',
+              cursor: (tabId === 'images' ? imageUrl.trim() : title.trim()) ? 'pointer' : 'not-allowed',
               fontSize: '12px',
               fontWeight: 'bold',
             }}

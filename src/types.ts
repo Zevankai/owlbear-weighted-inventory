@@ -18,8 +18,8 @@ export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Cre
 export type LoreTabId = 
   | 'overview' | 'history' | 'rumors' | 'quests' | 'people' 
   | 'government' | 'geography' | 'economy' | 'culture' | 'dangers'
-  | 'services' | 'menu' | 'secrets' | 'properties' | 'legends'
-  | 'members' | 'goals' | 'resources' | 'relationships' | 'images' | 'notes';
+  | 'menu' | 'secrets' | 'properties' | 'legends'
+  | 'members' | 'goals' | 'resources' | 'images' | 'notes';
 
 export type LoreType = 'town' | 'dungeon' | 'tavern' | 'shop' | 'item' | 'faction' | 'region' | 'custom';
 
@@ -82,6 +82,7 @@ export interface LoreTabConfig {
 export interface LoreSettings {
   loreType: LoreType;
   tabs: LoreTabConfig[];
+  allowPlayerEditing?: boolean;  // When true, players can add/edit entries in visible tabs (default: false)
 }
 
 export type PackType =
@@ -186,4 +187,5 @@ export interface CharacterData {
   loreContent?: string;   // Main lore text for lore tokens
   gmNotes?: string;       // GM-only notes (hidden from players)
   loreSettings?: LoreSettings;  // Lore system settings (only for tokenType === 'lore')
+  name?: string;  // Custom display name (overrides token name, GM-editable for lore tokens)
 }

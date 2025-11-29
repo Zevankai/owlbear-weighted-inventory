@@ -12,7 +12,6 @@ export const LORE_TAB_DEFINITIONS: Record<LoreTabId, { label: string; descriptio
   economy: { label: 'Economy', description: 'Trade goods, currency, merchants' },
   culture: { label: 'Culture', description: 'Customs, religions, festivals' },
   dangers: { label: 'Dangers', description: 'Monsters, hazards, hostile factions' },
-  services: { label: 'Services', description: "What's available here" },
   menu: { label: 'Menu', description: 'What they sell/offer (shops, taverns)' },
   secrets: { label: 'Secrets', description: 'Hidden info (often GM-only)' },
   properties: { label: 'Properties', description: 'Stats, abilities (for items)' },
@@ -20,7 +19,6 @@ export const LORE_TAB_DEFINITIONS: Record<LoreTabId, { label: string; descriptio
   members: { label: 'Members', description: 'Key figures, ranks (factions)' },
   goals: { label: 'Goals', description: 'Objectives, motivations' },
   resources: { label: 'Resources', description: 'What they control' },
-  relationships: { label: 'Relationships', description: 'Allies, enemies' },
   images: { label: 'Images', description: 'Gallery of image links' },
   notes: { label: 'Notes', description: 'General notes' },
 };
@@ -29,18 +27,18 @@ export const LORE_TAB_DEFINITIONS: Record<LoreTabId, { label: string; descriptio
 export const ALL_LORE_TAB_IDS: LoreTabId[] = [
   'overview', 'history', 'rumors', 'quests', 'people',
   'government', 'geography', 'economy', 'culture', 'dangers',
-  'services', 'menu', 'secrets', 'properties', 'legends',
-  'members', 'goals', 'resources', 'relationships', 'images', 'notes'
+  'menu', 'secrets', 'properties', 'legends',
+  'members', 'goals', 'resources', 'images', 'notes'
 ];
 
 // Presets for quick setup
 export const LORE_PRESETS: Record<LoreType, LoreTabId[]> = {
-  town: ['overview', 'history', 'people', 'government', 'rumors', 'quests', 'economy', 'services'],
+  town: ['overview', 'history', 'people', 'government', 'rumors', 'quests', 'economy'],
   dungeon: ['overview', 'history', 'dangers', 'secrets', 'rumors', 'legends'],
-  tavern: ['overview', 'people', 'rumors', 'menu', 'services', 'secrets'],
-  shop: ['overview', 'people', 'menu', 'services'],
+  tavern: ['overview', 'people', 'rumors', 'menu', 'secrets'],
+  shop: ['overview', 'people', 'menu'],
   item: ['overview', 'history', 'properties', 'legends', 'secrets'],
-  faction: ['overview', 'history', 'members', 'goals', 'resources', 'relationships'],
+  faction: ['overview', 'history', 'members', 'goals', 'resources'],
   region: ['overview', 'history', 'geography', 'culture', 'government', 'economy', 'dangers'],
   custom: ['overview'],
 };

@@ -23,7 +23,6 @@ const TAB_FIELD_CONFIG: Record<LoreTabId, string[]> = {
   economy: [],
   culture: [],
   dangers: ['threatLevel'],
-  services: ['price', 'availability'],
   menu: ['price', 'quantity', 'availability'],
   secrets: ['isRevealed'],
   properties: [],
@@ -31,7 +30,6 @@ const TAB_FIELD_CONFIG: Record<LoreTabId, string[]> = {
   members: ['rank'],
   goals: ['progress', 'priority'],
   resources: [],
-  relationships: ['relationship'],
   images: ['imageUrl', 'caption'],
   notes: [],
 };
@@ -663,7 +661,7 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
               value={content}
               onChange={(val) => setContent(val)}
               className="search-input"
-              placeholder="Enter content here... (Supports basic markdown: **bold**, *italic*, __underline__, ~~strikethrough~~, - lists)"
+              placeholder="Enter content here... (Supports basic markdown: **bold**, *italic*, __underline__, ~~strikethrough~~, [link](url), - lists)"
               rows={8}
               style={{
                 width: '100%',
@@ -677,7 +675,7 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
               color: 'var(--text-muted, #888)',
               marginTop: '4px',
             }}>
-              Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, - bullet lists, 1. numbered lists
+              Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [link text](url), - bullet lists, 1. numbered lists
             </div>
           </div>
         )}

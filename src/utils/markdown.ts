@@ -1,6 +1,6 @@
 /**
  * Simple markdown parser for lore content
- * Supports basic formatting: bold, italic, underline, strikethrough, and lists
+ * Supports basic formatting: bold, italic, underline, strikethrough, links, and lists
  */
 
 /**
@@ -20,6 +20,10 @@ export function parseMarkdown(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+
+  // Links: [text](url) -> <a href="url" target="_blank" rel="noopener noreferrer">text</a>
+  // Must be done before other replacements to avoid conflicts
+  html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
   // Bold: **text** -> <strong>text</strong>
   html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -101,6 +105,9 @@ export function stripMarkdown(text: string): string {
   if (!text) return '';
 
   let result = text;
+
+  // Remove links - keep the text, remove the URL
+  result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
 
   // Remove bold markers
   result = result.replace(/\*\*(.+?)\*\*/g, '$1');

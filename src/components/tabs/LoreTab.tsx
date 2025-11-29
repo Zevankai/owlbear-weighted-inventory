@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { LoreEntry, LoreTabConfig, LoreTabId } from '../../types';
+import type { LoreEntry, LoreTabConfig, LoreTabId, LoreSettings } from '../../types';
 import { LORE_TAB_DEFINITIONS } from '../../constants/lore';
 import { LoreEntryEditor } from '../LoreEntryEditor';
 import { parseMarkdown } from '../../utils/markdown';
@@ -20,7 +20,6 @@ const TAB_STYLES: Record<LoreTabId, {
   economy: { accentColor: '#ffc107', icon: '💰' },
   culture: { accentColor: '#e91e63', icon: '🎭' },
   dangers: { accentColor: '#f44336', icon: '⚠️' },
-  services: { accentColor: '#00bcd4', icon: '🛠️' },
   menu: { accentColor: '#8bc34a', icon: '📋' },
   secrets: { accentColor: '#9e9e9e', icon: '🔒' },
   properties: { accentColor: '#3f51b5', icon: '📊' },
@@ -28,7 +27,6 @@ const TAB_STYLES: Record<LoreTabId, {
   members: { accentColor: '#009688', icon: '👥' },
   goals: { accentColor: '#cddc39', icon: '🎯' },
   resources: { accentColor: '#ffeb3b', icon: '📦' },
-  relationships: { accentColor: '#03a9f4', icon: '🤝' },
   images: { accentColor: '#9c27b0', icon: '🖼️' },
   notes: { accentColor: '#607d8b', icon: '📝' },
 };
@@ -37,6 +35,7 @@ interface LoreTabProps {
   tabConfig: LoreTabConfig;
   playerRole: string;
   onUpdateEntries: (tabId: LoreTabId, entries: LoreEntry[]) => void;
+  loreSettings?: LoreSettings;
 }
 
 // Specialized field renderers for different tab types
@@ -287,28 +286,6 @@ function GoalsFields({ entry }: { entry: LoreEntry }) {
   );
 }
 
-function RelationshipsFields({ entry }: { entry: LoreEntry }) {
-  const relationshipColors: Record<string, string> = {
-    ally: '#4caf50',
-    neutral: '#9e9e9e',
-    enemy: '#f44336',
-    unknown: '#607d8b',
-  };
-  
-  if (!entry.relationship) return null;
-  return (
-    <span style={{
-      fontSize: '10px',
-      padding: '2px 6px',
-      borderRadius: '3px',
-      background: `${relationshipColors[entry.relationship]}20`,
-      color: relationshipColors[entry.relationship],
-    }}>
-      {entry.relationship === 'ally' ? '💚' : entry.relationship === 'enemy' ? '💔' : '💛'} {entry.relationship.toUpperCase()}
-    </span>
-  );
-}
-
 // Render specialized fields based on tab type
 function SpecializedFields({ tabId, entry, isGM }: { tabId: LoreTabId; entry: LoreEntry; isGM: boolean }) {
   switch (tabId) {
@@ -322,7 +299,6 @@ function SpecializedFields({ tabId, entry, isGM }: { tabId: LoreTabId; entry: Lo
       return <HistoryFields entry={entry} />;
     case 'dangers':
       return <DangersFields entry={entry} />;
-    case 'services':
     case 'menu':
       return <ServiceMenuFields entry={entry} />;
     case 'secrets':
@@ -331,14 +307,12 @@ function SpecializedFields({ tabId, entry, isGM }: { tabId: LoreTabId; entry: Lo
       return <MembersFields entry={entry} />;
     case 'goals':
       return <GoalsFields entry={entry} />;
-    case 'relationships':
-      return <RelationshipsFields entry={entry} />;
     default:
       return null;
   }
 }
 
-export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps) {
+export function LoreTab({ tabConfig, playerRole, onUpdateEntries, loreSettings }: LoreTabProps) {
   const [editingEntry, setEditingEntry] = useState<LoreEntry | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [expandedEntryId, setExpandedEntryId] = useState<string | null>(null);
@@ -346,6 +320,8 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
   const [failedImageIds, setFailedImageIds] = useState<Set<string>>(new Set());
 
   const isGM = playerRole === 'GM';
+  // Determine if user can edit: GM always can, players can if allowPlayerEditing is enabled
+  const canEdit = isGM || (loreSettings?.allowPlayerEditing ?? false);
   const tabDef = LORE_TAB_DEFINITIONS[tabConfig.tabId];
   const tabStyle = TAB_STYLES[tabConfig.tabId] || TAB_STYLES.notes;
 
@@ -482,7 +458,7 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
           {entry.title}
         </span>
         {/* Show inline specialized fields for certain types */}
-        {['dangers', 'secrets', 'members', 'relationships'].includes(tabConfig.tabId) && (
+        {['dangers', 'secrets', 'members'].includes(tabConfig.tabId) && (
           <SpecializedFields tabId={tabConfig.tabId} entry={entry} isGM={isGM} />
         )}
       </div>
@@ -520,7 +496,7 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
             {tabDef?.description}
           </div>
         </div>
-        {isGM && (
+        {canEdit && (
           <button
             onClick={handleAddEntry}
             style={{
@@ -630,28 +606,31 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
                   {entry.caption || entry.title || 'Untitled'}
                 </div>
                 
-                {/* GM Actions */}
-                {isGM && (
+                {/* Actions - GM gets visibility toggle, canEdit gets edit/delete */}
+                {canEdit && (
                   <div style={{
                     display: 'flex',
                     gap: '4px',
                     flexWrap: 'wrap',
                   }}>
-                    <button
-                      onClick={() => handleToggleVisibility(entry.id)}
-                      style={{
-                        background: entry.visibleToPlayers ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
-                        border: `1px solid ${entry.visibleToPlayers ? '#0f0' : '#f00'}`,
-                        color: entry.visibleToPlayers ? '#0f0' : '#f00',
-                        padding: '2px 6px',
-                        borderRadius: '3px',
-                        cursor: 'pointer',
-                        fontSize: '9px',
-                      }}
-                      title={entry.visibleToPlayers ? 'Hide from players' : 'Show to players'}
-                    >
-                      {entry.visibleToPlayers ? '👁' : '🔒'}
-                    </button>
+                    {/* Visibility toggle - GM only */}
+                    {isGM && (
+                      <button
+                        onClick={() => handleToggleVisibility(entry.id)}
+                        style={{
+                          background: entry.visibleToPlayers ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                          border: `1px solid ${entry.visibleToPlayers ? '#0f0' : '#f00'}`,
+                          color: entry.visibleToPlayers ? '#0f0' : '#f00',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '9px',
+                        }}
+                        title={entry.visibleToPlayers ? 'Hide from players' : 'Show to players'}
+                      >
+                        {entry.visibleToPlayers ? '👁' : '🔒'}
+                      </button>
+                    )}
                     <button
                       onClick={() => handleEditEntry(entry)}
                       style={{
@@ -771,6 +750,311 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
             </div>
           ))}
         </div>
+      ) : tabConfig.tabId === 'people' ? (
+        /* === PEOPLE CARD VIEW === */
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+          gap: '16px',
+        }}>
+          {sortedEntries.map((entry, index) => (
+            <div
+              key={entry.id}
+              style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: `1px solid ${entry.visibleToPlayers ? `${tabStyle.accentColor}40` : 'rgba(255, 100, 100, 0.3)'}`,
+                borderRadius: '8px',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              {/* Hidden indicator for GM */}
+              {isGM && !entry.visibleToPlayers && (
+                <div style={{
+                  position: 'absolute',
+                  top: '4px',
+                  right: '4px',
+                  background: 'rgba(255, 0, 0, 0.8)',
+                  color: 'white',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  fontSize: '9px',
+                  fontWeight: 'bold',
+                  zIndex: 1,
+                }}>
+                  HIDDEN
+                </div>
+              )}
+              
+              {/* Portrait Image - Large */}
+              <div 
+                onClick={() => entry.portraitUrl && setExpandedEntryId(expandedEntryId === entry.id ? null : entry.id)}
+                style={{
+                  width: '100%',
+                  height: '150px',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden',
+                  cursor: entry.portraitUrl ? 'pointer' : 'default',
+                }}
+              >
+                {entry.portraitUrl ? (
+                  <img
+                    src={entry.portraitUrl}
+                    alt={entry.title}
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                    }}
+                  />
+                ) : (
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: `${tabStyle.accentColor}30`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '32px',
+                  }}>
+                    👤
+                  </div>
+                )}
+              </div>
+              
+              {/* Person Info */}
+              <div style={{
+                padding: '12px',
+                borderTop: `1px solid ${tabStyle.accentColor}20`,
+              }}>
+                <div style={{
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  color: 'var(--text-main, #fff)',
+                  marginBottom: '4px',
+                }}>
+                  {entry.title}
+                </div>
+                
+                {entry.role && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: tabStyle.accentColor,
+                    fontStyle: 'italic',
+                    marginBottom: '4px',
+                  }}>
+                    {entry.role}
+                  </div>
+                )}
+                
+                {entry.relationship && (
+                  <span style={{
+                    fontSize: '10px',
+                    padding: '2px 6px',
+                    borderRadius: '3px',
+                    background: entry.relationship === 'ally' ? 'rgba(76, 175, 80, 0.2)' :
+                               entry.relationship === 'enemy' ? 'rgba(244, 67, 54, 0.2)' :
+                               entry.relationship === 'neutral' ? 'rgba(158, 158, 158, 0.2)' :
+                               'rgba(96, 125, 139, 0.2)',
+                    color: entry.relationship === 'ally' ? '#4caf50' :
+                           entry.relationship === 'enemy' ? '#f44336' :
+                           entry.relationship === 'neutral' ? '#9e9e9e' :
+                           '#607d8b',
+                  }}>
+                    {entry.relationship.toUpperCase()}
+                  </span>
+                )}
+                
+                {/* Content preview (if exists) */}
+                {entry.content && (
+                  <div style={{
+                    fontSize: '11px',
+                    color: 'var(--text-muted, #888)',
+                    marginTop: '8px',
+                    lineHeight: '1.4',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    display: '-webkit-box',
+                    WebkitLineClamp: 2,
+                    WebkitBoxOrient: 'vertical',
+                  }}>
+                    {entry.content.substring(0, 100)}{entry.content.length > 100 ? '...' : ''}
+                  </div>
+                )}
+                
+                {/* Actions - GM gets visibility toggle, canEdit gets edit/delete */}
+                {canEdit && (
+                  <div style={{
+                    display: 'flex',
+                    gap: '4px',
+                    flexWrap: 'wrap',
+                    marginTop: '10px',
+                    paddingTop: '10px',
+                    borderTop: `1px dashed ${tabStyle.accentColor}30`,
+                  }}>
+                    {/* Visibility toggle - GM only */}
+                    {isGM && (
+                      <button
+                        onClick={() => handleToggleVisibility(entry.id)}
+                        style={{
+                          background: entry.visibleToPlayers ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                          border: `1px solid ${entry.visibleToPlayers ? '#0f0' : '#f00'}`,
+                          color: entry.visibleToPlayers ? '#0f0' : '#f00',
+                          padding: '2px 6px',
+                          borderRadius: '3px',
+                          cursor: 'pointer',
+                          fontSize: '9px',
+                        }}
+                        title={entry.visibleToPlayers ? 'Hide from players' : 'Show to players'}
+                      >
+                        {entry.visibleToPlayers ? '👁' : '🔒'}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleEditEntry(entry)}
+                      style={{
+                        background: '#333',
+                        border: 'none',
+                        color: '#888',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Edit"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleMoveEntry(entry.id, 'up')}
+                      disabled={index === 0}
+                      style={{
+                        background: '#333',
+                        border: 'none',
+                        color: index === 0 ? '#555' : '#888',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: index === 0 ? 'not-allowed' : 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Move left"
+                    >
+                      ←
+                    </button>
+                    <button
+                      onClick={() => handleMoveEntry(entry.id, 'down')}
+                      disabled={index === sortedEntries.length - 1}
+                      style={{
+                        background: '#333',
+                        border: 'none',
+                        color: index === sortedEntries.length - 1 ? '#555' : '#888',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: index === sortedEntries.length - 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Move right"
+                    >
+                      →
+                    </button>
+                    <button
+                      onClick={() => handleDeleteEntry(entry.id)}
+                      style={{
+                        background: 'rgba(255, 0, 0, 0.1)',
+                        border: '1px solid #f00',
+                        color: '#f00',
+                        padding: '2px 6px',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '9px',
+                      }}
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {/* Expanded View (Lightbox) for portrait */}
+              {expandedEntryId === entry.id && entry.portraitUrl && (
+                <div
+                  onClick={() => setExpandedEntryId(null)}
+                  style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0, 0, 0, 0.9)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    cursor: 'pointer',
+                    padding: '20px',
+                  }}
+                >
+                  <img
+                    src={entry.portraitUrl}
+                    alt={entry.title}
+                    style={{
+                      maxWidth: '90%',
+                      maxHeight: '70%',
+                      objectFit: 'contain',
+                      borderRadius: '8px',
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <div style={{
+                    marginTop: '12px',
+                    color: 'var(--text-main, #fff)',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                  }}>
+                    {entry.title}
+                  </div>
+                  {entry.role && (
+                    <div style={{
+                      marginTop: '4px',
+                      color: tabStyle.accentColor,
+                      fontSize: '14px',
+                      fontStyle: 'italic',
+                    }}>
+                      {entry.role}
+                    </div>
+                  )}
+                  {entry.content && (
+                    <div 
+                      style={{
+                        marginTop: '12px',
+                        color: 'var(--text-main, #fff)',
+                        fontSize: '13px',
+                        lineHeight: '1.6',
+                        maxWidth: '600px',
+                        textAlign: 'center',
+                      }}
+                      dangerouslySetInnerHTML={{ __html: parseMarkdown(entry.content) }}
+                    />
+                  )}
+                  <div style={{
+                    marginTop: '16px',
+                    color: 'var(--text-muted, #888)',
+                    fontSize: '11px',
+                  }}>
+                    Click anywhere to close
+                  </div>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
           {sortedEntries.map((entry, index) => (
@@ -828,7 +1112,7 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
                   padding: '12px',
                 }}>
                   {/* Specialized fields at top (for certain tabs) */}
-                  {['quests', 'history', 'services', 'menu', 'goals'].includes(tabConfig.tabId) && (
+                  {['quests', 'history', 'menu', 'goals'].includes(tabConfig.tabId) && (
                     <div style={{ marginBottom: '8px' }}>
                       <SpecializedFields tabId={tabConfig.tabId} entry={entry} isGM={isGM} />
                     </div>
@@ -848,8 +1132,8 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
                   {/* Attribution for rumors */}
                   {tabConfig.tabId === 'rumors' && <RumorFields entry={entry} />}
 
-                  {/* GM Actions */}
-                  {isGM && (
+                  {/* Actions - GM gets visibility toggle, canEdit gets edit/delete */}
+                  {canEdit && (
                     <div style={{
                       display: 'flex',
                       gap: '6px',
@@ -858,20 +1142,23 @@ export function LoreTab({ tabConfig, playerRole, onUpdateEntries }: LoreTabProps
                       borderTop: `1px dashed ${tabStyle.accentColor}40`,
                       flexWrap: 'wrap',
                     }}>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleToggleVisibility(entry.id); }}
-                        style={{
-                          background: entry.visibleToPlayers ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
-                          border: `1px solid ${entry.visibleToPlayers ? '#0f0' : '#f00'}`,
-                          color: entry.visibleToPlayers ? '#0f0' : '#f00',
-                          padding: '4px 8px',
-                          borderRadius: '3px',
-                          cursor: 'pointer',
-                          fontSize: '10px',
-                        }}
-                      >
-                        {entry.visibleToPlayers ? '👁 Visible' : '🚫 Hidden'}
-                      </button>
+                      {/* Visibility toggle - GM only */}
+                      {isGM && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleToggleVisibility(entry.id); }}
+                          style={{
+                            background: entry.visibleToPlayers ? 'rgba(0, 255, 0, 0.1)' : 'rgba(255, 0, 0, 0.1)',
+                            border: `1px solid ${entry.visibleToPlayers ? '#0f0' : '#f00'}`,
+                            color: entry.visibleToPlayers ? '#0f0' : '#f00',
+                            padding: '4px 8px',
+                            borderRadius: '3px',
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                          }}
+                        >
+                          {entry.visibleToPlayers ? '👁 Visible' : '🚫 Hidden'}
+                        </button>
+                      )}
                       <button
                         onClick={(e) => { e.stopPropagation(); handleEditEntry(entry); }}
                         style={{

@@ -2272,6 +2272,7 @@ function App() {
                 tabConfig={tabConfig}
                 playerRole={playerRole}
                 onUpdateEntries={handleUpdateLoreEntries}
+                loreSettings={characterData.loreSettings}
               />
             );
           })()

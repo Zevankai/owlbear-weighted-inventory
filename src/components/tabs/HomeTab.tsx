@@ -1,6 +1,6 @@
 import type { CharacterData, PackType, ActiveTrade } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
-import { DebouncedTextarea } from '../DebouncedInput';
+import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '160px';
@@ -241,16 +241,39 @@ export function HomeTab({
                 />
               </div>
             )}
-            <div style={{
-              fontSize: '16px',
-              fontWeight: 'bold',
-              color: 'var(--text-main)',
-              textAlign: 'center',
-              textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 2px 4px rgba(0,0,0,0.8)' : undefined,
-              paddingBottom: '4px'
-            }}>
-              {tokenName || 'Unknown Character'}
-            </div>
+            {/* Token Name - GM can edit for lore tokens */}
+            {playerRole === 'GM' && characterData.tokenType === 'lore' ? (
+              <DebouncedInput
+                value={characterData.name || tokenName || ''}
+                onChange={(val) => updateData({ name: val })}
+                className="search-input"
+                placeholder="Enter token name..."
+                style={{
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  color: 'var(--text-main)',
+                  textAlign: 'center',
+                  textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 2px 4px rgba(0,0,0,0.8)' : undefined,
+                  background: 'transparent',
+                  border: '1px dashed var(--accent-gold)',
+                  borderRadius: '4px',
+                  padding: '4px 8px',
+                  width: '80%',
+                  maxWidth: '300px',
+                }}
+              />
+            ) : (
+              <div style={{
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: 'var(--text-main)',
+                textAlign: 'center',
+                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 2px 4px rgba(0,0,0,0.8)' : undefined,
+                paddingBottom: '4px'
+              }}>
+                {characterData.name || tokenName || 'Unknown Character'}
+              </div>
+            )}
 
             {/* Token Type Badge - only show for non-player tokens */}
             {characterData.tokenType && characterData.tokenType !== 'player' && (

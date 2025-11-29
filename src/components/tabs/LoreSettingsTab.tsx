@@ -174,6 +174,45 @@ export function LoreSettingsTab({ characterData, updateData }: LoreSettingsTabPr
         </div>
       </div>
 
+      {/* Allow Player Editing Toggle */}
+      <div style={{
+        marginBottom: '20px',
+        padding: '12px',
+        background: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '6px',
+        border: '1px solid var(--glass-border)',
+      }}>
+        <label style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          cursor: 'pointer',
+          fontSize: '13px',
+          color: 'var(--text-main, #fff)',
+        }}>
+          <input
+            type="checkbox"
+            checked={loreSettings.allowPlayerEditing ?? false}
+            onChange={(e) => updateData({
+              loreSettings: {
+                ...loreSettings,
+                allowPlayerEditing: e.target.checked,
+              },
+            })}
+            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+          />
+          Allow players to add/edit entries
+        </label>
+        <p style={{
+          margin: '8px 0 0 26px',
+          fontSize: '10px',
+          color: 'var(--text-muted, #888)',
+          fontStyle: 'italic',
+        }}>
+          When enabled, players can add and edit entries in visible tabs. Players can <strong>never</strong> access this settings tab.
+        </p>
+      </div>
+
       {/* Tab Configuration Table */}
       <div style={{ marginBottom: '12px' }}>
         <label style={{

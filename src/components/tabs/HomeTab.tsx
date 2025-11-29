@@ -1,5 +1,6 @@
 import type { CharacterData, PackType, ActiveTrade } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
+import { DebouncedTextarea } from '../DebouncedInput';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '160px';
@@ -301,11 +302,11 @@ export function HomeTab({
               📜 Lore Content
             </label>
             {/* Uses condition as fallback for backward compatibility with existing lore tokens that may have content stored in condition field */}
-            <textarea
+            <DebouncedTextarea
               value={characterData.loreContent || characterData.condition || ''}
-              onChange={(e) => {
+              onChange={(val) => {
                 if (playerRole === 'GM') {
-                  updateData({ loreContent: e.target.value });
+                  updateData({ loreContent: val });
                 }
               }}
               className="search-input"
@@ -331,9 +332,9 @@ export function HomeTab({
               <label style={{display:'block', fontSize:'10px', color:'var(--accent-gold)', textTransform:'uppercase', fontWeight: 'bold', marginBottom: '6px'}}>
                 🔒 GM Notes (hidden from players)
               </label>
-              <textarea
+              <DebouncedTextarea
                 value={characterData.gmNotes || ''}
-                onChange={(e) => updateData({ gmNotes: e.target.value })}
+                onChange={(val) => updateData({ gmNotes: val })}
                 className="search-input"
                 rows={4}
                 placeholder="Private notes for GM only..."
@@ -435,9 +436,9 @@ export function HomeTab({
         <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
           Description
         </label>
-        <textarea
+        <DebouncedTextarea
           value={currentDisplayData.condition}
-          onChange={(e) => canUserEdit && handleUpdateData({ condition: e.target.value })}
+          onChange={(val) => canUserEdit && handleUpdateData({ condition: val })}
           className="search-input"
           rows={2}
           disabled={!canUserEdit}
@@ -457,8 +458,8 @@ export function HomeTab({
       {viewingStorageId && canEditToken() && (
         <div style={{marginTop: '8px', width: '100%', alignSelf: 'stretch'}}>
           <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Notes</label>
-          <textarea value={characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes || ''} onChange={(e) => {
-            const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: e.target.value} : s);
+          <DebouncedTextarea value={characterData.externalStorages.find(s => s.id === viewingStorageId)?.notes || ''} onChange={(val) => {
+            const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: val} : s);
             updateData({ externalStorages: newStorages });
           }} className="search-input" rows={3} />
         </div>

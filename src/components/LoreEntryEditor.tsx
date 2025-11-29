@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { LoreEntry, LoreTabId } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { DebouncedInput, DebouncedTextarea } from './DebouncedInput';
 
 interface LoreEntryEditorProps {
   isOpen: boolean;
@@ -173,10 +174,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               Title
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              onChange={(val) => setTitle(val)}
               className="search-input"
               placeholder="Entry title..."
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -199,10 +200,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               🖼️ Image URL *
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
+              onChange={(val) => setImageUrl(val)}
               className="search-input"
               placeholder="https://example.com/image.jpg"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -250,10 +251,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               Caption (optional)
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={caption}
-              onChange={(e) => setCaption(e.target.value)}
+              onChange={(val) => setCaption(val)}
               className="search-input"
               placeholder="Image caption or description..."
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -275,10 +276,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               👤 Portrait URL
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={portraitUrl}
-              onChange={(e) => setPortraitUrl(e.target.value)}
+              onChange={(val) => setPortraitUrl(val)}
               className="search-input"
               placeholder="https://example.com/portrait.jpg"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -298,10 +299,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               Role / Title
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={role}
-              onChange={(e) => setRole(e.target.value)}
+              onChange={(val) => setRole(val)}
               className="search-input"
               placeholder="e.g., Blacksmith, Mayor, Guard Captain"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -348,10 +349,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               💬 Heard From
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={heardFrom}
-              onChange={(e) => setHeardFrom(e.target.value)}
+              onChange={(val) => setHeardFrom(val)}
               className="search-input"
               placeholder="e.g., A traveling merchant, Local gossip"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -399,10 +400,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               🏆 Reward
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={reward}
-              onChange={(e) => setReward(e.target.value)}
+              onChange={(val) => setReward(val)}
               className="search-input"
               placeholder="e.g., 100 gold, Magic sword"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -443,10 +444,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               📅 Date / Era
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              onChange={(val) => setDate(val)}
               className="search-input"
               placeholder="e.g., 1042 AR, The Third Age, 50 years ago"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -493,10 +494,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               💰 Price
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={price}
-              onChange={(e) => setPrice(e.target.value)}
+              onChange={(val) => setPrice(val)}
               className="search-input"
               placeholder="e.g., 5 gp, 2 sp per night"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -516,10 +517,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               📦 Quantity / Stock
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
+              onChange={(val) => setQuantity(val)}
               className="search-input"
               placeholder="e.g., In stock, Limited (3 left)"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -586,10 +587,10 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               🎖️ Rank / Position
             </label>
-            <input
+            <DebouncedInput
               type="text"
               value={rank}
-              onChange={(e) => setRank(e.target.value)}
+              onChange={(val) => setRank(val)}
               className="search-input"
               placeholder="e.g., Captain, Initiate, Council Member"
               style={{ width: '100%', boxSizing: 'border-box' }}
@@ -658,9 +659,9 @@ export function LoreEntryEditor({ isOpen, onClose, onSave, entry, tabId }: LoreE
             }}>
               Content
             </label>
-            <textarea
+            <DebouncedTextarea
               value={content}
-              onChange={(e) => setContent(e.target.value)}
+              onChange={(val) => setContent(val)}
               className="search-input"
               placeholder="Enter content here... (Supports basic markdown: **bold**, *italic*, __underline__, ~~strikethrough~~, - lists)"
               rows={8}

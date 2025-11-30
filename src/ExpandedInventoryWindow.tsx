@@ -12,12 +12,20 @@ import { LoreTab } from './components/tabs/LoreTab';
 import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
 import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/lore';
 import { hexToRgb } from './utils/color';
+import { parseMarkdown } from './utils/markdown';
 
 // Storage types that support equipment slots (weapons, body, quick)
 const STORAGE_TYPES_WITH_EQUIPMENT: StorageType[] = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
 
 // Tab IDs that require equipment slot functionality
 const EQUIPMENT_TAB_IDS: Tab[] = ['Weapons', 'Body', 'Quick'];
+
+// Markdown formatting hint component
+const MarkdownHint = () => (
+  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
+    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
+  </span>
+);
 
 export default function ExpandedInventoryWindow() {
   const [loading, setLoading] = useState(true);
@@ -1079,6 +1087,7 @@ export default function ExpandedInventoryWindow() {
                               <div style={{gridColumn: 'span 3'}}>
                                 <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Properties / Notes</label>
                                 <textarea className="search-input" style={{marginTop: 0, minHeight: '50px'}} value={item.properties || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, properties: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
+                                <MarkdownHint />
                               </div>
                             </div>
                           </td>
@@ -1086,9 +1095,7 @@ export default function ExpandedInventoryWindow() {
                       )}
                       {editingItemId !== item.id && item.properties && (
                         <tr style={{background: 'rgba(0,0,0,0.1)'}}>
-                          <td colSpan={7} style={{padding: '4px 8px 8px 8px', fontSize: '10px', color: '#888', fontStyle: 'italic'}}>
-                            {item.properties}
-                          </td>
+                          <td colSpan={7} style={{padding: '4px 8px 8px 8px', fontSize: '10px', color: '#888', fontStyle: 'italic'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties) }} />
                         </tr>
                       )}
                     </Fragment>
@@ -1112,7 +1119,7 @@ export default function ExpandedInventoryWindow() {
                     {item.hitModifier && <span style={{marginLeft: '8px'}}>Hit: {item.hitModifier}</span>}
                     {item.damageModifier && <span style={{marginLeft: '8px'}}>Dmg: {item.damageModifier}</span>}
                   </div>
-                  <div style={{fontSize:'10px', color:'#888', fontStyle:'italic'}}>{item.properties || 'No properties'}</div>
+                  <div style={{fontSize:'10px', color:'#888', fontStyle:'italic'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties || 'No properties') }} />
                 </div>
                 <button onClick={() => handleToggleEquip(item)} style={{background: '#333', color: '#888', border:'none', padding:'4px 8px', borderRadius:'4px', fontSize:'10px', cursor:'pointer'}}>UNEQUIP</button>
               </div>
@@ -1150,7 +1157,7 @@ export default function ExpandedInventoryWindow() {
                 <div style={{borderBottom:'1px solid #333', marginBottom:'8px'}}><span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>JEWELRY</span></div>
                 {equippedJewelry.map(item => (
                   <div key={item.id} style={{background: 'rgba(0,0,0,0.2)', padding: '8px', marginBottom: '4px', borderRadius: '4px', display:'flex', justifyContent:'space-between'}}>
-                    <div><div style={{fontWeight:'bold'}}>{item.name}</div>{item.properties && <div style={{fontSize:'10px', color:'#888'}}>{item.properties}</div>}</div>
+                    <div><div style={{fontWeight:'bold'}}>{item.name}</div>{item.properties && <div style={{fontSize:'10px', color:'#888'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties) }} />}</div>
                     <button onClick={() => handleToggleEquip(item)} style={{background:'none', border:'none', color:'#555', cursor:'pointer'}}>X</button>
                   </div>
                 ))}
@@ -1169,7 +1176,7 @@ export default function ExpandedInventoryWindow() {
                 <div key={item.id} style={{background: 'rgba(240, 225, 48, 0.05)', border:'1px solid rgba(240, 225, 48, 0.2)', padding: '12px', borderRadius: '4px', position:'relative'}}>
                   <div style={{fontWeight:'bold', fontSize:'12px', paddingRight:'20px'}}>{item.name}</div>
                   <div style={{fontSize:'10px', color:'#888'}}>{item.qty > 1 ? `Qty: ${item.qty}` : ''}</div>
-                  {item.properties && <div style={{fontSize:'10px', color:'var(--accent-gold)', marginTop: '4px', fontStyle:'italic'}}>{item.properties}</div>}
+                  {item.properties && <div style={{fontSize:'10px', color:'var(--accent-gold)', marginTop: '4px', fontStyle:'italic'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties) }} />}
                   <button onClick={() => handleToggleEquip(item)} style={{position:'absolute', top:4, right:4, background:'none', border:'none', color:'#555', cursor:'pointer', fontSize:'10px'}}>X</button>
                 </div>
               ))}
@@ -1239,7 +1246,11 @@ export default function ExpandedInventoryWindow() {
               <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Weight</label><input type="number" className="search-input" value={newItem.weight} onChange={e => setNewItem({...newItem, weight: parseFloat(e.target.value)})} /></div>
               <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Qty</label><input type="number" className="search-input" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value)})} /></div>
               <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Value</label><input className="search-input" value={newItem.value} onChange={e => setNewItem({...newItem, value: e.target.value})} placeholder="10gp" /></div>
-              <div style={{gridColumn: 'span 3'}}><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Properties / Notes</label><textarea className="search-input" rows={2} value={newItem.properties} onChange={e => setNewItem({...newItem, properties: e.target.value})} /></div>
+              <div style={{gridColumn: 'span 3'}}>
+                <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Properties / Notes</label>
+                <textarea className="search-input" rows={2} value={newItem.properties} onChange={e => setNewItem({...newItem, properties: e.target.value})} />
+                <MarkdownHint />
+              </div>
             </div>
             <button onClick={handleCreateItem} style={{width: '100%', marginTop: '16px', padding: '12px', backgroundColor: 'var(--accent-gold)', color: 'black', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer'}}>FORGE ITEM</button>
           </div>

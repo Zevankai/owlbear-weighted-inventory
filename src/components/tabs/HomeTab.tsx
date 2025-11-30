@@ -9,6 +9,13 @@ const TOKEN_SIZE_READONLY = '160px';
 // Description box width constants
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
 
+// Markdown formatting hint component
+const MarkdownHint = () => (
+  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
+    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
+  </span>
+);
+
 interface Stats {
   totalWeight: number;
   maxCapacity: number;
@@ -347,6 +354,7 @@ export function HomeTab({
                 lineHeight: '1.5'
               }}
             />
+            {playerRole === 'GM' && <MarkdownHint />}
           </div>
 
           {/* GM-only Notes Section */}
@@ -371,6 +379,7 @@ export function HomeTab({
                   borderColor: 'rgba(240, 225, 48, 0.3)'
                 }}
               />
+              <MarkdownHint />
             </div>
           )}
 
@@ -475,6 +484,7 @@ export function HomeTab({
             fontSize: '13px'
           }}
         />
+        {canUserEdit && <MarkdownHint />}
       </div>
 
       {/* Storage Notes - only show when viewing storage and can edit */}
@@ -485,6 +495,7 @@ export function HomeTab({
             const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: val} : s);
             updateData({ externalStorages: newStorages });
           }} className="search-input" rows={3} />
+          <MarkdownHint />
         </div>
       )}
 

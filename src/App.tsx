@@ -16,6 +16,7 @@ import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/l
 
 // Utilities
 import { hexToRgb } from './utils/color';
+import { parseMarkdown } from './utils/markdown';
 // Currency utilities moved to TradeWindow.tsx
 
 // Components
@@ -43,6 +44,13 @@ const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
 
 // Token type display order for favorites grouping
 const TOKEN_TYPE_ORDER: TokenType[] = ['player', 'npc', 'party', 'lore'];
+
+// Markdown formatting hint component
+const MarkdownHint = () => (
+  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
+    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
+  </span>
+);
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -1593,6 +1601,7 @@ function App() {
                                                                 handleUpdateData({inventory: newInv});
                                                             }}
                                                         />
+                                                        <MarkdownHint />
                                                     </div>
                                                     <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                                                         <input type="checkbox" id={`attune-${item.id}`} checked={item.requiresAttunement} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, requiresAttunement: e.target.checked} : i); handleUpdateData({inventory: newInv}); }} />
@@ -1619,7 +1628,7 @@ function App() {
                                         <tr style={{background: 'rgba(0,0,0,0.1)'}}>
                                             <td colSpan={7} style={{padding: '4px 8px 12px 8px', borderBottom: '1px solid #222'}}>
                                                 <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                                                    <div style={{flex: 1, fontSize: '10px', color: '#888'}}>{item.properties || 'No notes'}</div>
+                                                    <div style={{flex: 1, fontSize: '10px', color: '#888'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties || 'No notes') }} />
                                                     {item.requiresAttunement && (<div onClick={() => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, isAttuned: !i.isAttuned} : i); handleUpdateData({inventory: newInv}); }} style={{cursor: 'pointer', color: item.isAttuned ? 'cyan' : '#444', fontSize: '14px', marginLeft:'8px'}} title="Toggle Attunement">{item.isAttuned ? '★' : '☆'}</div>)}
                                                 </div>
                                             </td>
@@ -1646,7 +1655,7 @@ function App() {
                                 {item.hitModifier && <span style={{marginLeft: '8px'}}>Hit: {item.hitModifier}</span>}
                                 {item.damageModifier && <span style={{marginLeft: '8px'}}>Dmg: {item.damageModifier}</span>}
                             </div>
-                            <div style={{fontSize:'10px', color:'#888', fontStyle:'italic'}}>{item.properties || 'No properties'}</div>
+                            <div style={{fontSize:'10px', color:'#888', fontStyle:'italic'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties || 'No properties') }} />
                         </div>
                         <button onClick={() => handleToggleEquip(item)} style={{background: '#333', color: '#888', border:'none', padding:'4px 8px', borderRadius:'4px', fontSize:'10px', cursor:'pointer'}}>UNEQUIP</button>
                     </div>
@@ -1680,7 +1689,7 @@ function App() {
                     <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid #333', marginBottom:'8px'}}><span style={{fontSize:'11px', color:'var(--text-muted)', fontWeight:'bold'}}>JEWELRY</span></div>
                     {currentDisplayData.inventory.filter(i => i.equippedSlot === 'jewelry').map(item => (
                         <div key={item.id} style={{background: 'rgba(0,0,0,0.2)', padding: '8px', marginBottom: '4px', borderRadius: '4px', display:'flex', justifyContent:'space-between'}}>
-                             <div><div style={{fontWeight:'bold'}}>{item.name}</div><div style={{fontSize:'10px', color:'#888'}}>{item.properties}</div></div>
+                             <div><div style={{fontWeight:'bold'}}>{item.name}</div>{item.properties && <div style={{fontSize:'10px', color:'#888'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties) }} />}</div>
                              <button onClick={() => handleToggleEquip(item)} style={{background:'none', border:'none', color:'#555', cursor:'pointer'}}>X</button>
                         </div>
                     ))}
@@ -1696,7 +1705,7 @@ function App() {
                         <div key={item.id} style={{background: 'rgba(240, 225, 48, 0.05)', border:'1px solid rgba(240, 225, 48, 0.2)', padding: '8px', borderRadius: '4px', position:'relative'}}>
                             <div style={{fontWeight:'bold', fontSize:'12px', paddingRight:'20px'}}>{item.name}</div>
                             <div style={{fontSize:'10px', color:'#888'}}>{item.qty > 1 ? `Qty: ${item.qty}` : ''}</div>
-                            {item.properties && <div style={{fontSize:'10px', color:'var(--accent-gold)', marginTop: '4px', fontStyle:'italic'}}>{item.properties}</div>}
+                            {item.properties && <div style={{fontSize:'10px', color:'var(--accent-gold)', marginTop: '4px', fontStyle:'italic'}} dangerouslySetInnerHTML={{ __html: parseMarkdown(item.properties) }} />}
                             <button onClick={() => handleToggleEquip(item)} style={{position:'absolute', top:2, right:2, background:'none', border:'none', color:'#555', cursor:'pointer', fontSize:'10px'}}>X</button>
                         </div>
                     ))}
@@ -2052,6 +2061,7 @@ function App() {
                           value={newItem.properties}
                           onChange={e => setNewItem({...newItem, properties: e.target.value})}
                         />
+                        <MarkdownHint />
                     </div>
                 </div>
 

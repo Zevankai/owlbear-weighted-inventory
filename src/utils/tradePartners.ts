@@ -9,7 +9,7 @@ export function mapItemsToTradePartners(
   items: Array<{ id: string; name: string; metadata: Record<string, unknown>; image?: { url: string } }>,
   currentTokenId: string,
   playerId: string,
-  playerRole: 'GM' | 'PLAYER' = 'PLAYER'
+  _playerRole: 'GM' | 'PLAYER' = 'PLAYER'
 ): TradePartner[] {
   const partners: TradePartner[] = [];
   
@@ -25,8 +25,8 @@ export function mapItemsToTradePartners(
     
     // Handle different token types for trade partner visibility
     
-    // NPC tokens: Only show as partners to GM
-    if (tokenType === 'npc' && playerRole !== 'GM') continue;
+    // NPC tokens: Show as partners to everyone (players can trade with NPCs)
+    // Note: GMs control NPC inventories, but players can initiate trades with NPCs
 
     // Lore tokens: Cannot be traded with
     if (tokenType === 'lore') continue;

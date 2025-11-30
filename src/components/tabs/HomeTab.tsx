@@ -347,6 +347,7 @@ export function HomeTab({
                 lineHeight: '1.5'
               }}
             />
+            {playerRole === 'GM' && <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span>}
           </div>
 
           {/* GM-only Notes Section */}
@@ -371,6 +372,7 @@ export function HomeTab({
                   borderColor: 'rgba(240, 225, 48, 0.3)'
                 }}
               />
+              <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span>
             </div>
           )}
 
@@ -475,6 +477,7 @@ export function HomeTab({
             fontSize: '13px'
           }}
         />
+        {canUserEdit && <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span>}
       </div>
 
       {/* Storage Notes - only show when viewing storage and can edit */}
@@ -485,6 +488,7 @@ export function HomeTab({
             const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? {...s, notes: val} : s);
             updateData({ externalStorages: newStorages });
           }} className="search-input" rows={3} />
+          <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span>
         </div>
       )}
 

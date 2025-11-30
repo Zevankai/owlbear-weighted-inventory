@@ -45,6 +45,13 @@ const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
 // Token type display order for favorites grouping
 const TOKEN_TYPE_ORDER: TokenType[] = ['player', 'npc', 'party', 'lore'];
 
+// Markdown formatting hint component
+const MarkdownHint = () => (
+  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
+    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
+  </span>
+);
+
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
   const [ready, setReady] = useState(false);
@@ -1594,7 +1601,7 @@ function App() {
                                                                 handleUpdateData({inventory: newInv});
                                                             }}
                                                         />
-                                                        <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span>
+                                                        <MarkdownHint />
                                                     </div>
                                                     <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                                                         <input type="checkbox" id={`attune-${item.id}`} checked={item.requiresAttunement} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, requiresAttunement: e.target.checked} : i); handleUpdateData({inventory: newInv}); }} />
@@ -2054,7 +2061,7 @@ function App() {
                           value={newItem.properties}
                           onChange={e => setNewItem({...newItem, properties: e.target.value})}
                         />
-                        <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span>
+                        <MarkdownHint />
                     </div>
                 </div>
 

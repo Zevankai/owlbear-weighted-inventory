@@ -20,6 +20,13 @@ const STORAGE_TYPES_WITH_EQUIPMENT: StorageType[] = ['Small Pet', 'Large Pet', '
 // Tab IDs that require equipment slot functionality
 const EQUIPMENT_TAB_IDS: Tab[] = ['Weapons', 'Body', 'Quick'];
 
+// Markdown formatting hint component
+const MarkdownHint = () => (
+  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
+    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
+  </span>
+);
+
 export default function ExpandedInventoryWindow() {
   const [loading, setLoading] = useState(true);
   const [tokenId, setTokenId] = useState<string | null>(null);
@@ -1080,7 +1087,7 @@ export default function ExpandedInventoryWindow() {
                               <div style={{gridColumn: 'span 3'}}>
                                 <label style={{display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px'}}>Properties / Notes</label>
                                 <textarea className="search-input" style={{marginTop: 0, minHeight: '50px'}} value={item.properties || ''} onChange={(e) => { const newInv = currentDisplayData.inventory.map(i => i.id === item.id ? {...i, properties: e.target.value} : i); handleUpdateData({inventory: newInv}); }} />
-                                <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span>
+                                <MarkdownHint />
                               </div>
                             </div>
                           </td>
@@ -1239,7 +1246,11 @@ export default function ExpandedInventoryWindow() {
               <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Weight</label><input type="number" className="search-input" value={newItem.weight} onChange={e => setNewItem({...newItem, weight: parseFloat(e.target.value)})} /></div>
               <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Qty</label><input type="number" className="search-input" value={newItem.qty} onChange={e => setNewItem({...newItem, qty: parseInt(e.target.value)})} /></div>
               <div><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Value</label><input className="search-input" value={newItem.value} onChange={e => setNewItem({...newItem, value: e.target.value})} placeholder="10gp" /></div>
-              <div style={{gridColumn: 'span 3'}}><label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Properties / Notes</label><textarea className="search-input" rows={2} value={newItem.properties} onChange={e => setNewItem({...newItem, properties: e.target.value})} /><span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>Supports: **bold**, *italic*, [links](url)</span></div>
+              <div style={{gridColumn: 'span 3'}}>
+                <label style={{display:'block', fontSize:'11px', color:'var(--text-muted)'}}>Properties / Notes</label>
+                <textarea className="search-input" rows={2} value={newItem.properties} onChange={e => setNewItem({...newItem, properties: e.target.value})} />
+                <MarkdownHint />
+              </div>
             </div>
             <button onClick={handleCreateItem} style={{width: '100%', marginTop: '16px', padding: '12px', backgroundColor: 'var(--accent-gold)', color: 'black', border: 'none', borderRadius: '4px', fontWeight: 'bold', cursor: 'pointer'}}>FORGE ITEM</button>
           </div>

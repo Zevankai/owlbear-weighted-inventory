@@ -1,53 +1,12 @@
 import React, { useState } from 'react';
 import type { CharacterSheet, CharacterData, AbilityScores, Skills, HitPoints, SkillProficiency } from '../types';
 import { DebouncedInput, DebouncedTextarea } from './DebouncedInput';
-import { createDefaultCharacterSheet, calculateModifier, DND_CONDITIONS, migrateSkillProficiency, getProficiencyContribution, calculateProficiencyBonus } from '../utils/characterSheet';
+import { createDefaultCharacterSheet, calculateModifier, DND_CONDITIONS, migrateSkillProficiency, getProficiencyContribution, calculateProficiencyBonus, SKILL_DEFINITIONS, ABILITY_ABBREV } from '../utils/characterSheet';
 import { CollapsibleSection } from './CollapsibleSection';
 import { SkillProficiencyIndicator } from './SkillProficiencyIndicator';
 
 // Format modifier as "+X" or "-X"
 const formatModifier = (mod: number): string => (mod >= 0 ? `+${mod}` : `${mod}`);
-
-// Skill definitions with their associated abilities
-const SKILL_DEFINITIONS: Array<{
-  key: keyof Skills;
-  name: string;
-  ability: keyof AbilityScores;
-}> = [
-  // Strength
-  { key: 'athletics', name: 'Athletics', ability: 'strength' },
-  // Dexterity
-  { key: 'acrobatics', name: 'Acrobatics', ability: 'dexterity' },
-  { key: 'sleightOfHand', name: 'Sleight of Hand', ability: 'dexterity' },
-  { key: 'stealth', name: 'Stealth', ability: 'dexterity' },
-  // Intelligence
-  { key: 'arcana', name: 'Arcana', ability: 'intelligence' },
-  { key: 'history', name: 'History', ability: 'intelligence' },
-  { key: 'investigation', name: 'Investigation', ability: 'intelligence' },
-  { key: 'nature', name: 'Nature', ability: 'intelligence' },
-  { key: 'religion', name: 'Religion', ability: 'intelligence' },
-  // Wisdom
-  { key: 'animalHandling', name: 'Animal Handling', ability: 'wisdom' },
-  { key: 'insight', name: 'Insight', ability: 'wisdom' },
-  { key: 'medicine', name: 'Medicine', ability: 'wisdom' },
-  { key: 'perception', name: 'Perception', ability: 'wisdom' },
-  { key: 'survival', name: 'Survival', ability: 'wisdom' },
-  // Charisma
-  { key: 'deception', name: 'Deception', ability: 'charisma' },
-  { key: 'intimidation', name: 'Intimidation', ability: 'charisma' },
-  { key: 'performance', name: 'Performance', ability: 'charisma' },
-  { key: 'persuasion', name: 'Persuasion', ability: 'charisma' },
-];
-
-// Ability abbreviations
-const ABILITY_ABBREV: Record<keyof AbilityScores, string> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  constitution: 'CON',
-  intelligence: 'INT',
-  wisdom: 'WIS',
-  charisma: 'CHA',
-};
 
 interface CharacterSheetSectionProps {
   characterData: CharacterData;

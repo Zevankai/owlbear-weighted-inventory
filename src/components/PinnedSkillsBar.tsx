@@ -1,43 +1,6 @@
 import React from 'react';
-import type { CharacterSheet, AbilityScores, Skills, SkillProficiencyLevel } from '../types';
-import { calculateModifier, getProficiencyContribution, migrateSkillProficiency, calculateProficiencyBonus } from '../utils/characterSheet';
-
-// Skill definitions with their associated abilities
-const SKILL_DEFINITIONS: Array<{
-  key: keyof Skills;
-  name: string;
-  abbrev: string;
-  ability: keyof AbilityScores;
-}> = [
-  { key: 'athletics', name: 'Athletics', abbrev: 'ATH', ability: 'strength' },
-  { key: 'acrobatics', name: 'Acrobatics', abbrev: 'ACR', ability: 'dexterity' },
-  { key: 'sleightOfHand', name: 'Sleight of Hand', abbrev: 'SoH', ability: 'dexterity' },
-  { key: 'stealth', name: 'Stealth', abbrev: 'STL', ability: 'dexterity' },
-  { key: 'arcana', name: 'Arcana', abbrev: 'ARC', ability: 'intelligence' },
-  { key: 'history', name: 'History', abbrev: 'HIS', ability: 'intelligence' },
-  { key: 'investigation', name: 'Investigation', abbrev: 'INV', ability: 'intelligence' },
-  { key: 'nature', name: 'Nature', abbrev: 'NAT', ability: 'intelligence' },
-  { key: 'religion', name: 'Religion', abbrev: 'REL', ability: 'intelligence' },
-  { key: 'animalHandling', name: 'Animal Handling', abbrev: 'ANH', ability: 'wisdom' },
-  { key: 'insight', name: 'Insight', abbrev: 'INS', ability: 'wisdom' },
-  { key: 'medicine', name: 'Medicine', abbrev: 'MED', ability: 'wisdom' },
-  { key: 'perception', name: 'Perception', abbrev: 'PER', ability: 'wisdom' },
-  { key: 'survival', name: 'Survival', abbrev: 'SUR', ability: 'wisdom' },
-  { key: 'deception', name: 'Deception', abbrev: 'DEC', ability: 'charisma' },
-  { key: 'intimidation', name: 'Intimidation', abbrev: 'INT', ability: 'charisma' },
-  { key: 'performance', name: 'Performance', abbrev: 'PRF', ability: 'charisma' },
-  { key: 'persuasion', name: 'Persuasion', abbrev: 'PRS', ability: 'charisma' },
-];
-
-// Ability abbreviations
-const ABILITY_ABBREV: Record<keyof AbilityScores, string> = {
-  strength: 'STR',
-  dexterity: 'DEX',
-  constitution: 'CON',
-  intelligence: 'INT',
-  wisdom: 'WIS',
-  charisma: 'CHA',
-};
+import type { CharacterSheet, SkillProficiencyLevel } from '../types';
+import { calculateModifier, getProficiencyContribution, migrateSkillProficiency, calculateProficiencyBonus, SKILL_DEFINITIONS, ABILITY_ABBREV } from '../utils/characterSheet';
 
 interface PinnedSkillsBarProps {
   sheet: CharacterSheet;

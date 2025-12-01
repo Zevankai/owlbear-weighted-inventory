@@ -12,7 +12,7 @@ export interface Theme {
   background: string;
 }
 
-export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation' | 'LoreSettings';
+export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation' | 'LoreSettings' | 'Spells';
 
 // Lore system types
 export type LoreTabId = 
@@ -185,9 +185,14 @@ export interface AbilityScores {
   charisma: AbilityScore;
 }
 
+// Skill proficiency levels: none, half, proficient, mastery (expertise)
+export type SkillProficiencyLevel = 'none' | 'half' | 'proficient' | 'mastery';
+
 export interface SkillProficiency {
-  proficient: boolean;
+  proficiencyLevel: SkillProficiencyLevel;
   bonus: number;
+  // Legacy support - keep proficient for backwards compatibility
+  proficient?: boolean;
 }
 
 export interface Skills {
@@ -222,6 +227,26 @@ export interface HitPoints {
   temp: number;
 }
 
+// Spell types for spell management
+export interface Spell {
+  id: string;
+  name: string;
+  level: number;       // 0 for cantrips, 1-9 for spell levels
+  description: string;
+  prepared?: boolean;  // Is this spell currently prepared/equipped?
+}
+
+export interface SpellSlots {
+  max: number;
+  used: number;
+}
+
+export interface SpellManagement {
+  knownSpells: Spell[];
+  spellSlots: Record<number, SpellSlots>;  // Key is spell level (1-9), value is slots info
+  useCustomSlots: boolean;  // If true, use custom slot values instead of auto-calculated
+}
+
 export interface CharacterSheet {
   // Character Info
   gender: string;
@@ -234,6 +259,7 @@ export interface CharacterSheet {
   
   // Skills
   skills: Skills;
+  pinnedSkills: string[];  // Array of skill keys (max 5) for quick reference
   
   // Combat Stats
   hitPoints: HitPoints;
@@ -252,6 +278,9 @@ export interface CharacterSheet {
   defenses: string;      // Text field for immunities/resistances
   conditions: string;    // Text field for active conditions
   languages: string;     // Text field for known languages
+  
+  // Spells
+  spellManagement?: SpellManagement;
 }
 
 export interface CharacterData {

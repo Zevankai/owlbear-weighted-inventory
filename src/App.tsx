@@ -25,6 +25,7 @@ import { HomeTab } from './components/tabs/HomeTab';
 import { ReputationTab } from './components/tabs/ReputationTab';
 import { LoreTab } from './components/tabs/LoreTab';
 import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
+import { SpellsTab } from './components/tabs/SpellsTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { ToggleButtons } from './components/ToggleButtons';
@@ -1315,6 +1316,13 @@ function App() {
     { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
   ];
 
+  // Add Spells tab for player/party tokens, and NPC tokens (GM only)
+  const showSpellsTab = !viewingStorageId && characterData?.tokenType !== 'lore' && 
+    (characterData?.tokenType !== 'npc' || playerRole === 'GM');
+  if (showSpellsTab) {
+    baseTabs.push({ id: 'Spells', label: 'SPELLS' });
+  }
+
   // Add GM tab (always visible to GMs)
   if (playerRole === 'GM') {
     baseTabs.push({ id: 'GM', label: 'GM' });
@@ -2269,6 +2277,16 @@ function App() {
             characterData={characterData}
             updateData={updateData}
             playerRole={playerRole}
+          />
+        )}
+
+        {/* === SPELLS TAB === */}
+        {activeTab === 'Spells' && characterData?.tokenType !== 'lore' && 
+         (characterData?.tokenType !== 'npc' || playerRole === 'GM') && (
+          <SpellsTab
+            characterData={characterData}
+            canEdit={playerRole === 'GM' || characterData?.claimedBy === playerId || characterData?.tokenType === 'party'}
+            updateData={updateData}
           />
         )}
 

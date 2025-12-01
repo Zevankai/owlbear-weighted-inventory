@@ -1,4 +1,47 @@
-import type { CharacterSheet } from '../types';
+import type { CharacterSheet, SkillProficiency, SkillProficiencyLevel, SpellManagement, SpellSlots, Skills, AbilityScores } from '../types';
+
+// Skill definitions with their associated abilities
+export const SKILL_DEFINITIONS: Array<{
+  key: keyof Skills;
+  name: string;
+  abbrev: string;
+  ability: keyof AbilityScores;
+}> = [
+  { key: 'athletics', name: 'Athletics', abbrev: 'ATH', ability: 'strength' },
+  { key: 'acrobatics', name: 'Acrobatics', abbrev: 'ACR', ability: 'dexterity' },
+  { key: 'sleightOfHand', name: 'Sleight of Hand', abbrev: 'SoH', ability: 'dexterity' },
+  { key: 'stealth', name: 'Stealth', abbrev: 'STL', ability: 'dexterity' },
+  { key: 'arcana', name: 'Arcana', abbrev: 'ARC', ability: 'intelligence' },
+  { key: 'history', name: 'History', abbrev: 'HIS', ability: 'intelligence' },
+  { key: 'investigation', name: 'Investigation', abbrev: 'INV', ability: 'intelligence' },
+  { key: 'nature', name: 'Nature', abbrev: 'NAT', ability: 'intelligence' },
+  { key: 'religion', name: 'Religion', abbrev: 'REL', ability: 'intelligence' },
+  { key: 'animalHandling', name: 'Animal Handling', abbrev: 'ANH', ability: 'wisdom' },
+  { key: 'insight', name: 'Insight', abbrev: 'INS', ability: 'wisdom' },
+  { key: 'medicine', name: 'Medicine', abbrev: 'MED', ability: 'wisdom' },
+  { key: 'perception', name: 'Perception', abbrev: 'PER', ability: 'wisdom' },
+  { key: 'survival', name: 'Survival', abbrev: 'SUR', ability: 'wisdom' },
+  { key: 'deception', name: 'Deception', abbrev: 'DEC', ability: 'charisma' },
+  { key: 'intimidation', name: 'Intimidation', abbrev: 'INT', ability: 'charisma' },
+  { key: 'performance', name: 'Performance', abbrev: 'PRF', ability: 'charisma' },
+  { key: 'persuasion', name: 'Persuasion', abbrev: 'PRS', ability: 'charisma' },
+];
+
+// Ability abbreviations
+export const ABILITY_ABBREV: Record<keyof AbilityScores, string> = {
+  strength: 'STR',
+  dexterity: 'DEX',
+  constitution: 'CON',
+  intelligence: 'INT',
+  wisdom: 'WIS',
+  charisma: 'CHA',
+};
+
+// Default skill proficiency
+const createDefaultSkillProficiency = (): SkillProficiency => ({
+  proficiencyLevel: 'none',
+  bonus: 0,
+});
 
 // Default character sheet values
 export const createDefaultCharacterSheet = (): CharacterSheet => ({
@@ -15,25 +58,26 @@ export const createDefaultCharacterSheet = (): CharacterSheet => ({
     charisma: { base: 10, modifier: 0 },
   },
   skills: {
-    athletics: { proficient: false, bonus: 0 },
-    acrobatics: { proficient: false, bonus: 0 },
-    sleightOfHand: { proficient: false, bonus: 0 },
-    stealth: { proficient: false, bonus: 0 },
-    arcana: { proficient: false, bonus: 0 },
-    history: { proficient: false, bonus: 0 },
-    investigation: { proficient: false, bonus: 0 },
-    nature: { proficient: false, bonus: 0 },
-    religion: { proficient: false, bonus: 0 },
-    animalHandling: { proficient: false, bonus: 0 },
-    insight: { proficient: false, bonus: 0 },
-    medicine: { proficient: false, bonus: 0 },
-    perception: { proficient: false, bonus: 0 },
-    survival: { proficient: false, bonus: 0 },
-    deception: { proficient: false, bonus: 0 },
-    intimidation: { proficient: false, bonus: 0 },
-    performance: { proficient: false, bonus: 0 },
-    persuasion: { proficient: false, bonus: 0 },
+    athletics: createDefaultSkillProficiency(),
+    acrobatics: createDefaultSkillProficiency(),
+    sleightOfHand: createDefaultSkillProficiency(),
+    stealth: createDefaultSkillProficiency(),
+    arcana: createDefaultSkillProficiency(),
+    history: createDefaultSkillProficiency(),
+    investigation: createDefaultSkillProficiency(),
+    nature: createDefaultSkillProficiency(),
+    religion: createDefaultSkillProficiency(),
+    animalHandling: createDefaultSkillProficiency(),
+    insight: createDefaultSkillProficiency(),
+    medicine: createDefaultSkillProficiency(),
+    perception: createDefaultSkillProficiency(),
+    survival: createDefaultSkillProficiency(),
+    deception: createDefaultSkillProficiency(),
+    intimidation: createDefaultSkillProficiency(),
+    performance: createDefaultSkillProficiency(),
+    persuasion: createDefaultSkillProficiency(),
   },
+  pinnedSkills: [],
   hitPoints: { current: 0, max: 0, temp: 0 },
   armorClass: 10,
   initiative: 0,
@@ -50,6 +94,88 @@ export const createDefaultCharacterSheet = (): CharacterSheet => ({
 
 // Calculate ability modifier using D&D formula
 export const calculateModifier = (score: number): number => Math.floor((score - 10) / 2);
+
+// Calculate proficiency bonus based on level
+export const calculateProficiencyBonus = (level: number): number => Math.floor((level - 1) / 4) + 2;
+
+// Calculate proficiency contribution based on level
+export const getProficiencyContribution = (
+  proficiencyLevel: SkillProficiencyLevel,
+  proficiencyBonus: number
+): number => {
+  switch (proficiencyLevel) {
+    case 'none':
+      return 0;
+    case 'half':
+      return Math.floor(proficiencyBonus / 2);
+    case 'proficient':
+      return proficiencyBonus;
+    case 'mastery':
+      return proficiencyBonus * 2;
+    default:
+      return 0;
+  }
+};
+
+// Migrate old skill format (proficient: boolean) to new format (proficiencyLevel)
+export const migrateSkillProficiency = (skill: SkillProficiency): SkillProficiency => {
+  // If proficiencyLevel already exists, return as is
+  if (skill.proficiencyLevel) {
+    return skill;
+  }
+  // Migrate from old format: proficient boolean to proficiencyLevel
+  const legacyProficient = (skill as { proficient?: boolean }).proficient;
+  return {
+    proficiencyLevel: legacyProficient ? 'proficient' : 'none',
+    bonus: skill.bonus || 0,
+  };
+};
+
+// Default spell slots by caster level (full caster)
+export const DEFAULT_SPELL_SLOTS: Record<number, Record<number, number>> = {
+  // Level: { SpellLevel: MaxSlots }
+  1: { 1: 2 },
+  2: { 1: 3 },
+  3: { 1: 4, 2: 2 },
+  4: { 1: 4, 2: 3 },
+  5: { 1: 4, 2: 3, 3: 2 },
+  6: { 1: 4, 2: 3, 3: 3 },
+  7: { 1: 4, 2: 3, 3: 3, 4: 1 },
+  8: { 1: 4, 2: 3, 3: 3, 4: 2 },
+  9: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 1 },
+  10: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2 },
+  11: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },
+  12: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1 },
+  13: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },
+  14: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1 },
+  15: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 },
+  16: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1 },
+  17: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 2, 6: 1, 7: 1, 8: 1, 9: 1 },
+  18: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 1, 7: 1, 8: 1, 9: 1 },
+  19: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 2, 7: 1, 8: 1, 9: 1 },
+  20: { 1: 4, 2: 3, 3: 3, 4: 3, 5: 3, 6: 2, 7: 2, 8: 1, 9: 1 },
+};
+
+// Get default spell slots for a given character level
+export const getDefaultSpellSlots = (level: number): Record<number, SpellSlots> => {
+  const clampedLevel = Math.max(1, Math.min(20, level));
+  const levelSlots = DEFAULT_SPELL_SLOTS[clampedLevel] || {};
+  const result: Record<number, SpellSlots> = {};
+  
+  for (let spellLevel = 1; spellLevel <= 9; spellLevel++) {
+    const max = levelSlots[spellLevel] || 0;
+    result[spellLevel] = { max, used: 0 };
+  }
+  
+  return result;
+};
+
+// Create default spell management
+export const createDefaultSpellManagement = (level: number = 1): SpellManagement => ({
+  knownSpells: [],
+  spellSlots: getDefaultSpellSlots(level),
+  useCustomSlots: false,
+});
 
 // Common D&D 5e conditions for reference
 export const DND_CONDITIONS = [

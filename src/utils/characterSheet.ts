@@ -50,3 +50,22 @@ export const createDefaultCharacterSheet = (): CharacterSheet => ({
 
 // Calculate ability modifier using D&D formula
 export const calculateModifier = (score: number): number => Math.floor((score - 10) / 2);
+
+// Common D&D 5e conditions for reference
+export const DND_CONDITIONS = [
+  'Blinded',
+  'Charmed',
+  'Deafened',
+  'Frightened',
+  'Grappled',
+  'Incapacitated',
+  'Invisible',
+  'Paralyzed',
+  'Petrified',
+  'Poisoned',
+  'Prone',
+  'Restrained',
+  'Stunned',
+  'Unconscious',
+  'Exhaustion (1-6)',
+] as const;

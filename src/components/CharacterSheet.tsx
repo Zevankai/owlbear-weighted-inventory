@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { CharacterSheet, CharacterData, AbilityScores, Skills, HitPoints } from '../types';
 import { DebouncedInput, DebouncedTextarea } from './DebouncedInput';
-import { createDefaultCharacterSheet, calculateModifier } from '../utils/characterSheet';
+import { createDefaultCharacterSheet, calculateModifier, DND_CONDITIONS } from '../utils/characterSheet';
 
 // Format modifier as "+X" or "-X"
 const formatModifier = (mod: number): string => (mod >= 0 ? `+${mod}` : `${mod}`);
@@ -566,7 +566,7 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
               color: 'var(--text-muted)',
               fontStyle: 'italic',
             }}>
-              Note: Intimidation can be STR or CHA based (listed under CHA)
+              Note: Intimidation can use STR or CHA (listed under CHA) - adjust bonus manually if using STR
             </div>
           </div>
 
@@ -636,7 +636,7 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
               color: 'var(--text-muted)',
               fontStyle: 'italic',
             }}>
-              Common: Blinded, Charmed, Deafened, Frightened, Grappled, Incapacitated, Invisible, Paralyzed, Petrified, Poisoned, Prone, Restrained, Stunned, Unconscious, Exhaustion (1-6)
+              Common: {DND_CONDITIONS.join(', ')}
             </div>
           </div>
 

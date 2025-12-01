@@ -1,6 +1,7 @@
 import type { CharacterData, PackType, ActiveTrade } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
+import { CharacterSheetSection } from '../CharacterSheet';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '160px';
@@ -486,6 +487,16 @@ export function HomeTab({
         />
         {canUserEdit && <MarkdownHint />}
       </div>
+
+      {/* Character Sheet - only show for player-type tokens (not lore tokens) */}
+      {!viewingStorageId && 
+       (characterData.tokenType === 'player' || !characterData.tokenType || characterData.tokenType === 'party') && (
+        <CharacterSheetSection
+          characterData={characterData}
+          canEdit={canUserEdit}
+          updateData={updateData}
+        />
+      )}
 
       {/* Storage Notes - only show when viewing storage and can edit */}
       {viewingStorageId && canEditToken() && (

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { CharacterSheet, CharacterData, AbilityScores, Skills, HitPoints } from '../types';
 import { DebouncedInput, DebouncedTextarea } from './DebouncedInput';
 import { createDefaultCharacterSheet, calculateModifier, DND_CONDITIONS } from '../utils/characterSheet';
+import { CollapsibleSection } from './CollapsibleSection';
 
 // Format modifier as "+X" or "-X"
 const formatModifier = (mod: number): string => (mod >= 0 ? `+${mod}` : `${mod}`);
@@ -203,74 +204,67 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
             </div>
           </div>
 
-          {/* Ability Scores Section */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <h3 style={{
-              margin: '0 0 10px 0',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}>
-              Ability Scores
-            </h3>
+          {/* Ability Scores Section - Collapsible */}
+          <CollapsibleSection title="Ability Scores" defaultExpanded={false}>
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '8px',
+              background: 'rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              padding: '12px',
+              border: '1px solid var(--glass-border)',
             }}>
-              {(Object.keys(sheet.abilityScores) as Array<keyof AbilityScores>).map((ability) => (
-                <div
-                  key={ability}
-                  style={{
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    borderRadius: '6px',
-                    padding: '8px',
-                    textAlign: 'center',
-                    border: '1px solid var(--glass-border)',
-                  }}
-                >
-                  <div style={{
-                    fontSize: '10px',
-                    color: 'var(--text-muted)',
-                    textTransform: 'uppercase',
-                    marginBottom: '4px',
-                  }}>
-                    {ABILITY_ABBREV[ability]}
-                  </div>
-                  <div style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    color: 'var(--accent-gold)',
-                    marginBottom: '2px',
-                  }}>
-                    {formatModifier(sheet.abilityScores[ability].modifier)}
-                  </div>
-                  <input
-                    type="number"
-                    value={sheet.abilityScores[ability].base}
-                    onChange={(e) => canEdit && updateAbilityScore(ability, parseInt(e.target.value) || 10)}
-                    className="search-input"
-                    disabled={!canEdit}
-                    min={1}
-                    max={30}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(3, 1fr)',
+                gap: '8px',
+              }}>
+                {(Object.keys(sheet.abilityScores) as Array<keyof AbilityScores>).map((ability) => (
+                  <div
+                    key={ability}
                     style={{
-                      ...inputStyle,
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '6px',
+                      padding: '8px',
                       textAlign: 'center',
-                      fontSize: '12px',
-                      padding: '4px',
-                      width: '50px',
+                      border: '1px solid var(--glass-border)',
                     }}
-                  />
-                </div>
-              ))}
+                  >
+                    <div style={{
+                      fontSize: '10px',
+                      color: 'var(--text-muted)',
+                      textTransform: 'uppercase',
+                      marginBottom: '4px',
+                    }}>
+                      {ABILITY_ABBREV[ability]}
+                    </div>
+                    <div style={{
+                      fontSize: '18px',
+                      fontWeight: 'bold',
+                      color: 'var(--accent-gold)',
+                      marginBottom: '2px',
+                    }}>
+                      {formatModifier(sheet.abilityScores[ability].modifier)}
+                    </div>
+                    <input
+                      type="number"
+                      value={sheet.abilityScores[ability].base}
+                      onChange={(e) => canEdit && updateAbilityScore(ability, parseInt(e.target.value) || 10)}
+                      className="search-input"
+                      disabled={!canEdit}
+                      min={1}
+                      max={30}
+                      style={{
+                        ...inputStyle,
+                        textAlign: 'center',
+                        fontSize: '12px',
+                        padding: '4px',
+                        width: '50px',
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Combat Stats Section */}
           <div style={{
@@ -484,91 +478,84 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
             </label>
           </div>
 
-          {/* Skills Section */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <h3 style={{
-              margin: '0 0 10px 0',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}>
-              Skills
-            </h3>
+          {/* Skills Section - Collapsible */}
+          <CollapsibleSection title="Skills & Proficiencies" defaultExpanded={false}>
             <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '6px',
+              background: 'rgba(0, 0, 0, 0.2)',
+              borderRadius: '8px',
+              padding: '12px',
+              border: '1px solid var(--glass-border)',
             }}>
-              {SKILL_DEFINITIONS.map(({ key, name, ability }) => (
-                <div
-                  key={key}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    padding: '4px 6px',
-                    background: 'rgba(0, 0, 0, 0.2)',
-                    borderRadius: '4px',
-                  }}
-                >
-                  {/* Proficiency Circle */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '6px',
+              }}>
+                {SKILL_DEFINITIONS.map(({ key, name, ability }) => (
                   <div
-                    onClick={() => canEdit && updateSkill(key, { proficient: !sheet.skills[key].proficient })}
+                    key={key}
                     style={{
-                      width: '14px',
-                      height: '14px',
-                      borderRadius: '50%',
-                      border: `2px solid ${sheet.skills[key].proficient ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
-                      background: sheet.skills[key].proficient ? 'var(--accent-gold)' : 'transparent',
-                      cursor: canEdit ? 'pointer' : 'default',
-                      flexShrink: 0,
-                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      padding: '4px 6px',
+                      background: 'rgba(0, 0, 0, 0.2)',
+                      borderRadius: '4px',
                     }}
-                  />
-                  {/* Bonus Input */}
-                  <input
-                    type="number"
-                    value={sheet.skills[key].bonus}
-                    onChange={(e) => canEdit && updateSkill(key, { bonus: parseInt(e.target.value) || 0 })}
-                    className="search-input"
-                    disabled={!canEdit}
-                    style={{
-                      width: '40px',
-                      textAlign: 'center',
+                  >
+                    {/* Proficiency Circle */}
+                    <div
+                      onClick={() => canEdit && updateSkill(key, { proficient: !sheet.skills[key].proficient })}
+                      style={{
+                        width: '14px',
+                        height: '14px',
+                        borderRadius: '50%',
+                        border: `2px solid ${sheet.skills[key].proficient ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
+                        background: sheet.skills[key].proficient ? 'var(--accent-gold)' : 'transparent',
+                        cursor: canEdit ? 'pointer' : 'default',
+                        flexShrink: 0,
+                        transition: 'all 0.2s ease',
+                      }}
+                    />
+                    {/* Bonus Input */}
+                    <input
+                      type="number"
+                      value={sheet.skills[key].bonus}
+                      onChange={(e) => canEdit && updateSkill(key, { bonus: parseInt(e.target.value) || 0 })}
+                      className="search-input"
+                      disabled={!canEdit}
+                      style={{
+                        width: '40px',
+                        textAlign: 'center',
+                        fontSize: '10px',
+                        padding: '2px 4px',
+                        margin: 0,
+                      }}
+                    />
+                    {/* Skill Name & Ability */}
+                    <span style={{
                       fontSize: '10px',
-                      padding: '2px 4px',
-                      margin: 0,
-                    }}
-                  />
-                  {/* Skill Name & Ability */}
-                  <span style={{
-                    fontSize: '10px',
-                    color: 'var(--text-main)',
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}>
-                    {name} <span style={{ color: 'var(--text-muted)', fontSize: '9px' }}>({ABILITY_ABBREV[ability]})</span>
-                  </span>
-                </div>
-              ))}
+                      color: 'var(--text-main)',
+                      flex: 1,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}>
+                      {name} <span style={{ color: 'var(--text-muted)', fontSize: '9px' }}>({ABILITY_ABBREV[ability]})</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div style={{
+                marginTop: '8px',
+                fontSize: '9px',
+                color: 'var(--text-muted)',
+                fontStyle: 'italic',
+              }}>
+                Note: Intimidation can use STR or CHA (listed under CHA) - adjust bonus manually if using STR
+              </div>
             </div>
-            <div style={{
-              marginTop: '8px',
-              fontSize: '9px',
-              color: 'var(--text-muted)',
-              fontStyle: 'italic',
-            }}>
-              Note: Intimidation can use STR or CHA (listed under CHA) - adjust bonus manually if using STR
-            </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Defenses Section */}
           <div style={{

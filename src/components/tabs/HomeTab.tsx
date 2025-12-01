@@ -2,6 +2,8 @@ import type { CharacterData, PackType, ActiveTrade } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
+import { CollapsibleSection } from '../CollapsibleSection';
+import { createDefaultCharacterSheet } from '../../utils/characterSheet';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '160px';
@@ -16,6 +18,55 @@ const MarkdownHint = () => (
     Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
   </span>
 );
+
+// Helper function to get HP color class based on current/max ratio
+const getHpColorClass = (current: number, max: number): string => {
+  if (max <= 0) return '';
+  const ratio = current / max;
+  if (ratio > 0.5) return 'hp-healthy';
+  if (ratio > 0.25) return 'hp-wounded';
+  return 'hp-critical';
+};
+
+// Combat Stats Header Component - Always visible quick reference
+interface CombatStatsHeaderProps {
+  hp: { current: number; max: number; temp: number };
+  ac: number;
+  initiative: number;
+}
+
+const CombatStatsHeader = ({ hp, ac, initiative }: CombatStatsHeaderProps) => {
+  const hpColorClass = getHpColorClass(hp.current, hp.max);
+  
+  return (
+    <div className="combat-stats-header">
+      {/* HP Display */}
+      <div className="combat-stat-box">
+        <span className="combat-stat-label">HP</span>
+        <span className={`combat-stat-value ${hpColorClass}`}>
+          {hp.current}/{hp.max}
+        </span>
+        {hp.temp > 0 && (
+          <span className="combat-stat-secondary">+{hp.temp} temp</span>
+        )}
+      </div>
+      
+      {/* AC Display */}
+      <div className="combat-stat-box">
+        <span className="combat-stat-label">AC</span>
+        <span className="combat-stat-value">{ac}</span>
+      </div>
+      
+      {/* Initiative Display */}
+      <div className="combat-stat-box">
+        <span className="combat-stat-label">Initiative</span>
+        <span className="combat-stat-value">
+          {initiative >= 0 ? `+${initiative}` : initiative}
+        </span>
+      </div>
+    </div>
+  );
+};
 
 interface Stats {
   totalWeight: number;
@@ -324,6 +375,23 @@ export function HomeTab({
         </div>
       )}
 
+      {/* === COMBAT STATS HEADER - Always visible for player/party tokens === */}
+      {(() => {
+        const isPlayerOrPartyToken = characterData.tokenType === 'player' || !characterData.tokenType || characterData.tokenType === 'party';
+        const shouldShowCombatStats = !viewingStorageId && characterData.tokenType !== 'lore' && isPlayerOrPartyToken;
+        
+        if (!shouldShowCombatStats) return null;
+        
+        const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+        return (
+          <CombatStatsHeader
+            hp={sheet.hitPoints}
+            ac={sheet.armorClass}
+            initiative={sheet.initiative}
+          />
+        );
+      })()}
+
       {/* === LORE TOKEN SPECIFIC UI === */}
       {!viewingStorageId && characterData.tokenType === 'lore' && (
         <>
@@ -444,8 +512,7 @@ export function HomeTab({
           </div>
 
           {!viewingStorageId && (
-            <>
-              <h2 style={{marginTop: '12px', border: 'none'}}>SLOT USAGE</h2>
+            <CollapsibleSection title="Slot Usage" defaultExpanded={false}>
               <div className="totals-grid">
                 <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
                   <div className="stat-label">WEAPONS</div>
@@ -459,7 +526,7 @@ export function HomeTab({
                 <div className="stat-box"><div className="stat-label">JEWELRY</div><div className="stat-value">{stats.usedSlots.jewelry} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.jewelry}</span></div></div>
                 <div className="stat-box" style={{gridColumn: 'span 2', background: 'rgba(240, 225, 48, 0.05)'}}><div className="stat-label" style={{color: 'var(--accent-gold)'}}>UTILITY / QUICK</div><div className="stat-value">{stats.usedSlots.utility} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.utility}</span></div></div>
               </div>
-            </>
+            </CollapsibleSection>
           )}
         </>
       )}

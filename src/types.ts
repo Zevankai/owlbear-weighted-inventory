@@ -12,7 +12,7 @@ export interface Theme {
   background: string;
 }
 
-export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation' | 'LoreSettings';
+export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation' | 'LoreSettings' | 'Spells';
 
 // Lore system types
 export type LoreTabId = 
@@ -252,6 +252,44 @@ export interface CharacterSheet {
   defenses: string;      // Text field for immunities/resistances
   conditions: string;    // Text field for active conditions
   languages: string;     // Text field for known languages
+  
+  // Spell Management
+  spellManagement?: SpellManagement;
+}
+
+// Spell system types
+export interface Spell {
+  id: string;
+  name: string;
+  level: number;  // 0 = cantrip, 1-9 for spell levels
+  description: string;
+}
+
+export interface SpellSlotLevels {
+  1: number;
+  2: number;
+  3: number;
+  4: number;
+  5: number;
+  6: number;
+  7: number;
+  8: number;
+  9: number;
+}
+
+export interface SpellSlots {
+  // Max slots per level (can be overridden from defaults)
+  max: SpellSlotLevels;
+  // Currently used slots per level
+  used: SpellSlotLevels;
+  // Whether to use custom slots or auto-calculate from level
+  useCustomSlots: boolean;
+}
+
+export interface SpellManagement {
+  spellSlots: SpellSlots;
+  knownSpells: Spell[];           // All spells in spellbook/domain
+  preparedSpellIds: string[];     // IDs of currently prepared/equipped spells
 }
 
 export interface CharacterData {

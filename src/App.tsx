@@ -25,6 +25,7 @@ import { HomeTab } from './components/tabs/HomeTab';
 import { ReputationTab } from './components/tabs/ReputationTab';
 import { LoreTab } from './components/tabs/LoreTab';
 import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
+import { SpellsTab } from './components/tabs/SpellsTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { ToggleButtons } from './components/ToggleButtons';
@@ -1310,6 +1311,7 @@ function App() {
 
   const baseTabs: { id: Tab; label?: string; icon?: React.ReactNode }[] = [
     { id: 'Home', label: '||' }, { id: 'Pack', label: 'PACK' }, { id: 'Weapons', label: 'WEAPONS' }, { id: 'Body', label: 'BODY' }, { id: 'Quick', label: 'QUICK' },
+    { id: 'Spells', label: '🔮' },
     { id: 'Create', label: 'CREATE' },
     { id: 'Search', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> },
     { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
@@ -2269,6 +2271,15 @@ function App() {
             characterData={characterData}
             updateData={updateData}
             playerRole={playerRole}
+          />
+        )}
+
+        {/* === SPELLS TAB === */}
+        {activeTab === 'Spells' && characterData?.tokenType !== 'lore' && (
+          <SpellsTab
+            characterData={characterData}
+            updateData={updateData}
+            canEdit={playerRole === 'GM' || characterData?.claimedBy === playerId || characterData?.tokenType === 'party'}
           />
         )}
 

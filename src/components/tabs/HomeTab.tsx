@@ -334,6 +334,22 @@ export function HomeTab({
               </div>
             )}
 
+            {/* Race/Class Subtitle - Show for player, npc, and party tokens if defined */}
+            {characterData.tokenType !== 'lore' && characterData.characterSheet && 
+             (characterData.characterSheet.race || characterData.characterSheet.characterClass) && (
+              <div style={{
+                fontSize: '12px',
+                color: 'var(--text-muted)',
+                textAlign: 'center',
+                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
+                marginBottom: '4px'
+              }}>
+                {[characterData.characterSheet.race, characterData.characterSheet.characterClass]
+                  .filter(Boolean)
+                  .join(' ')}
+              </div>
+            )}
+
             {/* Token Type Badge - only show for non-player tokens */}
             {characterData.tokenType && characterData.tokenType !== 'player' && (
               <div style={{

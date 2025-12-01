@@ -290,7 +290,7 @@ button.action-btn:hover {
 /* --- Combat Stats Header --- */
 .combat-stats-header {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 12px;
   margin-bottom: 16px;
   padding: 12px;
@@ -354,4 +354,57 @@ button.action-btn:hover {
   font-size: 11px;
   color: var(--text-muted);
   margin-top: 2px;
+}
+
+/* --- Level Badge Styling --- */
+.combat-stat-box.level-badge {
+  background: rgba(240, 225, 48, 0.15);
+  border-color: var(--border-bright);
+  position: relative;
+}
+
+.combat-stat-box.level-badge::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(240, 225, 48, 0.1) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+.level-value {
+  color: var(--accent-gold) !important;
+  text-shadow: 0 0 12px rgba(240, 225, 48, 0.5) !important;
+}
+
+.level-input {
+  width: 50px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+  color: var(--accent-gold);
+  font-size: 22px;
+  font-weight: bold;
+  text-align: center;
+  padding: 4px;
+  outline: none;
+  text-shadow: 0 0 12px rgba(240, 225, 48, 0.5);
+}
+
+.level-input:focus {
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 8px rgba(240, 225, 48, 0.4);
+}
+
+.level-input::-webkit-inner-spin-button,
+.level-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.level-input {
+  -moz-appearance: textfield;
 }

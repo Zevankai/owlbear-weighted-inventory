@@ -392,6 +392,7 @@ button.action-btn:hover {
   padding: 4px;
   outline: none;
   text-shadow: 0 0 12px rgba(240, 225, 48, 0.5);
+  -moz-appearance: textfield;
 }
 
 .level-input:focus {
@@ -403,8 +404,4 @@ button.action-btn:hover {
 .level-input::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
-}
-
-.level-input {
-  -moz-appearance: textfield;
 }

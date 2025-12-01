@@ -376,20 +376,21 @@ export function HomeTab({
       )}
 
       {/* === COMBAT STATS HEADER - Always visible for player/party tokens === */}
-      {!viewingStorageId && 
-       characterData.tokenType !== 'lore' &&
-       (characterData.tokenType === 'player' || !characterData.tokenType || characterData.tokenType === 'party') && (
-        (() => {
-          const sheet = characterData.characterSheet || createDefaultCharacterSheet();
-          return (
-            <CombatStatsHeader
-              hp={sheet.hitPoints}
-              ac={sheet.armorClass}
-              initiative={sheet.initiative}
-            />
-          );
-        })()
-      )}
+      {(() => {
+        const isPlayerOrPartyToken = characterData.tokenType === 'player' || !characterData.tokenType || characterData.tokenType === 'party';
+        const shouldShowCombatStats = !viewingStorageId && characterData.tokenType !== 'lore' && isPlayerOrPartyToken;
+        
+        if (!shouldShowCombatStats) return null;
+        
+        const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+        return (
+          <CombatStatsHeader
+            hp={sheet.hitPoints}
+            ac={sheet.armorClass}
+            initiative={sheet.initiative}
+          />
+        );
+      })()}
 
       {/* === LORE TOKEN SPECIFIC UI === */}
       {!viewingStorageId && characterData.tokenType === 'lore' && (

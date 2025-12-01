@@ -3,6 +3,7 @@ import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
 import { CollapsibleSection } from '../CollapsibleSection';
+import { PinnedSkillsBar } from '../PinnedSkillsBar';
 import { createDefaultCharacterSheet } from '../../utils/characterSheet';
 
 // Token image sizing constants
@@ -419,16 +420,29 @@ export function HomeTab({
             },
           });
         };
+
+        // Handler for pinned skill click - scrolls to skills section
+        const handlePinnedSkillClick = () => {
+          // Placeholder: In the future this could scroll to the skill in the skills section
+          // For now it just provides visual feedback
+        };
         
         return (
-          <CombatStatsHeader
-            hp={sheet.hitPoints}
-            ac={sheet.armorClass}
-            initiative={sheet.initiative}
-            level={sheet.level}
-            canEdit={canUserEdit}
-            onLevelChange={handleLevelChange}
-          />
+          <>
+            <CombatStatsHeader
+              hp={sheet.hitPoints}
+              ac={sheet.armorClass}
+              initiative={sheet.initiative}
+              level={sheet.level}
+              canEdit={canUserEdit}
+              onLevelChange={handleLevelChange}
+            />
+            {/* Pinned Skills Bar - shown below combat stats */}
+            <PinnedSkillsBar
+              sheet={sheet}
+              onSkillClick={handlePinnedSkillClick}
+            />
+          </>
         );
       })()}
 

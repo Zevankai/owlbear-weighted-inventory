@@ -405,3 +405,438 @@ button.action-btn:hover {
   -webkit-appearance: none;
   margin: 0;
 }
+
+/* --- Pinned Skills Bar --- */
+.pinned-skills-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  margin-bottom: 12px;
+}
+
+.pinned-skill-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(240, 225, 48, 0.08);
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pinned-skill-item:hover {
+  background: rgba(240, 225, 48, 0.15);
+  transform: translateY(-1px);
+}
+
+.pinned-skill-icon {
+  font-size: 10px;
+  color: var(--accent-gold);
+}
+
+.pinned-skill-name {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--text-main);
+}
+
+.pinned-skill-ability {
+  font-size: 8px;
+  color: var(--text-muted);
+  padding: 1px 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.pinned-skill-bonus {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--accent-gold);
+  min-width: 20px;
+  text-align: center;
+}
+
+/* --- Proficiency Indicator Styles --- */
+.proficiency-indicator {
+  transition: all 0.15s ease;
+}
+
+.proficiency-half {
+  position: relative;
+  overflow: hidden;
+}
+
+/* --- Spells Tab Styles --- */
+.spells-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spells-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+}
+
+.spell-level-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spell-header-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.spell-header-value {
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--accent-gold);
+}
+
+.custom-slots-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.custom-slots-toggle input {
+  accent-color: var(--accent-gold);
+}
+
+/* Spell Slots Section */
+.spell-slots-section {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.spell-section-title {
+  margin: 0 0 10px 0;
+  font-size: 11px;
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.spell-slots-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spell-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.spell-slot-row.active {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.spell-slot-row.inactive {
+  opacity: 0.4;
+}
+
+.spell-slot-level {
+  font-size: 11px;
+  font-weight: bold;
+  color: var(--text-main);
+  min-width: 70px;
+}
+
+.spell-slot-circles {
+  display: flex;
+  gap: 4px;
+  flex: 1;
+}
+
+.spell-slot-circle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--accent-gold);
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.spell-slot-circle.used {
+  background: var(--accent-gold);
+}
+
+.spell-slot-circle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 6px var(--accent-gold);
+}
+
+.spell-slot-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  min-width: 30px;
+  text-align: right;
+}
+
+.spell-slot-max-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spell-slot-max-edit label {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.spell-slot-input {
+  width: 50px;
+  padding: 4px;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* Prepared Spells Section */
+.prepared-spells-section {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.no-spells-message {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  text-align: center;
+  margin: 0;
+}
+
+.prepared-spells-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.prepared-spell-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: rgba(240, 225, 48, 0.1);
+  border: 1px solid var(--border-bright);
+  border-radius: 4px;
+}
+
+.prepared-spell-level {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--accent-gold);
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+
+.prepared-spell-name {
+  font-size: 11px;
+  color: var(--text-main);
+}
+
+.unprepare-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0 2px;
+  font-size: 10px;
+}
+
+.unprepare-btn:hover {
+  color: var(--danger);
+}
+
+/* Spellbook Section */
+.spellbook-section {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.add-spell-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add-spell-level-select {
+  flex: 0 0 120px;
+}
+
+.add-spell-btn {
+  flex: 1;
+  background: var(--accent-gold);
+  color: #000;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.add-spell-btn:hover {
+  filter: brightness(1.1);
+}
+
+.spellbook-level-group {
+  margin-bottom: 12px;
+}
+
+.spellbook-level-header {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--accent-gold);
+  border-bottom: 1px solid var(--border-bright);
+  padding-bottom: 4px;
+}
+
+.spellbook-spell-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spellbook-spell-item {
+  padding: 6px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.spell-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.spell-edit-row {
+  display: flex;
+  gap: 8px;
+}
+
+.spell-name-input {
+  flex: 1;
+}
+
+.spell-level-select {
+  width: 100px;
+}
+
+.spell-description-input {
+  min-height: 60px;
+  resize: vertical;
+}
+
+.spell-edit-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.spell-done-btn {
+  background: var(--accent-gold);
+  color: #000;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.spell-delete-btn {
+  background: rgba(255, 77, 77, 0.2);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.spell-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.spell-prepared-toggle {
+  font-size: 14px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spell-prepared-toggle.prepared {
+  color: var(--accent-gold);
+  text-shadow: 0 0 6px var(--accent-gold);
+}
+
+.spell-prepared-toggle:hover {
+  transform: scale(1.2);
+}
+
+.spell-info {
+  flex: 1;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.spell-info:hover {
+  opacity: 0.8;
+}
+
+.spell-name {
+  font-size: 12px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.spell-description-preview {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.spell-edit-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+}
+
+.spell-edit-btn:hover {
+  color: var(--accent-gold);
+}

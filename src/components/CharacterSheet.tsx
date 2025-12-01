@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import type { CharacterSheet, CharacterData, AbilityScores, Skills, HitPoints } from '../types';
+import type { CharacterSheet, CharacterData, AbilityScores, Skills, HitPoints, SkillProficiency } from '../types';
 import { DebouncedInput, DebouncedTextarea } from './DebouncedInput';
-import { createDefaultCharacterSheet, calculateModifier, DND_CONDITIONS } from '../utils/characterSheet';
+import { createDefaultCharacterSheet, calculateModifier, DND_CONDITIONS, migrateSkillProficiency, getProficiencyContribution, calculateProficiencyBonus } from '../utils/characterSheet';
 import { CollapsibleSection } from './CollapsibleSection';
+import { SkillProficiencyIndicator } from './SkillProficiencyIndicator';
 
 // Format modifier as "+X" or "-X"
 const formatModifier = (mod: number): string => (mod >= 0 ? `+${mod}` : `${mod}`);
@@ -83,13 +84,37 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
     });
   };
 
-  const updateSkill = (skill: keyof Skills, updates: Partial<{ proficient: boolean; bonus: number }>) => {
+  const updateSkill = (skill: keyof Skills, updates: Partial<SkillProficiency>) => {
+    const currentSkill = migrateSkillProficiency(sheet.skills[skill]);
     updateSheet({
       skills: {
         ...sheet.skills,
-        [skill]: { ...sheet.skills[skill], ...updates },
+        [skill]: { ...currentSkill, ...updates },
       },
     });
+  };
+
+  // Pin/unpin skill handling
+  const togglePinSkill = (skillKey: keyof Skills) => {
+    const pinnedSkills = sheet.pinnedSkills || [];
+    const isPinned = pinnedSkills.includes(skillKey);
+    
+    if (isPinned) {
+      // Unpin
+      updateSheet({
+        pinnedSkills: pinnedSkills.filter(k => k !== skillKey),
+      });
+    } else {
+      // Check if max pinned
+      if (pinnedSkills.length >= 5) {
+        alert('Maximum 5 skills can be pinned. Unpin a skill first.');
+        return;
+      }
+      // Pin
+      updateSheet({
+        pinnedSkills: [...pinnedSkills, skillKey],
+      });
+    }
   };
 
   const updateHitPoints = (updates: Partial<HitPoints>) => {
@@ -491,60 +516,92 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
                 gridTemplateColumns: 'repeat(2, 1fr)',
                 gap: '6px',
               }}>
-                {SKILL_DEFINITIONS.map(({ key, name, ability }) => (
-                  <div
-                    key={key}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      padding: '4px 6px',
-                      background: 'rgba(0, 0, 0, 0.2)',
-                      borderRadius: '4px',
-                    }}
-                  >
-                    {/* Proficiency Circle */}
+                {SKILL_DEFINITIONS.map(({ key, name, ability }) => {
+                  const skill = migrateSkillProficiency(sheet.skills[key]);
+                  const isPinned = (sheet.pinnedSkills || []).includes(key);
+                  const profBonus = sheet.proficiencyBonus || calculateProficiencyBonus(sheet.level || 1);
+                  const abilityMod = calculateModifier(sheet.abilityScores[ability].base);
+                  const profContribution = getProficiencyContribution(skill.proficiencyLevel, profBonus);
+                  const totalBonus = abilityMod + profContribution + (skill.bonus || 0);
+                  
+                  return (
                     <div
-                      onClick={() => canEdit && updateSkill(key, { proficient: !sheet.skills[key].proficient })}
+                      key={key}
                       style={{
-                        width: '14px',
-                        height: '14px',
-                        borderRadius: '50%',
-                        border: `2px solid ${sheet.skills[key].proficient ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
-                        background: sheet.skills[key].proficient ? 'var(--accent-gold)' : 'transparent',
-                        cursor: canEdit ? 'pointer' : 'default',
-                        flexShrink: 0,
-                        transition: 'all 0.2s ease',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 6px',
+                        background: isPinned ? 'rgba(240, 225, 48, 0.1)' : 'rgba(0, 0, 0, 0.2)',
+                        borderRadius: '4px',
+                        border: isPinned ? '1px solid var(--border-bright)' : '1px solid transparent',
                       }}
-                    />
-                    {/* Bonus Input */}
-                    <input
-                      type="number"
-                      value={sheet.skills[key].bonus}
-                      onChange={(e) => canEdit && updateSkill(key, { bonus: parseInt(e.target.value) || 0 })}
-                      className="search-input"
-                      disabled={!canEdit}
-                      style={{
-                        width: '40px',
-                        textAlign: 'center',
+                    >
+                      {/* Pin Button */}
+                      {canEdit && (
+                        <button
+                          onClick={() => togglePinSkill(key)}
+                          title={isPinned ? 'Unpin skill' : 'Pin skill'}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: isPinned ? 'var(--accent-gold)' : '#555',
+                            cursor: 'pointer',
+                            fontSize: '10px',
+                            padding: '0 2px',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {isPinned ? '📌' : '📍'}
+                        </button>
+                      )}
+                      {/* Proficiency Indicator */}
+                      <SkillProficiencyIndicator
+                        level={skill.proficiencyLevel}
+                        onChange={(newLevel) => updateSkill(key, { proficiencyLevel: newLevel })}
+                        canEdit={canEdit}
+                        size={14}
+                      />
+                      {/* Bonus Input */}
+                      <input
+                        type="number"
+                        value={skill.bonus}
+                        onChange={(e) => canEdit && updateSkill(key, { bonus: parseInt(e.target.value) || 0 })}
+                        className="search-input"
+                        disabled={!canEdit}
+                        title="Additional bonus (on top of ability + proficiency)"
+                        style={{
+                          width: '36px',
+                          textAlign: 'center',
+                          fontSize: '10px',
+                          padding: '2px 2px',
+                          margin: 0,
+                        }}
+                      />
+                      {/* Total Bonus Display */}
+                      <span style={{
                         fontSize: '10px',
-                        padding: '2px 4px',
-                        margin: 0,
-                      }}
-                    />
-                    {/* Skill Name & Ability */}
-                    <span style={{
-                      fontSize: '10px',
-                      color: 'var(--text-main)',
-                      flex: 1,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}>
-                      {name} <span style={{ color: 'var(--text-muted)', fontSize: '9px' }}>({ABILITY_ABBREV[ability]})</span>
-                    </span>
-                  </div>
-                ))}
+                        fontWeight: 'bold',
+                        color: 'var(--accent-gold)',
+                        minWidth: '24px',
+                        textAlign: 'center',
+                      }}>
+                        {totalBonus >= 0 ? `+${totalBonus}` : totalBonus}
+                      </span>
+                      {/* Skill Name & Ability */}
+                      <span style={{
+                        fontSize: '10px',
+                        color: 'var(--text-main)',
+                        flex: 1,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}>
+                        {name} <span style={{ color: 'var(--text-muted)', fontSize: '9px' }}>({ABILITY_ABBREV[ability]})</span>
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
               <div style={{
                 marginTop: '8px',
@@ -552,7 +609,7 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
                 color: 'var(--text-muted)',
                 fontStyle: 'italic',
               }}>
-                Note: Intimidation can use STR or CHA (listed under CHA) - adjust bonus manually if using STR
+                ○ = None, ◐ = Half, ● = Proficient, ★ = Expertise/Mastery | 📌 = Pinned
               </div>
             </div>
           </CollapsibleSection>

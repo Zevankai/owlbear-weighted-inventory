@@ -33,13 +33,38 @@ interface CombatStatsHeaderProps {
   hp: { current: number; max: number; temp: number };
   ac: number;
   initiative: number;
+  level: number;
+  canEdit: boolean;
+  onLevelChange: (level: number) => void;
 }
 
-const CombatStatsHeader = ({ hp, ac, initiative }: CombatStatsHeaderProps) => {
+const CombatStatsHeader = ({ hp, ac, initiative, level, canEdit, onLevelChange }: CombatStatsHeaderProps) => {
   const hpColorClass = getHpColorClass(hp.current, hp.max);
+  // Ensure level defaults to 1 if undefined or 0
+  const displayLevel = level || 1;
   
   return (
     <div className="combat-stats-header">
+      {/* Level Display - Prominent badge */}
+      <div className="combat-stat-box level-badge">
+        <span className="combat-stat-label">Level</span>
+        {canEdit ? (
+          <input
+            type="number"
+            value={displayLevel}
+            onChange={(e) => {
+              const newLevel = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
+              onLevelChange(newLevel);
+            }}
+            className="level-input"
+            min={1}
+            max={20}
+          />
+        ) : (
+          <span className="combat-stat-value level-value">{displayLevel}</span>
+        )}
+      </div>
+      
       {/* HP Display */}
       <div className="combat-stat-box">
         <span className="combat-stat-label">HP</span>
@@ -385,11 +410,24 @@ export function HomeTab({
         if (!shouldShowCombatStats) return null;
         
         const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+        
+        const handleLevelChange = (newLevel: number) => {
+          updateData({
+            characterSheet: {
+              ...sheet,
+              level: newLevel,
+            },
+          });
+        };
+        
         return (
           <CombatStatsHeader
             hp={sheet.hitPoints}
             ac={sheet.armorClass}
             initiative={sheet.initiative}
+            level={sheet.level}
+            canEdit={canUserEdit}
+            onLevelChange={handleLevelChange}
           />
         );
       })()}

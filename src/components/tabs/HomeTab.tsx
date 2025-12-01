@@ -375,10 +375,12 @@ export function HomeTab({
         </div>
       )}
 
-      {/* === COMBAT STATS HEADER - Always visible for player/party tokens === */}
+      {/* === COMBAT STATS HEADER - Always visible for player/party tokens and NPC tokens (GM only) === */}
       {(() => {
-        const isPlayerOrPartyToken = characterData.tokenType === 'player' || !characterData.tokenType || characterData.tokenType === 'party';
-        const shouldShowCombatStats = !viewingStorageId && characterData.tokenType !== 'lore' && isPlayerOrPartyToken;
+        // Show for player tokens, party tokens, or NPC tokens when user is GM
+        const showCharacterSheet = characterData.tokenType !== 'lore' && 
+          (characterData.tokenType !== 'npc' || playerRole === 'GM');
+        const shouldShowCombatStats = !viewingStorageId && showCharacterSheet;
         
         if (!shouldShowCombatStats) return null;
         
@@ -555,9 +557,9 @@ export function HomeTab({
         {canUserEdit && <MarkdownHint />}
       </div>
 
-      {/* Character Sheet - only show for player-type tokens (not lore tokens) */}
+      {/* Character Sheet - show for player/party tokens, and NPC tokens when user is GM */}
       {!viewingStorageId && 
-       (characterData.tokenType === 'player' || !characterData.tokenType || characterData.tokenType === 'party') && (
+       (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
         <CharacterSheetSection
           characterData={characterData}
           canEdit={canUserEdit}

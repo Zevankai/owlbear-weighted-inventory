@@ -170,6 +170,90 @@ export interface Reputation {
   showPartyAverage: boolean; // GM controls if average slider is visible to players
 }
 
+// D&D 5e Character Sheet Types
+export interface AbilityScore {
+  base: number;      // 1-30
+  modifier: number;  // Auto-calculated: floor((base - 10) / 2)
+}
+
+export interface AbilityScores {
+  strength: AbilityScore;
+  dexterity: AbilityScore;
+  constitution: AbilityScore;
+  intelligence: AbilityScore;
+  wisdom: AbilityScore;
+  charisma: AbilityScore;
+}
+
+export interface SkillProficiency {
+  proficient: boolean;
+  bonus: number;
+}
+
+export interface Skills {
+  // Strength
+  athletics: SkillProficiency;
+  // Dexterity
+  acrobatics: SkillProficiency;
+  sleightOfHand: SkillProficiency;
+  stealth: SkillProficiency;
+  // Intelligence
+  arcana: SkillProficiency;
+  history: SkillProficiency;
+  investigation: SkillProficiency;
+  nature: SkillProficiency;
+  religion: SkillProficiency;
+  // Wisdom
+  animalHandling: SkillProficiency;
+  insight: SkillProficiency;
+  medicine: SkillProficiency;
+  perception: SkillProficiency;
+  survival: SkillProficiency;
+  // Charisma
+  deception: SkillProficiency;
+  intimidation: SkillProficiency;
+  performance: SkillProficiency;
+  persuasion: SkillProficiency;
+}
+
+export interface HitPoints {
+  current: number;
+  max: number;
+  temp: number;
+}
+
+export interface CharacterSheet {
+  // Character Info
+  gender: string;
+  race: string;
+  characterClass: string;  // 'class' is reserved
+  level: number;
+  
+  // Ability Scores
+  abilityScores: AbilityScores;
+  
+  // Skills
+  skills: Skills;
+  
+  // Combat Stats
+  hitPoints: HitPoints;
+  armorClass: number;
+  initiative: number;
+  proficiencyBonus: number;
+  speed: number;
+  
+  // Passive Scores
+  passivePerception: number;
+  passiveInvestigation: number;
+  passiveInsight: number;
+  
+  // Misc
+  heroicInspiration: boolean;
+  defenses: string;      // Text field for immunities/resistances
+  conditions: string;    // Text field for active conditions
+  languages: string;     // Text field for known languages
+}
+
 export interface CharacterData {
   tokenType: TokenType;  // Type of token: player (default), npc, party, or lore
   packType: PackType;
@@ -188,4 +272,5 @@ export interface CharacterData {
   gmNotes?: string;       // GM-only notes (hidden from players)
   loreSettings?: LoreSettings;  // Lore system settings (only for tokenType === 'lore')
   name?: string;  // Custom display name (overrides token name, GM-editable for lore tokens)
+  characterSheet?: CharacterSheet;  // D&D 5e character sheet (optional for backwards compatibility)
 }

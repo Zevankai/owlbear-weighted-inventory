@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass } from '../types';
-import { getAvailableRestOptions } from '../data/restOptions';
+import { getStandardRestOptions, getNonStandardRestOptions, getMaxAdditionalOptions } from '../data/restOptions';
 
 interface RestModalProps {
   isOpen: boolean;
@@ -35,9 +35,16 @@ export const RestModal: React.FC<RestModalProps> = ({
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
 
-  // Get available options based on character's race/class and rest type
-  const availableOptions = useMemo(() => {
-    const defaultOptions = getAvailableRestOptions(
+  // Get standard options (auto-applied, not selectable)
+  const standardOptions = useMemo(() => {
+    return getStandardRestOptions(selectedRestType).filter(
+      opt => !disabledRestOptionIds.includes(opt.id)
+    );
+  }, [selectedRestType, disabledRestOptionIds]);
+
+  // Get non-standard options (selectable - race and class options)
+  const selectableOptions = useMemo(() => {
+    const defaultNonStandard = getNonStandardRestOptions(
       selectedRestType,
       race,
       characterClass,
@@ -45,30 +52,42 @@ export const RestModal: React.FC<RestModalProps> = ({
       secondaryClass
     );
     
-    // Add custom GM options that match the rest type
+    // Add custom GM options that match the rest type (treat as selectable)
     const customMatchingOptions = customRestOptions.filter(
       opt => opt.restType === selectedRestType
     );
     
     // Combine and filter out disabled options
-    const allOptions = [...defaultOptions, ...customMatchingOptions];
+    const allOptions = [...defaultNonStandard, ...customMatchingOptions];
     return allOptions.filter(opt => !disabledRestOptionIds.includes(opt.id));
   }, [selectedRestType, race, characterClass, secondaryRace, secondaryClass, customRestOptions, disabledRestOptionIds]);
 
-  // Group options by category
-  const groupedOptions = useMemo(() => {
+  // Group selectable options by category
+  const groupedSelectableOptions = useMemo(() => {
     const groups: Record<string, RestOption[]> = {
-      standard: [],
       race: [],
       class: [],
+      custom: [],
     };
     
-    availableOptions.forEach(option => {
-      groups[option.category].push(option);
+    selectableOptions.forEach(option => {
+      if (option.category === 'race') {
+        groups.race.push(option);
+      } else if (option.category === 'class') {
+        groups.class.push(option);
+      } else {
+        groups.custom.push(option);
+      }
     });
     
     return groups;
-  }, [availableOptions]);
+  }, [selectableOptions]);
+
+  // Get max allowed additional selections
+  const maxAdditional = getMaxAdditionalOptions(selectedRestType);
+
+  // Check if at max selections
+  const isAtMaxSelections = selectedOptionIds.size >= maxAdditional;
 
   // Format timestamp for display
   const formatLastRest = (timestamp: number | null): string => {
@@ -93,14 +112,22 @@ export const RestModal: React.FC<RestModalProps> = ({
     if (newSet.has(optionId)) {
       newSet.delete(optionId);
     } else {
-      newSet.add(optionId);
+      // Only add if not at max
+      if (newSet.size < maxAdditional) {
+        newSet.add(optionId);
+      }
     }
     setSelectedOptionIds(newSet);
   };
 
   // Handle rest completion
   const handleRest = () => {
-    onRest(selectedRestType, Array.from(selectedOptionIds));
+    // Include all standard option IDs + selected additional options
+    const allSelectedIds = [
+      ...standardOptions.map(opt => opt.id),
+      ...Array.from(selectedOptionIds),
+    ];
+    onRest(selectedRestType, allSelectedIds);
     setSelectedOptionIds(new Set());
     onClose();
   };
@@ -134,8 +161,8 @@ export const RestModal: React.FC<RestModalProps> = ({
         backdropFilter: 'blur(16px)',
         border: '1px solid var(--glass-border)',
         borderRadius: '12px',
-        width: 'min(500px, 90vw)',
-        maxHeight: 'min(700px, 85vh)',
+        width: 'min(550px, 90vw)',
+        maxHeight: 'min(750px, 85vh)',
         display: 'flex',
         flexDirection: 'column',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
@@ -219,7 +246,7 @@ export const RestModal: React.FC<RestModalProps> = ({
             <div style={{ fontSize: '20px', marginBottom: '4px' }}>☀️</div>
             <div style={{ fontWeight: 'bold', fontSize: '12px' }}>Short Rest</div>
             <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px' }}>
-              1+ hours • Spend Hit Dice
+              1+ hours • 1 additional option
             </div>
           </button>
           <button
@@ -243,7 +270,7 @@ export const RestModal: React.FC<RestModalProps> = ({
             <div style={{ fontSize: '20px', marginBottom: '4px' }}>🌙</div>
             <div style={{ fontWeight: 'bold', fontSize: '12px' }}>Long Rest</div>
             <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px' }}>
-              8+ hours • Full recovery
+              8+ hours • 2 additional options
             </div>
           </button>
         </div>
@@ -284,53 +311,105 @@ export const RestModal: React.FC<RestModalProps> = ({
             {level && <span>Level: <strong style={{ color: 'var(--text-main)' }}>{level}</strong></span>}
           </div>
 
-          {/* Standard Options */}
-          {groupedOptions.standard.length > 0 && (
-            <OptionSection
-              title="Standard Benefits"
-              options={groupedOptions.standard}
-              selectedIds={selectedOptionIds}
-              expandedId={expandedOptionId}
-              onToggle={toggleOption}
-              onExpand={setExpandedOptionId}
-              color="#51cf66"
-            />
+          {/* Standard Benefits (Auto-applied - shown as info) */}
+          {standardOptions.length > 0 && (
+            <div style={{ marginBottom: '16px' }}>
+              <h4 style={{
+                fontSize: '10px',
+                color: '#51cf66',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                marginBottom: '8px',
+                borderBottom: '1px solid rgba(81, 207, 102, 0.3)',
+                paddingBottom: '4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                ✓ Standard Benefits (Auto-Applied)
+              </h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {standardOptions.map(option => (
+                  <StandardOptionDisplay 
+                    key={option.id} 
+                    option={option} 
+                    expandedId={expandedOptionId}
+                    onExpand={setExpandedOptionId}
+                  />
+                ))}
+              </div>
+            </div>
           )}
 
+          {/* Selection Info Banner */}
+          <div style={{
+            padding: '10px 12px',
+            background: isAtMaxSelections 
+              ? 'rgba(255, 107, 107, 0.1)' 
+              : 'rgba(77, 171, 247, 0.1)',
+            border: `1px solid ${isAtMaxSelections ? 'rgba(255, 107, 107, 0.3)' : 'rgba(77, 171, 247, 0.3)'}`,
+            borderRadius: '6px',
+            marginBottom: '16px',
+            fontSize: '11px',
+            color: isAtMaxSelections ? '#ff6b6b' : '#4dabf7',
+          }}>
+            {isAtMaxSelections ? (
+              <span>⚠️ Maximum selections reached ({maxAdditional}). Deselect an option to choose a different one.</span>
+            ) : (
+              <span>📋 Select {maxAdditional - selectedOptionIds.size} more additional option{maxAdditional - selectedOptionIds.size !== 1 ? 's' : ''} (max {maxAdditional} for {selectedRestType} rest)</span>
+            )}
+          </div>
+
           {/* Race Options */}
-          {groupedOptions.race.length > 0 && (
-            <OptionSection
-              title={`${race || 'Race'} Benefits`}
-              options={groupedOptions.race}
+          {groupedSelectableOptions.race.length > 0 && (
+            <SelectableOptionSection
+              title={`${race || 'Race'} Options`}
+              options={groupedSelectableOptions.race}
               selectedIds={selectedOptionIds}
               expandedId={expandedOptionId}
               onToggle={toggleOption}
               onExpand={setExpandedOptionId}
               color="#fcc419"
+              isAtMax={isAtMaxSelections}
             />
           )}
 
           {/* Class Options */}
-          {groupedOptions.class.length > 0 && (
-            <OptionSection
-              title={`${characterClass || 'Class'} Benefits`}
-              options={groupedOptions.class}
+          {groupedSelectableOptions.class.length > 0 && (
+            <SelectableOptionSection
+              title={`${characterClass || 'Class'} Options`}
+              options={groupedSelectableOptions.class}
               selectedIds={selectedOptionIds}
               expandedId={expandedOptionId}
               onToggle={toggleOption}
               onExpand={setExpandedOptionId}
               color="#4dabf7"
+              isAtMax={isAtMaxSelections}
             />
           )}
 
-          {availableOptions.length === 0 && (
+          {/* Custom GM Options */}
+          {groupedSelectableOptions.custom.length > 0 && (
+            <SelectableOptionSection
+              title="Custom Options"
+              options={groupedSelectableOptions.custom}
+              selectedIds={selectedOptionIds}
+              expandedId={expandedOptionId}
+              onToggle={toggleOption}
+              onExpand={setExpandedOptionId}
+              color="#c084fc"
+              isAtMax={isAtMaxSelections}
+            />
+          )}
+
+          {selectableOptions.length === 0 && (
             <div style={{
               textAlign: 'center',
               padding: '20px',
               color: 'var(--text-muted)',
               fontSize: '12px',
             }}>
-              No specific options available for this rest type.
+              No additional options available for your race/class.
             </div>
           )}
         </div>
@@ -348,7 +427,7 @@ export const RestModal: React.FC<RestModalProps> = ({
             fontSize: '11px',
             color: 'var(--text-muted)',
           }}>
-            {selectedOptionIds.size} option{selectedOptionIds.size !== 1 ? 's' : ''} selected
+            {standardOptions.length} standard + {selectedOptionIds.size}/{maxAdditional} additional selected
           </div>
           <button
             onClick={handleRest}
@@ -374,8 +453,99 @@ export const RestModal: React.FC<RestModalProps> = ({
   );
 };
 
-// Option Section Component
-interface OptionSectionProps {
+// Standard Option Display (auto-applied, not selectable)
+interface StandardOptionDisplayProps {
+  option: RestOption;
+  expandedId: string | null;
+  onExpand: (id: string | null) => void;
+}
+
+const StandardOptionDisplay: React.FC<StandardOptionDisplayProps> = ({
+  option,
+  expandedId,
+  onExpand,
+}) => {
+  const isExpanded = expandedId === option.id;
+  
+  return (
+    <div>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 10px',
+          background: 'rgba(81, 207, 102, 0.1)',
+          border: '1px solid rgba(81, 207, 102, 0.2)',
+          borderRadius: isExpanded ? '6px 6px 0 0' : '6px',
+        }}
+      >
+        {/* Checkmark icon (always checked) */}
+        <div style={{
+          width: '18px',
+          height: '18px',
+          borderRadius: '4px',
+          background: '#51cf66',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexShrink: 0,
+        }}>
+          <span style={{ color: '#000', fontSize: '12px', fontWeight: 'bold' }}>✓</span>
+        </div>
+        
+        {/* Option name */}
+        <span style={{
+          flex: 1,
+          fontSize: '11px',
+          color: '#51cf66',
+          fontWeight: 'bold',
+        }}>
+          {option.name}
+        </span>
+        
+        {/* Expand button */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onExpand(isExpanded ? null : option.id);
+          }}
+          style={{
+            background: 'none',
+            border: 'none',
+            color: 'var(--text-muted)',
+            cursor: 'pointer',
+            padding: '2px',
+            fontSize: '10px',
+            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            transition: 'transform 0.2s ease',
+          }}
+        >
+          ▼
+        </button>
+      </div>
+      
+      {/* Description */}
+      {isExpanded && (
+        <div style={{
+          padding: '10px',
+          background: 'rgba(0, 0, 0, 0.3)',
+          borderRadius: '0 0 6px 6px',
+          border: '1px solid var(--glass-border)',
+          borderTop: 'none',
+          fontSize: '10px',
+          color: 'var(--text-muted)',
+          lineHeight: '1.5',
+        }}>
+          {option.description}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Selectable Option Section Component
+interface SelectableOptionSectionProps {
   title: string;
   options: RestOption[];
   selectedIds: Set<string>;
@@ -383,9 +553,10 @@ interface OptionSectionProps {
   onToggle: (id: string) => void;
   onExpand: (id: string | null) => void;
   color: string;
+  isAtMax: boolean;
 }
 
-const OptionSection: React.FC<OptionSectionProps> = ({
+const SelectableOptionSection: React.FC<SelectableOptionSectionProps> = ({
   title,
   options,
   selectedIds,
@@ -393,6 +564,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
   onToggle,
   onExpand,
   color,
+  isAtMax,
 }) => (
   <div style={{ marginBottom: '16px' }}>
     <h4 style={{
@@ -410,6 +582,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
       {options.map(option => {
         const isSelected = selectedIds.has(option.id);
         const isExpanded = expandedId === option.id;
+        const isDisabled = isAtMax && !isSelected;
         
         return (
           <div key={option.id}>
@@ -422,9 +595,10 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                 background: isSelected ? `${color}15` : 'rgba(0, 0, 0, 0.2)',
                 border: `1px solid ${isSelected ? color : 'transparent'}`,
                 borderRadius: isExpanded ? '6px 6px 0 0' : '6px',
-                cursor: 'pointer',
+                cursor: isDisabled ? 'not-allowed' : 'pointer',
+                opacity: isDisabled ? 0.5 : 1,
               }}
-              onClick={() => onToggle(option.id)}
+              onClick={() => !isDisabled && onToggle(option.id)}
             >
               {/* Checkbox */}
               <div style={{

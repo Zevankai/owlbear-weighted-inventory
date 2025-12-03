@@ -288,7 +288,17 @@ export type CharacterRace = 'Human' | 'Elf' | 'Dragonborn' | 'Orc' | 'Halfling' 
 export type CharacterClass = 'Fighter' | 'Ranger' | 'Bard' | 'Wizard' | 'Warlock' | 'Rogue' | 'Barbarian' | 'Druid' | 'Cleric' | 'Paladin' | 'Monk' | 'Multiclass' | string;
 
 // Condition types
-export type ConditionType = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 'grappled' | 'incapacitated' | 'invisible' | 'paralyzed' | 'petrified' | 'poisoned' | 'prone' | 'restrained' | 'stunned' | 'unconscious';
+export type ConditionType = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 'grappled' | 'incapacitated' | 'invisible' | 'paralyzed' | 'petrified' | 'poisoned' | 'prone' | 'restrained' | 'stunned' | 'unconscious' | 'minorInjury' | 'seriousInjury' | 'criticalInjury' | 'infection';
+
+// Injury location types for injury conditions
+export type InjuryLocation = 'limb' | 'torso' | 'head';
+
+// Extended condition data for injury conditions
+export interface InjuryConditionData {
+  injuryLocation?: InjuryLocation;
+  injuryDaysSinceRest?: number; // For infection tracking
+  infectionDeathSavesFailed?: number; // For infection death saves
+}
 
 export interface CharacterConditions {
   blinded: boolean;
@@ -305,6 +315,19 @@ export interface CharacterConditions {
   restrained: boolean;
   stunned: boolean;
   unconscious: boolean;
+  // New injury conditions
+  minorInjury: boolean;
+  seriousInjury: boolean;
+  criticalInjury: boolean;
+  infection: boolean;
+}
+
+// Extended data for injury tracking
+export interface CharacterInjuryData {
+  minorInjury?: InjuryConditionData;
+  seriousInjury?: InjuryConditionData;
+  criticalInjury?: InjuryConditionData;
+  infection?: InjuryConditionData;
 }
 
 // Exhaustion state
@@ -364,6 +387,7 @@ export interface CharacterStats {
   armorClass: number;
   heroicInspiration: boolean;
   conditions: CharacterConditions;
+  injuryData?: CharacterInjuryData; // Extended injury condition data
   exhaustion: ExhaustionState;
   restHistory: RestHistory;
 }

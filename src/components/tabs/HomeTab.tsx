@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef } from 'react';
+import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
@@ -86,7 +87,7 @@ const HorizontalBanner = ({
   
   const hpColorClass = getHpColorClass(sheet.hitPoints.current, sheet.hitPoints.max);
 
-  const handleStatClick = (type: 'hp' | 'ac' | 'init', ref: React.RefObject<HTMLDivElement | null>) => {
+  const handleStatClick = (type: 'hp' | 'ac' | 'init', ref: RefObject<HTMLDivElement | null>) => {
     if (!canEdit || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     setEditPopup({
@@ -660,14 +661,15 @@ export function HomeTab({
       </div>
 
       {/* --- TOKEN PROFILE WITH COVER PHOTO --- */}
-      {!viewingStorageId && showTokenProfile && (
+      {/* Only show for lore tokens OR when there's a cover photo */}
+      {!viewingStorageId && showTokenProfile && (characterData.tokenType === 'lore' || characterData.coverPhotoUrl) && (
         <div style={{
           position: 'relative',
           overflow: 'hidden',
           borderRadius: '8px',
           marginBottom: '12px',
-          minHeight: '280px',
-          paddingBottom: '24px'
+          minHeight: characterData.tokenType === 'lore' ? '280px' : '100px', // Smaller for non-lore tokens (just cover photo)
+          paddingBottom: characterData.tokenType === 'lore' ? '24px' : '8px'
         }}>
           {/* Cover photo as background */}
           {showCoverPhoto && characterData.coverPhotoUrl && (
@@ -702,11 +704,15 @@ export function HomeTab({
             flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: showCoverPhoto && characterData.coverPhotoUrl ? '20px 16px 16px 16px' : '8px 0',
-            minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined
+            padding: showCoverPhoto && characterData.coverPhotoUrl 
+              ? (characterData.tokenType === 'lore' ? '20px 16px 16px 16px' : '12px 16px')
+              : '8px 0',
+            minHeight: showCoverPhoto && characterData.coverPhotoUrl 
+              ? (characterData.tokenType === 'lore' ? '200px' : '80px') 
+              : undefined
           }}>
-            {/* Token Image with Heroic Inspiration border */}
-            {tokenImage && (
+            {/* Token Image with Heroic Inspiration border - only for lore tokens (non-lore tokens show image in HorizontalBanner) */}
+            {tokenImage && characterData.tokenType === 'lore' && (
               <div 
                 onClick={canUserEdit && characterData.tokenType !== 'lore' ? toggleHeroicInspiration : undefined}
                 style={{

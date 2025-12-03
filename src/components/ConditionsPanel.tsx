@@ -35,9 +35,12 @@ export const ConditionsPanel: React.FC<ConditionsPanelProps> = ({
   const standardConditions = CONDITIONS.filter(c => STANDARD_CONDITION_TYPES.includes(c.id));
   const injuryConditions = CONDITIONS.filter(c => INJURY_CONDITION_TYPES.includes(c.id));
 
+  // Injury types that require location selection
+  const LOCATION_REQUIRED_INJURIES: ConditionType[] = ['seriousInjury', 'criticalInjury'];
+
   // Handle injury condition toggle - shows location picker for serious/critical
   const handleInjuryToggle = (conditionId: ConditionType, newValue: boolean) => {
-    if (newValue && (conditionId === 'seriousInjury' || conditionId === 'criticalInjury')) {
+    if (newValue && LOCATION_REQUIRED_INJURIES.includes(conditionId)) {
       // Show location picker before enabling
       setShowLocationPicker(conditionId);
     } else {

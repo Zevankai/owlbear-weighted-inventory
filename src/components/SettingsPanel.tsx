@@ -758,7 +758,7 @@ export function SettingsPanel({
                   </div>
 
                   {/* Rest Rules Message */}
-                  <div>
+                  <div style={{ marginBottom: '12px' }}>
                     <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
                       Rest House Rules Message
                     </label>
@@ -770,6 +770,72 @@ export function SettingsPanel({
                       className="search-input"
                       style={{ margin: 0 }}
                     />
+                  </div>
+
+                  {/* Exhaustion Effects Management */}
+                  <div>
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>
+                      💤 Exhaustion Level Effects
+                    </label>
+                    <p style={{ fontSize: '9px', color: '#666', marginBottom: '8px' }}>
+                      Customize what happens at each exhaustion level (0-6)
+                    </p>
+                    {[0, 1, 2, 3, 4, 5, 6].map(level => {
+                      const defaultEffects = [
+                        'No effect',
+                        'Disadvantage on ability checks',
+                        'Speed halved',
+                        'Disadvantage on attack rolls and saving throws',
+                        'Hit point maximum halved',
+                        'Speed reduced to 0',
+                        'Death',
+                      ];
+                      const currentEffect = gmCustomizations?.exhaustionEffects?.[level] || defaultEffects[level];
+                      
+                      return (
+                        <div key={level} style={{ marginBottom: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ 
+                              minWidth: '24px', 
+                              fontSize: '11px', 
+                              fontWeight: 'bold',
+                              color: level === 0 ? '#51cf66' : 
+                                     level <= 2 ? '#fcc419' : 
+                                     level <= 4 ? '#ff922b' : '#ff6b6b',
+                            }}>
+                              L{level}:
+                            </span>
+                            <input
+                              type="text"
+                              value={currentEffect}
+                              onChange={(e) => {
+                                const newEffects = [...(gmCustomizations?.exhaustionEffects || defaultEffects)];
+                                newEffects[level] = e.target.value;
+                                onUpdateGMCustomizations({ exhaustionEffects: newEffects });
+                              }}
+                              className="search-input"
+                              style={{ margin: 0, flex: 1, padding: '4px 8px', fontSize: '10px' }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    })}
+                    <button
+                      onClick={() => onUpdateGMCustomizations({ exhaustionEffects: undefined })}
+                      style={{
+                        marginTop: '8px',
+                        width: '100%',
+                        padding: '6px',
+                        background: 'rgba(255,255,255,0.05)',
+                        border: '1px solid var(--glass-border)',
+                        borderRadius: '4px',
+                        color: 'var(--text-muted)',
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Reset to Default Effects
+                    </button>
                   </div>
                 </div>
               )}

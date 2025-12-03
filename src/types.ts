@@ -283,6 +283,91 @@ export interface CharacterSheet {
   spellManagement?: SpellManagement;
 }
 
+// Race and Class types
+export type CharacterRace = 'Human' | 'Elf' | 'Dragonborn' | 'Orc' | 'Halfling' | 'Dwarf' | 'Tiefling' | 'Goblin' | 'Fairy' | 'Mixed' | string;
+export type CharacterClass = 'Fighter' | 'Ranger' | 'Bard' | 'Wizard' | 'Warlock' | 'Rogue' | 'Barbarian' | 'Druid' | 'Cleric' | 'Paladin' | 'Monk' | 'Multiclass' | string;
+
+// Condition types
+export type ConditionType = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 'grappled' | 'incapacitated' | 'invisible' | 'paralyzed' | 'petrified' | 'poisoned' | 'prone' | 'restrained' | 'stunned' | 'unconscious';
+
+export interface CharacterConditions {
+  blinded: boolean;
+  charmed: boolean;
+  deafened: boolean;
+  frightened: boolean;
+  grappled: boolean;
+  incapacitated: boolean;
+  invisible: boolean;
+  paralyzed: boolean;
+  petrified: boolean;
+  poisoned: boolean;
+  prone: boolean;
+  restrained: boolean;
+  stunned: boolean;
+  unconscious: boolean;
+}
+
+// Exhaustion state
+export interface ExhaustionState {
+  currentLevel: number;
+  maxLevels: number; // Default 6, GM customizable
+  customEffects: string[]; // GM-defined effects per level
+}
+
+// Rest System types
+export type RestType = 'short' | 'long';
+
+export interface RestOption {
+  id: string;
+  name: string;
+  description: string;
+  category: 'standard' | 'race' | 'class';
+  raceRestriction?: CharacterRace;
+  classRestriction?: CharacterClass;
+  restType: RestType;
+}
+
+export interface RestHistory {
+  lastShortRest: {
+    timestamp: number;
+    chosenOptionIds: string[];
+  } | null;
+  lastLongRest: {
+    timestamp: number;
+    chosenOptionIds: string[];
+  } | null;
+  heroicInspirationGainedToday: boolean;
+}
+
+// GM Customizations (stored in Room Metadata)
+export interface GMCustomizations {
+  customRaces: string[];
+  customClasses: string[];
+  customRestOptions: RestOption[];
+  modifiedRestOptions: Record<string, Partial<RestOption>>; // Overrides for default options
+  disabledRestOptions: string[]; // IDs of disabled default options
+  exhaustionEffects: string[]; // Custom effects per exhaustion level
+  overencumberedText: string;
+  restRulesMessage: string;
+}
+
+// Character Stats (unified character stats for dashboard)
+export interface CharacterStats {
+  race: CharacterRace;
+  secondaryRace?: CharacterRace; // For Mixed race
+  characterClass: CharacterClass;
+  secondaryClass?: CharacterClass; // For Multiclass
+  level: number;
+  currentHp: number;
+  maxHp: number;
+  tempHp: number;
+  armorClass: number;
+  heroicInspiration: boolean;
+  conditions: CharacterConditions;
+  exhaustion: ExhaustionState;
+  restHistory: RestHistory;
+}
+
 export interface CharacterData {
   tokenType: TokenType;  // Type of token: player (default), npc, party, or lore
   packType: PackType;
@@ -302,4 +387,5 @@ export interface CharacterData {
   loreSettings?: LoreSettings;  // Lore system settings (only for tokenType === 'lore')
   name?: string;  // Custom display name (overrides token name, GM-editable for lore tokens)
   characterSheet?: CharacterSheet;  // D&D 5e character sheet (optional for backwards compatibility)
+  characterStats?: CharacterStats;  // New unified character stats
 }

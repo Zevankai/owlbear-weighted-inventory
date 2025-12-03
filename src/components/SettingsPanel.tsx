@@ -1,4 +1,6 @@
-import type { CharacterData, Theme, TokenType } from '../types';
+import { useState } from 'react';
+import type { CharacterData, Theme, TokenType, CharacterRace, CharacterClass, CharacterStats, GMCustomizations } from '../types';
+import { createDefaultCharacterStats } from '../utils/characterStats';
 
 interface DebugInfo {
   roomKeys: string[];
@@ -22,7 +24,15 @@ interface SettingsPanelProps {
   cleanupLegacyData: () => void;
   tokenId: string | null;
   playerRole: 'GM' | 'PLAYER';
+  gmCustomizations?: GMCustomizations;
+  onUpdateGMCustomizations?: (updates: Partial<GMCustomizations>) => void;
 }
+
+// Default races and classes
+const DEFAULT_RACES: CharacterRace[] = ['Human', 'Elf', 'Dragonborn', 'Orc', 'Halfling', 'Dwarf', 'Tiefling', 'Goblin', 'Fairy', 'Mixed'];
+const DEFAULT_CLASSES: CharacterClass[] = ['Fighter', 'Ranger', 'Bard', 'Wizard', 'Warlock', 'Rogue', 'Barbarian', 'Druid', 'Cleric', 'Paladin', 'Monk', 'Multiclass'];
+
+type SettingsTab = 'style' | 'character';
 
 export function SettingsPanel({
   isOpen,
@@ -35,9 +45,33 @@ export function SettingsPanel({
   loadDebugInfo,
   cleanupLegacyData,
   tokenId,
-  playerRole
+  playerRole,
+  gmCustomizations,
+  onUpdateGMCustomizations
 }: SettingsPanelProps) {
+  const [activeTab, setActiveTab] = useState<SettingsTab>('style');
+  const [newCustomRace, setNewCustomRace] = useState('');
+  const [newCustomClass, setNewCustomClass] = useState('');
+  
   if (!isOpen) return null;
+  
+  // Get character stats with defaults
+  const characterStats = characterData.characterStats;
+  
+  // Helper to update character stats
+  const updateCharacterStats = (updates: Partial<CharacterStats>) => {
+    const currentStats: CharacterStats = characterStats || createDefaultCharacterStats();
+    updateData({
+      characterStats: {
+        ...currentStats,
+        ...updates,
+      }
+    });
+  };
+  
+  // Combine default and custom races/classes
+  const allRaces = [...DEFAULT_RACES, ...(gmCustomizations?.customRaces || [])];
+  const allClasses = [...DEFAULT_CLASSES, ...(gmCustomizations?.customClasses || [])];
 
   return (
     <>
@@ -105,8 +139,162 @@ export function SettingsPanel({
           </button>
         </div>
 
+        {/* Tab Navigation */}
+        <div style={{
+          display: 'flex',
+          borderBottom: '1px solid var(--glass-border)',
+          background: 'rgba(0,0,0,0.1)',
+        }}>
+          <button
+            onClick={() => setActiveTab('style')}
+            style={{
+              flex: 1,
+              padding: '10px',
+              background: activeTab === 'style' ? 'rgba(240, 225, 48, 0.1)' : 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'style' ? '2px solid var(--accent-gold)' : '2px solid transparent',
+              color: activeTab === 'style' ? 'var(--accent-gold)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
+            }}
+          >
+            🎨 Style
+          </button>
+          <button
+            onClick={() => setActiveTab('character')}
+            style={{
+              flex: 1,
+              padding: '10px',
+              background: activeTab === 'character' ? 'rgba(240, 225, 48, 0.1)' : 'transparent',
+              border: 'none',
+              borderBottom: activeTab === 'character' ? '2px solid var(--accent-gold)' : '2px solid transparent',
+              color: activeTab === 'character' ? 'var(--accent-gold)' : 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
+            }}
+          >
+            👤 Character
+          </button>
+        </div>
+
         {/* Content - scrollable */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          {/* ========== STYLE TAB ========== */}
+          {activeTab === 'style' && (
+            <>
+              {/* Token Type Section - GM Only */}
+              {playerRole === 'GM' && (
+                <div style={{
+                  marginBottom: '16px',
+                  padding: '12px',
+                  background: 'rgba(0,0,0,0.2)',
+                  borderRadius: '6px',
+                  border: '1px solid var(--glass-border)'
+                }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    color: 'var(--accent-gold)',
+                    textTransform: 'uppercase',
+                    marginBottom: '10px',
+                    fontWeight: 'bold'
+                  }}>
+                    🎭 Token Type
+                  </label>
+                  <select
+                    value={characterData.tokenType || 'player'}
+                    onChange={(e) => updateData({ tokenType: e.target.value as TokenType })}
+                    className="search-input"
+                    style={{ marginTop: '4px', fontWeight: 'bold' }}
+                  >
+                    <option value="player">Player Token</option>
+                    <option value="npc">NPC Token</option>
+                    <option value="party">Party Token</option>
+                    <option value="lore">Lore Token</option>
+                  </select>
+                  <p style={{ fontSize: '10px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
+                    {characterData.tokenType === 'player' && 'Standard token claimable by one player'}
+                    {characterData.tokenType === 'npc' && 'GM-controlled NPC with inventory'}
+                    {characterData.tokenType === 'party' && 'Shared inventory accessible by all players'}
+                    {characterData.tokenType === 'lore' && 'Information token (no inventory)'}
+                    {!characterData.tokenType && 'Standard token claimable by one player'}
+                  </p>
+                </div>
+              )}
+
+          {/* Cover Photo Section */}
+          <div style={{
+            marginBottom: '16px',
+            padding: '12px',
+            background: 'rgba(0,0,0,0.2)',
+            borderRadius: '6px',
+            border: '1px solid var(--glass-border)'
+          }}>
+            <label style={{
+              display: 'block',
+              fontSize: '11px',
+              color: 'var(--accent-gold)',
+              textTransform: 'uppercase',
+              marginBottom: '10px',
+              fontWeight: 'bold'
+            }}>
+              🖼️ Cover Photo
+            </label>
+            <input
+              type="text"
+              value={characterData.coverPhotoUrl || ''}
+              onChange={(e) => updateData({ coverPhotoUrl: e.target.value || undefined })}
+              placeholder="Paste image URL here..."
+              className="search-input"
+              style={{ marginTop: 0, marginBottom: '8px' }}
+            />
+            {characterData.coverPhotoUrl && (
+              <>
+                {/* Preview */}
+                <div style={{
+                  width: '100%',
+                  height: '100px',
+                  borderRadius: '4px',
+                  overflow: 'hidden',
+                  marginBottom: '8px',
+                  border: '1px solid var(--glass-border)'
+                }}>
+                  <img
+                    src={characterData.coverPhotoUrl}
+                    alt="Cover preview"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+                {/* Remove button */}
+                <button
+                  onClick={() => updateData({ coverPhotoUrl: undefined })}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(255,0,0,0.1)',
+                    border: '1px solid rgba(255,0,0,0.3)',
+                    borderRadius: '4px',
+                    color: '#f66',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.2)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.1)'}
+                >
+                  Remove Cover Photo
+                </button>
+              </>
+            )}
+          </div>
+
           {/* Theme Colors Section */}
           <div style={{
             marginBottom: '16px',
@@ -182,115 +370,6 @@ export function SettingsPanel({
             >
               Reset to Default
             </button>
-          </div>
-
-          {/* Token Type Section - GM Only */}
-          {playerRole === 'GM' && (
-            <div style={{
-              marginBottom: '16px',
-              padding: '12px',
-              background: 'rgba(0,0,0,0.2)',
-              borderRadius: '6px',
-              border: '1px solid var(--glass-border)'
-            }}>
-              <label style={{
-                display: 'block',
-                fontSize: '11px',
-                color: 'var(--accent-gold)',
-                textTransform: 'uppercase',
-                marginBottom: '10px',
-                fontWeight: 'bold'
-              }}>
-                🎭 Token Type
-              </label>
-              <select
-                value={characterData.tokenType || 'player'}
-                onChange={(e) => updateData({ tokenType: e.target.value as TokenType })}
-                className="search-input"
-                style={{ marginTop: '4px', fontWeight: 'bold' }}
-              >
-                <option value="player">Player Token</option>
-                <option value="npc">NPC Token</option>
-                <option value="party">Party Token</option>
-                <option value="lore">Lore Token</option>
-              </select>
-              <p style={{ fontSize: '10px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
-                {characterData.tokenType === 'player' && 'Standard token claimable by one player'}
-                {characterData.tokenType === 'npc' && 'GM-controlled NPC with inventory'}
-                {characterData.tokenType === 'party' && 'Shared inventory accessible by all players'}
-                {characterData.tokenType === 'lore' && 'Information token (no inventory)'}
-                {!characterData.tokenType && 'Standard token claimable by one player'}
-              </p>
-            </div>
-          )}
-
-          {/* Cover Photo Section */}
-          <div style={{
-            marginBottom: '16px',
-            padding: '12px',
-            background: 'rgba(0,0,0,0.2)',
-            borderRadius: '6px',
-            border: '1px solid var(--glass-border)'
-          }}>
-            <label style={{
-              display: 'block',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              marginBottom: '10px',
-              fontWeight: 'bold'
-            }}>
-              🖼️ Cover Photo
-            </label>
-            <input
-              type="text"
-              value={characterData.coverPhotoUrl || ''}
-              onChange={(e) => updateData({ coverPhotoUrl: e.target.value || undefined })}
-              placeholder="Paste image URL here..."
-              className="search-input"
-              style={{ marginTop: 0, marginBottom: '8px' }}
-            />
-            {characterData.coverPhotoUrl && (
-              <>
-                {/* Preview */}
-                <div style={{
-                  width: '100%',
-                  height: '100px',
-                  borderRadius: '4px',
-                  overflow: 'hidden',
-                  marginBottom: '8px',
-                  border: '1px solid var(--glass-border)'
-                }}>
-                  <img
-                    src={characterData.coverPhotoUrl}
-                    alt="Cover preview"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
-                  />
-                </div>
-                {/* Remove button */}
-                <button
-                  onClick={() => updateData({ coverPhotoUrl: undefined })}
-                  style={{
-                    width: '100%',
-                    padding: '8px',
-                    background: 'rgba(255,0,0,0.1)',
-                    border: '1px solid rgba(255,0,0,0.3)',
-                    borderRadius: '4px',
-                    color: '#f66',
-                    fontSize: '11px',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.2)'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,0,0,0.1)'}
-                >
-                  Remove Cover Photo
-                </button>
-              </>
-            )}
           </div>
 
           {/* Debug Info Section */}
@@ -387,6 +466,315 @@ export function SettingsPanel({
               </>
             )}
           </div>
+            </>
+          )}
+
+          {/* ========== CHARACTER TAB ========== */}
+          {activeTab === 'character' && (
+            <>
+              {/* Race Selection */}
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '6px',
+                border: '1px solid var(--glass-border)'
+              }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '11px',
+                  color: 'var(--accent-gold)',
+                  textTransform: 'uppercase',
+                  marginBottom: '10px',
+                  fontWeight: 'bold'
+                }}>
+                  🧬 Race
+                </label>
+                <select
+                  value={characterStats?.race || 'Human'}
+                  onChange={(e) => updateCharacterStats({ race: e.target.value as CharacterRace })}
+                  className="search-input"
+                  style={{ marginTop: '4px' }}
+                >
+                  {allRaces.map(race => (
+                    <option key={race} value={race}>{race}</option>
+                  ))}
+                </select>
+                
+                {/* Secondary Race for Mixed */}
+                {characterStats?.race === 'Mixed' && (
+                  <div style={{ marginTop: '10px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      Secondary Race
+                    </label>
+                    <select
+                      value={characterStats?.secondaryRace || ''}
+                      onChange={(e) => updateCharacterStats({ secondaryRace: e.target.value as CharacterRace })}
+                      className="search-input"
+                    >
+                      <option value="">Select secondary race...</option>
+                      {allRaces.filter(r => r !== 'Mixed').map(race => (
+                        <option key={race} value={race}>{race}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Class Selection */}
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                background: 'rgba(0,0,0,0.2)',
+                borderRadius: '6px',
+                border: '1px solid var(--glass-border)'
+              }}>
+                <label style={{
+                  display: 'block',
+                  fontSize: '11px',
+                  color: 'var(--accent-gold)',
+                  textTransform: 'uppercase',
+                  marginBottom: '10px',
+                  fontWeight: 'bold'
+                }}>
+                  ⚔️ Class
+                </label>
+                <select
+                  value={characterStats?.characterClass || 'Fighter'}
+                  onChange={(e) => updateCharacterStats({ characterClass: e.target.value as CharacterClass })}
+                  className="search-input"
+                  style={{ marginTop: '4px' }}
+                >
+                  {allClasses.map(cls => (
+                    <option key={cls} value={cls}>{cls}</option>
+                  ))}
+                </select>
+                
+                {/* Secondary Class for Multiclass (level 5+) */}
+                {characterStats?.characterClass === 'Multiclass' && (characterStats?.level || 1) >= 5 && (
+                  <div style={{ marginTop: '10px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      Secondary Class (Level 5+)
+                    </label>
+                    <select
+                      value={characterStats?.secondaryClass || ''}
+                      onChange={(e) => updateCharacterStats({ secondaryClass: e.target.value as CharacterClass })}
+                      className="search-input"
+                    >
+                      <option value="">Select secondary class...</option>
+                      {allClasses.filter(c => c !== 'Multiclass').map(cls => (
+                        <option key={cls} value={cls}>{cls}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* GM-Only Custom Races/Classes Section */}
+              {playerRole === 'GM' && onUpdateGMCustomizations && (
+                <div style={{
+                  marginBottom: '16px',
+                  padding: '12px',
+                  background: 'rgba(240, 225, 48, 0.05)',
+                  borderRadius: '6px',
+                  border: '1px solid rgba(240, 225, 48, 0.3)'
+                }}>
+                  <label style={{
+                    display: 'block',
+                    fontSize: '11px',
+                    color: 'var(--accent-gold)',
+                    textTransform: 'uppercase',
+                    marginBottom: '10px',
+                    fontWeight: 'bold'
+                  }}>
+                    👑 GM Customizations
+                  </label>
+                  
+                  {/* Add Custom Race */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      Add Custom Race
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={newCustomRace}
+                        onChange={(e) => setNewCustomRace(e.target.value)}
+                        placeholder="New race name..."
+                        className="search-input"
+                        style={{ flex: 1, margin: 0 }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (newCustomRace.trim()) {
+                            onUpdateGMCustomizations({
+                              customRaces: [...(gmCustomizations?.customRaces || []), newCustomRace.trim()]
+                            });
+                            setNewCustomRace('');
+                          }
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          background: 'rgba(81, 207, 102, 0.2)',
+                          border: '1px solid #51cf66',
+                          borderRadius: '4px',
+                          color: '#51cf66',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    {/* Show custom races */}
+                    {gmCustomizations?.customRaces && gmCustomizations.customRaces.length > 0 && (
+                      <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {gmCustomizations.customRaces.map(race => (
+                          <span
+                            key={race}
+                            style={{
+                              padding: '2px 8px',
+                              background: 'rgba(0, 0, 0, 0.3)',
+                              borderRadius: '12px',
+                              fontSize: '10px',
+                              color: 'var(--text-main)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            {race}
+                            <button
+                              onClick={() => onUpdateGMCustomizations({
+                                customRaces: gmCustomizations.customRaces.filter(r => r !== race)
+                              })}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#ff6b6b',
+                                cursor: 'pointer',
+                                padding: 0,
+                                fontSize: '10px',
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Add Custom Class */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      Add Custom Class
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={newCustomClass}
+                        onChange={(e) => setNewCustomClass(e.target.value)}
+                        placeholder="New class name..."
+                        className="search-input"
+                        style={{ flex: 1, margin: 0 }}
+                      />
+                      <button
+                        onClick={() => {
+                          if (newCustomClass.trim()) {
+                            onUpdateGMCustomizations({
+                              customClasses: [...(gmCustomizations?.customClasses || []), newCustomClass.trim()]
+                            });
+                            setNewCustomClass('');
+                          }
+                        }}
+                        style={{
+                          padding: '6px 12px',
+                          background: 'rgba(81, 207, 102, 0.2)',
+                          border: '1px solid #51cf66',
+                          borderRadius: '4px',
+                          color: '#51cf66',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    {/* Show custom classes */}
+                    {gmCustomizations?.customClasses && gmCustomizations.customClasses.length > 0 && (
+                      <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {gmCustomizations.customClasses.map(cls => (
+                          <span
+                            key={cls}
+                            style={{
+                              padding: '2px 8px',
+                              background: 'rgba(0, 0, 0, 0.3)',
+                              borderRadius: '12px',
+                              fontSize: '10px',
+                              color: 'var(--text-main)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            {cls}
+                            <button
+                              onClick={() => onUpdateGMCustomizations({
+                                customClasses: gmCustomizations.customClasses.filter(c => c !== cls)
+                              })}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#ff6b6b',
+                                cursor: 'pointer',
+                                padding: 0,
+                                fontSize: '10px',
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Overencumbered Text */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      Overencumbered Warning Text
+                    </label>
+                    <input
+                      type="text"
+                      value={gmCustomizations?.overencumberedText || '-3 to all DEX & STR rolls, -10 movement per 10 units over'}
+                      onChange={(e) => onUpdateGMCustomizations({ overencumberedText: e.target.value })}
+                      placeholder="Custom overencumbered text..."
+                      className="search-input"
+                      style={{ margin: 0 }}
+                    />
+                  </div>
+
+                  {/* Rest Rules Message */}
+                  <div>
+                    <label style={{ fontSize: '10px', color: 'var(--text-muted)', display: 'block', marginBottom: '4px' }}>
+                      Rest House Rules Message
+                    </label>
+                    <input
+                      type="text"
+                      value={gmCustomizations?.restRulesMessage || ''}
+                      onChange={(e) => onUpdateGMCustomizations({ restRulesMessage: e.target.value })}
+                      placeholder="Custom rest rules message..."
+                      className="search-input"
+                      style={{ margin: 0 }}
+                    />
+                  </div>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </>

@@ -118,7 +118,7 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
 
       {isExpanded && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Character Info Section */}
+          {/* Character Info Section - Only gender remains (Race, Class, Level are in banner/settings) */}
           <div style={{
             background: 'rgba(0, 0, 0, 0.2)',
             borderRadius: '8px',
@@ -134,57 +134,16 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
             }}>
               Character Info
             </h3>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(2, 1fr)',
-              gap: '8px',
-            }}>
-              <div>
-                <label style={labelStyle}>Gender</label>
-                <DebouncedInput
-                  value={sheet.gender}
-                  onChange={(val) => canEdit && updateSheet({ gender: val })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  placeholder="Gender..."
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Race</label>
-                <DebouncedInput
-                  value={sheet.race}
-                  onChange={(val) => canEdit && updateSheet({ race: val })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  placeholder="Race..."
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Class</label>
-                <DebouncedInput
-                  value={sheet.characterClass}
-                  onChange={(val) => canEdit && updateSheet({ characterClass: val })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  placeholder="Class..."
-                  style={inputStyle}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Level</label>
-                <input
-                  type="number"
-                  value={sheet.level}
-                  onChange={(e) => canEdit && updateSheet({ level: Math.max(1, parseInt(e.target.value) || 1) })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  min={1}
-                  max={20}
-                  style={inputStyle}
-                />
-              </div>
+            <div>
+              <label style={labelStyle}>Gender</label>
+              <DebouncedInput
+                value={sheet.gender}
+                onChange={(val) => canEdit && updateSheet({ gender: val })}
+                className="search-input"
+                disabled={!canEdit}
+                placeholder="Gender..."
+                style={inputStyle}
+              />
             </div>
           </div>
 

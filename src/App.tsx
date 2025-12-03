@@ -75,7 +75,8 @@ function App() {
     favorites, isFavorited, toggleFavorite, loadTokenById, theme, updateTheme,
     updateOverburdenedEffect, playerId, playerRole, playerClaimedTokenId,
     claimToken, unclaimToken, unclaimTokenById,
-    removeFavoriteById, canEditToken, checkProximity
+    removeFavoriteById, canEditToken, checkProximity,
+    gmCustomizations, updateGMCustomizations
   } = useInventory();
 
   // Track previous tokenId to detect token changes
@@ -128,7 +129,7 @@ function App() {
       id: EXPANDED_POPOVER_ID,
       url,
       height: 700,
-      width: 900,
+      width: 1125, // Increased by 25% from 900
     });
   };
 
@@ -1477,6 +1478,7 @@ function App() {
             currentDisplayData={currentDisplayData}
             activeStorageDef={activeStorageDef}
             hasClaimedToken={!!playerClaimedTokenId}
+            gmCustomizations={gmCustomizations || undefined}
           />
         )}
 
@@ -2356,6 +2358,8 @@ function App() {
         cleanupLegacyData={cleanupLegacyData}
         tokenId={tokenId}
         playerRole={playerRole}
+        gmCustomizations={gmCustomizations || undefined}
+        onUpdateGMCustomizations={updateGMCustomizations}
       />
     </div>
   );

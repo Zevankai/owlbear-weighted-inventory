@@ -169,3 +169,23 @@ export const CONDITION_TYPES: ConditionType[] = [
   'stunned',
   'unconscious',
 ];
+
+/**
+ * Map of condition IDs to display labels
+ */
+export const CONDITION_LABELS: Record<ConditionType, string> = {
+  blinded: 'Blinded',
+  charmed: 'Charmed',
+  deafened: 'Deafened',
+  frightened: 'Frightened',
+  grappled: 'Grappled',
+  incapacitated: 'Incapacitated',
+  invisible: 'Invisible',
+  paralyzed: 'Paralyzed',
+  petrified: 'Petrified',
+  poisoned: 'Poisoned',
+  prone: 'Prone',
+  restrained: 'Restrained',
+  stunned: 'Stunned',
+  unconscious: 'Unconscious',
+};

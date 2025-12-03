@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations } from '../../types';
+import { useState, useMemo, useRef } from 'react';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
@@ -8,11 +8,13 @@ import { PinnedSkillsBar } from '../PinnedSkillsBar';
 import { ConditionsPanel } from '../ConditionsPanel';
 import { ExhaustionMeter } from '../ExhaustionMeter';
 import { RestModal } from '../RestModal';
+import { EditPopup } from '../EditPopup';
 import { createDefaultCharacterSheet } from '../../utils/characterSheet';
 import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats } from '../../utils/characterStats';
-import { createDefaultConditions } from '../../data/conditions';
+import { createDefaultConditions, CONDITION_LABELS } from '../../data/conditions';
 
 // Token image sizing constants
+const TOKEN_SIZE_BANNER = '100px'; // Smaller for horizontal banner layout
 const TOKEN_SIZE_EDITABLE = '160px';
 const TOKEN_SIZE_READONLY = '160px';
 
@@ -35,67 +37,372 @@ const getHpColorClass = (current: number, max: number): string => {
   return 'hp-critical';
 };
 
-// Combat Stats Header Component - Always visible quick reference
-interface CombatStatsHeaderProps {
-  hp: { current: number; max: number; temp: number };
-  ac: number;
-  initiative: number;
-  level: number;
+// Horizontal Banner Component - Compact layout with stats, token, and weight
+interface HorizontalBannerProps {
+  sheet: CharacterSheet;
+  characterStats: CharacterStats | undefined;
+  tokenImage: string | null;
+  tokenName: string | null;
+  characterData: CharacterData;
+  stats: Stats;
   canEdit: boolean;
-  onLevelChange: (level: number) => void;
+  onUpdateSheet: (updates: Partial<CharacterSheet>) => void;
+  onToggleHeroicInspiration: () => void;
+  onOpenTradePartnerModal?: () => void;
+  showTradeButton: boolean;
 }
 
-const CombatStatsHeader = ({ hp, ac, initiative, level, canEdit, onLevelChange }: CombatStatsHeaderProps) => {
-  const hpColorClass = getHpColorClass(hp.current, hp.max);
-  // Ensure level defaults to 1 if undefined or 0
-  const displayLevel = level || 1;
+const HorizontalBanner = ({
+  sheet,
+  characterStats,
+  tokenImage,
+  tokenName,
+  characterData,
+  stats,
+  canEdit,
+  onUpdateSheet,
+  onToggleHeroicInspiration,
+  onOpenTradePartnerModal,
+  showTradeButton
+}: HorizontalBannerProps) => {
+  const [editPopup, setEditPopup] = useState<{
+    type: 'hp' | 'ac' | 'init' | 'level' | null;
+    position: { top: number; left: number };
+  }>({ type: null, position: { top: 0, left: 0 } });
   
+  const hpRef = useRef<HTMLDivElement>(null);
+  const acRef = useRef<HTMLDivElement>(null);
+  const initRef = useRef<HTMLDivElement>(null);
+  
+  const isOverencumbered = stats.totalWeight > stats.maxCapacity;
+  const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
+  
+  // Get active conditions
+  const activeConditions = characterStats?.conditions 
+    ? Object.entries(characterStats.conditions)
+        .filter(([_, isActive]) => isActive)
+        .map(([key]) => CONDITION_LABELS[key as ConditionType] || key)
+    : [];
+  
+  const hpColorClass = getHpColorClass(sheet.hitPoints.current, sheet.hitPoints.max);
+
+  const handleStatClick = (type: 'hp' | 'ac' | 'init', ref: React.RefObject<HTMLDivElement | null>) => {
+    if (!canEdit || !ref.current) return;
+    const rect = ref.current.getBoundingClientRect();
+    setEditPopup({
+      type,
+      position: { top: rect.bottom + 8, left: rect.left }
+    });
+  };
+
   return (
-    <div className="combat-stats-header">
-      {/* Level Display - Prominent badge */}
-      <div className="combat-stat-box level-badge">
-        <span className="combat-stat-label">Level</span>
-        {canEdit ? (
-          <input
-            type="number"
-            value={displayLevel}
-            onChange={(e) => {
-              const newLevel = Math.max(1, Math.min(20, parseInt(e.target.value) || 1));
-              onLevelChange(newLevel);
+    <div style={{
+      display: 'flex',
+      gap: '12px',
+      padding: '12px',
+      background: 'rgba(0, 0, 0, 0.25)',
+      borderRadius: '8px',
+      border: '1px solid var(--glass-border)',
+      marginBottom: '8px',
+      alignItems: 'stretch',
+      minHeight: '140px'
+    }}>
+      {/* Left Column - Stats Boxes */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        minWidth: '60px'
+      }}>
+        {/* HP Box */}
+        <div
+          ref={hpRef}
+          onClick={() => handleStatClick('hp', hpRef)}
+          style={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px',
+            background: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '6px',
+            border: '1px solid var(--glass-border)',
+            cursor: canEdit ? 'pointer' : 'default',
+            transition: 'all 0.2s',
+          }}
+          title={canEdit ? 'Click to edit HP' : undefined}
+        >
+          <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>HP</span>
+          <span style={{ fontSize: '14px', fontWeight: 'bold' }} className={hpColorClass}>
+            {sheet.hitPoints.current}/{sheet.hitPoints.max}
+          </span>
+          {sheet.hitPoints.temp > 0 && (
+            <span style={{ fontSize: '10px', color: '#4dabf7' }}>+{sheet.hitPoints.temp}</span>
+          )}
+        </div>
+        
+        {/* AC Box */}
+        <div
+          ref={acRef}
+          onClick={() => handleStatClick('ac', acRef)}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px',
+            background: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '6px',
+            border: '1px solid var(--glass-border)',
+            cursor: canEdit ? 'pointer' : 'default',
+            transition: 'all 0.2s',
+          }}
+          title={canEdit ? 'Click to edit AC' : undefined}
+        >
+          <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>AC</span>
+          <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+            {sheet.armorClass}
+          </span>
+        </div>
+        
+        {/* Initiative Box */}
+        <div
+          ref={initRef}
+          onClick={() => handleStatClick('init', initRef)}
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px',
+            background: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '6px',
+            border: '1px solid var(--glass-border)',
+            cursor: canEdit ? 'pointer' : 'default',
+            transition: 'all 0.2s',
+          }}
+          title={canEdit ? 'Click to edit Initiative' : undefined}
+        >
+          <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>INIT</span>
+          <span style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+            {sheet.initiative >= 0 ? `+${sheet.initiative}` : sheet.initiative}
+          </span>
+        </div>
+      </div>
+      
+      {/* Center Column - Token Image and Info */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '4px'
+      }}>
+        {/* Token Image */}
+        {tokenImage && (
+          <div 
+            onClick={canEdit ? onToggleHeroicInspiration : undefined}
+            style={{
+              position: 'relative',
+              width: TOKEN_SIZE_BANNER,
+              height: TOKEN_SIZE_BANNER,
+              cursor: canEdit ? 'pointer' : 'default',
             }}
-            className="level-input"
-            min={1}
-            max={20}
-          />
-        ) : (
-          <span className="combat-stat-value level-value">{displayLevel}</span>
+            title={canEdit ? (characterStats?.heroicInspiration ? 'Click to remove Heroic Inspiration' : 'Click to grant Heroic Inspiration') : undefined}
+          >
+            {/* Gold glow for Heroic Inspiration */}
+            {characterStats?.heroicInspiration && (
+              <div style={{
+                position: 'absolute',
+                top: '-3px',
+                left: '-3px',
+                right: '-3px',
+                bottom: '-3px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(255, 215, 0, 0.5) 0%, rgba(255, 215, 0, 0) 70%)',
+                animation: 'pulse 2s infinite',
+              }} />
+            )}
+            <div style={{
+              width: '100%',
+              height: '100%',
+              borderRadius: '50%',
+              overflow: 'hidden',
+              border: characterStats?.heroicInspiration
+                ? '3px solid gold'
+                : '2px solid var(--accent-gold)',
+              boxShadow: characterStats?.heroicInspiration
+                ? '0 0 15px rgba(255, 215, 0, 0.5)'
+                : undefined,
+            }}>
+              <img src={tokenImage} alt="Token" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            </div>
+            {characterStats?.heroicInspiration && (
+              <div style={{
+                position: 'absolute',
+                bottom: '0',
+                right: '0',
+                background: 'gold',
+                borderRadius: '50%',
+                width: '18px',
+                height: '18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+              }}>
+                ✨
+              </div>
+            )}
+          </div>
         )}
-      </div>
-      
-      {/* HP Display */}
-      <div className="combat-stat-box">
-        <span className="combat-stat-label">HP</span>
-        <span className={`combat-stat-value ${hpColorClass}`}>
-          {hp.current}/{hp.max}
-        </span>
-        {hp.temp > 0 && (
-          <span className="combat-stat-secondary">+{hp.temp} temp</span>
+        
+        {/* Character Name */}
+        <div style={{ fontSize: '14px', fontWeight: 'bold', color: 'var(--text-main)', textAlign: 'center' }}>
+          {characterData.name || tokenName || 'Unknown'}
+        </div>
+        
+        {/* Race + Class */}
+        {characterStats && (
+          <div style={{ fontSize: '11px', color: 'var(--text-muted)', textAlign: 'center' }}>
+            {characterStats.race} {characterStats.characterClass}
+          </div>
         )}
+        
+        {/* Level | Token Type | Trade */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '11px',
+          color: 'var(--accent-gold)'
+        }}>
+          <span style={{ fontWeight: 'bold' }}>Lv {sheet.level || 1}</span>
+          {characterData.tokenType && characterData.tokenType !== 'player' && (
+            <>
+              <span style={{ color: 'var(--text-muted)' }}>|</span>
+              <span style={{
+                color: characterData.tokenType === 'npc' ? '#ff9800' : 
+                       characterData.tokenType === 'party' ? '#4caf50' : '#9c27b0',
+                textTransform: 'uppercase',
+                fontSize: '9px'
+              }}>
+                {characterData.tokenType}
+              </span>
+            </>
+          )}
+          {showTradeButton && onOpenTradePartnerModal && (
+            <>
+              <span style={{ color: 'var(--text-muted)' }}>|</span>
+              <button
+                onClick={onOpenTradePartnerModal}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  padding: '0 2px',
+                  opacity: 0.9,
+                  lineHeight: 1
+                }}
+                title="Trade with nearby tokens"
+              >
+                💰
+              </button>
+            </>
+          )}
+        </div>
       </div>
       
-      {/* AC Display */}
-      <div className="combat-stat-box">
-        <span className="combat-stat-label">AC</span>
-        <span className="combat-stat-value">{ac}</span>
+      {/* Right Column - Conditions and Weight */}
+      <div style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        minWidth: '100px',
+        maxWidth: '130px'
+      }}>
+        {/* Active Conditions */}
+        {activeConditions.length > 0 && (
+          <div style={{
+            flex: 1,
+            padding: '6px',
+            background: 'rgba(255, 87, 34, 0.1)',
+            borderRadius: '6px',
+            border: '1px solid rgba(255, 87, 34, 0.3)',
+          }}>
+            <span style={{ fontSize: '9px', color: '#ff9800', textTransform: 'uppercase', fontWeight: 'bold' }}>
+              Conditions
+            </span>
+            <div style={{ fontSize: '10px', color: '#ff5722', marginTop: '2px' }}>
+              {activeConditions.slice(0, 3).map((cond, i) => (
+                <div key={i}>• {cond}</div>
+              ))}
+              {activeConditions.length > 3 && (
+                <div style={{ fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                  +{activeConditions.length - 3} more
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        
+        {/* Current Weight */}
+        <div style={{
+          padding: '6px',
+          background: isOverencumbered ? 'rgba(255, 87, 34, 0.1)' : 'rgba(0, 0, 0, 0.3)',
+          borderRadius: '6px',
+          border: isOverencumbered ? '1px solid rgba(255, 87, 34, 0.4)' : '1px solid var(--glass-border)',
+          textAlign: 'center'
+        }}>
+          <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Weight</span>
+          <div style={{
+            fontSize: '13px',
+            fontWeight: 'bold',
+            color: isOverencumbered ? '#ff5722' : 'var(--text-main)'
+          }}>
+            {stats.totalWeight} / {stats.maxCapacity}u
+          </div>
+          {isOverencumbered && (
+            <div style={{ fontSize: '9px', color: '#ff5722', fontWeight: 'bold', marginTop: '2px' }}>
+              ⚠️ +{overencumberedAmount}u OVER
+            </div>
+          )}
+        </div>
       </div>
       
-      {/* Initiative Display */}
-      <div className="combat-stat-box">
-        <span className="combat-stat-label">Initiative</span>
-        <span className="combat-stat-value">
-          {initiative >= 0 ? `+${initiative}` : initiative}
-        </span>
-      </div>
+      {/* Edit Popups */}
+      <EditPopup
+        isOpen={editPopup.type === 'hp'}
+        onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
+        title="Edit Hit Points"
+        position={editPopup.position}
+        fields={[
+          { label: 'Current HP', value: sheet.hitPoints.current, onChange: (val) => onUpdateSheet({ hitPoints: { ...sheet.hitPoints, current: val } }) },
+          { label: 'Max HP', value: sheet.hitPoints.max, onChange: (val) => onUpdateSheet({ hitPoints: { ...sheet.hitPoints, max: val } }), min: 0 },
+          { label: 'Temp HP', value: sheet.hitPoints.temp, onChange: (val) => onUpdateSheet({ hitPoints: { ...sheet.hitPoints, temp: val } }), min: 0 },
+        ]}
+      />
+      <EditPopup
+        isOpen={editPopup.type === 'ac'}
+        onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
+        title="Edit Armor Class"
+        position={editPopup.position}
+        fields={[
+          { label: 'Armor Class', value: sheet.armorClass, onChange: (val) => onUpdateSheet({ armorClass: val }), min: 0 },
+        ]}
+      />
+      <EditPopup
+        isOpen={editPopup.type === 'init'}
+        onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
+        title="Edit Initiative"
+        position={editPopup.position}
+        fields={[
+          { label: 'Initiative Modifier', value: sheet.initiative, onChange: (val) => onUpdateSheet({ initiative: val }) },
+        ]}
+      />
     </div>
   );
 };
@@ -502,25 +809,6 @@ export function HomeTab({
               </div>
             )}
 
-            {/* Race, Class, Level display - only for non-lore tokens */}
-            {characterData.tokenType !== 'lore' && characterStats && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
-                marginTop: '4px',
-              }}>
-                <span>{characterStats.race}</span>
-                <span>•</span>
-                <span>{characterStats.characterClass}</span>
-                <span>•</span>
-                <span>Level {characterStats.level || 1}</span>
-              </div>
-            )}
-
             {/* Token Type Badge - only show for non-player tokens */}
             {characterData.tokenType && characterData.tokenType !== 'player' && (
               <div style={{
@@ -542,43 +830,22 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Start P2P Trade Button - MOVED OUTSIDE/below cover photo */}
-      {!viewingStorageId && showTokenProfile && characterData && showTradeButton && (
-        <div style={{marginBottom: '12px', textAlign: 'center'}}>
-          <button
-            onClick={onOpenTradePartnerModal}
-            style={{
-              background: '#4a9eff',
-              border: 'none',
-              color: 'white',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              cursor: 'pointer',
-              fontSize: '12px',
-              fontWeight: 'bold'
-            }}
-          >
-            TRADE
-          </button>
-        </div>
-      )}
-
-      {/* === COMBAT STATS HEADER - Always visible for player/party tokens and NPC tokens (GM only) === */}
+      {/* === HORIZONTAL BANNER - Compact layout with stats, token, and weight === */}
       {(() => {
         // Show for player tokens, party tokens, or NPC tokens when user is GM
         const showCharacterSheet = characterData.tokenType !== 'lore' && 
           (characterData.tokenType !== 'npc' || playerRole === 'GM');
-        const shouldShowCombatStats = !viewingStorageId && showCharacterSheet;
+        const shouldShowBanner = !viewingStorageId && showCharacterSheet;
         
-        if (!shouldShowCombatStats) return null;
+        if (!shouldShowBanner) return null;
         
         const sheet = characterData.characterSheet || createDefaultCharacterSheet();
         
-        const handleLevelChange = (newLevel: number) => {
+        const handleUpdateSheet = (updates: Partial<CharacterSheet>) => {
           updateData({
             characterSheet: {
               ...sheet,
-              level: newLevel,
+              ...updates,
             },
           });
         };
@@ -591,13 +858,18 @@ export function HomeTab({
         
         return (
           <>
-            <CombatStatsHeader
-              hp={sheet.hitPoints}
-              ac={sheet.armorClass}
-              initiative={sheet.initiative}
-              level={sheet.level}
+            <HorizontalBanner
+              sheet={sheet}
+              characterStats={characterStats}
+              tokenImage={tokenImage}
+              tokenName={tokenName}
+              characterData={characterData}
+              stats={stats}
               canEdit={canUserEdit}
-              onLevelChange={handleLevelChange}
+              onUpdateSheet={handleUpdateSheet}
+              onToggleHeroicInspiration={toggleHeroicInspiration}
+              onOpenTradePartnerModal={onOpenTradePartnerModal}
+              showTradeButton={!!showTradeButton}
             />
             {/* Pinned Skills Bar - shown below combat stats */}
             <PinnedSkillsBar
@@ -608,114 +880,29 @@ export function HomeTab({
         );
       })()}
 
-      {/* === HP SECTION - Editable HP display for non-lore tokens === */}
+      {/* === TAKE A REST BUTTON === */}
       {!viewingStorageId && characterData.tokenType !== 'lore' && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
-        <div style={{
-          background: 'rgba(0, 0, 0, 0.2)',
-          borderRadius: '8px',
-          padding: '12px',
-          border: '1px solid var(--glass-border)',
-          marginBottom: '12px',
-        }}>
-          <h3 style={{
-            margin: '0 0 10px 0',
-            fontSize: '11px',
-            color: 'var(--accent-gold)',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-          }}>
-            ❤️ Hit Points
-          </h3>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Current</label>
-              <input
-                type="number"
-                value={characterStats?.currentHp ?? characterData.characterSheet?.hitPoints?.current ?? 0}
-                onChange={(e) => {
-                  if (canUserEdit) {
-                    updateCharacterStats({ currentHp: parseInt(e.target.value) || 0 });
-                  }
-                }}
-                className="search-input"
-                disabled={!canUserEdit}
-                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}
-              />
-            </div>
-            <span style={{ color: 'var(--text-muted)', marginTop: '14px', fontSize: '16px' }}>/</span>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Max</label>
-              <input
-                type="number"
-                value={characterStats?.maxHp ?? characterData.characterSheet?.hitPoints?.max ?? 0}
-                onChange={(e) => {
-                  if (canUserEdit) {
-                    updateCharacterStats({ maxHp: parseInt(e.target.value) || 0 });
-                  }
-                }}
-                className="search-input"
-                disabled={!canUserEdit}
-                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}
-              />
-            </div>
-            <span style={{ color: 'var(--text-muted)', marginTop: '14px', fontSize: '16px' }}>+</span>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Temp</label>
-              <input
-                type="number"
-                value={characterStats?.tempHp ?? characterData.characterSheet?.hitPoints?.temp ?? 0}
-                onChange={(e) => {
-                  if (canUserEdit) {
-                    updateCharacterStats({ tempHp: parseInt(e.target.value) || 0 });
-                  }
-                }}
-                className="search-input"
-                disabled={!canUserEdit}
-                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#4dabf7' }}
-              />
-            </div>
-          </div>
-          
-          {/* Armor Class */}
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ flex: 0 }}>
-              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>AC</label>
-              <input
-                type="number"
-                value={characterStats?.armorClass ?? characterData.characterSheet?.armorClass ?? 10}
-                onChange={(e) => {
-                  if (canUserEdit) {
-                    updateCharacterStats({ armorClass: parseInt(e.target.value) || 10 });
-                  }
-                }}
-                className="search-input"
-                disabled={!canUserEdit}
-                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold', width: '60px' }}
-              />
-            </div>
-            
-            {/* Rest Button */}
-            <button
-              onClick={() => setShowRestModal(true)}
-              style={{
-                flex: 1,
-                padding: '10px',
-                background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 87, 34, 0.2))',
-                border: '1px solid #ff9800',
-                borderRadius: '6px',
-                color: '#ff9800',
-                cursor: 'pointer',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-              }}
-            >
-              🏕️ Take a Rest
-            </button>
-          </div>
+        <div style={{ marginBottom: '8px' }}>
+          <button
+            onClick={() => setShowRestModal(true)}
+            style={{
+              width: '100%',
+              padding: '10px',
+              background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 87, 34, 0.2))',
+              border: '1px solid #ff9800',
+              borderRadius: '6px',
+              color: '#ff9800',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+            }}
+          >
+            🏕️ Take a Rest
+          </button>
         </div>
       )}
 
@@ -741,16 +928,6 @@ export function HomeTab({
             </div>
           </div>
         </div>
-      )}
-
-      {/* === CONDITIONS PANEL (Compact) - Show active conditions === */}
-      {!viewingStorageId && characterData.tokenType !== 'lore' && characterStats && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
-        <ConditionsPanel
-          conditions={characterStats.conditions}
-          onConditionChange={updateCondition}
-          canEdit={canUserEdit}
-          compact={true}
-        />
       )}
 
       {/* === CONDITIONS & EXHAUSTION - Collapsible section === */}

@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import OBR, { buildShape, isImage } from '@owlbear-rodeo/sdk';
 import type { Item } from '@owlbear-rodeo/sdk';
-import type { CharacterData, TokenType } from '../types';
+import type { CharacterData, TokenType, GMCustomizations } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
 import type { Vector2 } from '@owlbear-rodeo/sdk';
 
@@ -22,6 +22,8 @@ const OVERBURDENED_ATTACHMENT_ID = 'com.weighted-inventory/overburdened-indicato
 // Legacy keys for migration
 const LEGACY_ROOM_KEY = 'com.weighted-inventory/room-data';
 const LEGACY_TOKEN_NAME_KEY_PREFIX = 'com.weighted-inventory/token/';
+// GM customizations key (stored in room metadata)
+const GM_CUSTOMIZATIONS_KEY = 'com.weighted-inventory/gm-customizations';
 
 const getFavoritesKey = (playerId: string) => `${FAVORITES_KEY_PREFIX}${playerId}`;
 
@@ -63,6 +65,7 @@ export function useInventory() {
   const [playerRole, setPlayerRole] = useState<'GM' | 'PLAYER'>('PLAYER');
   const [playerClaimedTokenId, setPlayerClaimedTokenId] = useState<string | null>(null);
   const [playerClaimedTokenInfo, setPlayerClaimedTokenInfo] = useState<{name: string; image?: string} | null>(null);
+  const [gmCustomizations, setGMCustomizations] = useState<GMCustomizations | null>(null);
 
   // Track auto-favorited tokens to avoid re-adding on every selection
   const autoFavoritedTokensRef = useRef<Set<string>>(new Set());
@@ -193,6 +196,13 @@ export function useInventory() {
       if (savedFavorites && mounted) {
         setFavorites(savedFavorites);
         console.log('[Favorites] Loaded', savedFavorites.length, 'favorites');
+      }
+
+      // Load GM customizations from room metadata
+      const savedGMCustomizations = roomMetadata[GM_CUSTOMIZATIONS_KEY] as GMCustomizations | undefined;
+      if (savedGMCustomizations && mounted) {
+        setGMCustomizations(savedGMCustomizations);
+        console.log('[GM Customizations] Loaded from room metadata');
       }
 
       // Theme is now loaded from token metadata (per-token), not room metadata (per-player)
@@ -391,6 +401,27 @@ export function useInventory() {
     console.log('[Theme] Saved theme to token:', newTheme);
   }, [tokenId, updateData]);
 
+  // Update GM customizations (stored in room metadata)
+  const updateGMCustomizations = useCallback(async (updates: Partial<GMCustomizations>) => {
+    const currentCustomizations = gmCustomizations || {
+      customRaces: [],
+      customClasses: [],
+      customRestOptions: [],
+      modifiedRestOptions: {},
+      disabledRestOptions: [],
+      exhaustionEffects: [],
+      overencumberedText: '',
+      restRulesMessage: ''
+    };
+    
+    const newCustomizations = { ...currentCustomizations, ...updates };
+    setGMCustomizations(newCustomizations);
+    
+    // Save to room metadata
+    await OBR.room.setMetadata({ [GM_CUSTOMIZATIONS_KEY]: newCustomizations });
+    console.log('[GM Customizations] Saved to room metadata');
+  }, [gmCustomizations]);
+
   // Update over-encumbered visual effect
   const updateOverburdenedEffect = useCallback(async (isOverburdened: boolean) => {
     if (!tokenId) return;
@@ -571,7 +602,9 @@ export function useInventory() {
     unclaimTokenById,
     removeFavoriteById,
     canEditToken,
-    checkProximity
+    checkProximity,
+    gmCustomizations,
+    updateGMCustomizations
   };
 }
 

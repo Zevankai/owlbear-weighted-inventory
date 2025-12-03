@@ -1,10 +1,15 @@
-import type { CharacterData, PackType, ActiveTrade } from '../../types';
+import { useState } from 'react';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
 import { CollapsibleSection } from '../CollapsibleSection';
 import { PinnedSkillsBar } from '../PinnedSkillsBar';
+import { ConditionsPanel } from '../ConditionsPanel';
+import { ExhaustionMeter, createDefaultExhaustionState } from '../ExhaustionMeter';
+import { RestModal, createDefaultRestHistory } from '../RestModal';
 import { createDefaultCharacterSheet } from '../../utils/characterSheet';
+import { createDefaultConditions } from '../../data/conditions';
 
 // Token image sizing constants
 const TOKEN_SIZE_EDITABLE = '160px';
@@ -147,6 +152,7 @@ interface HomeTabProps {
   hasClaimedToken?: boolean;
   showCoverPhoto?: boolean;
   showTokenProfile?: boolean;
+  gmCustomizations?: GMCustomizations;
 }
 
 export function HomeTab({
@@ -176,10 +182,108 @@ export function HomeTab({
   activeStorageDef,
   hasClaimedToken,
   showCoverPhoto = true,
-  showTokenProfile = true
+  showTokenProfile = true,
+  gmCustomizations
 }: HomeTabProps) {
+  // State for Rest Modal
+  const [showRestModal, setShowRestModal] = useState(false);
+  
   // Helper to check if user can edit this token (GM, owner, or party token)
   const canUserEdit = playerRole === 'GM' || characterData.claimedBy === playerId || characterData.tokenType === 'party';
+  
+  // Get character stats with defaults
+  const characterStats = characterData.characterStats;
+  
+  // Helper to create default character stats
+  const createDefaultCharacterStats = (): CharacterStats => ({
+    race: 'Human',
+    characterClass: 'Fighter',
+    level: 1,
+    currentHp: 0,
+    maxHp: 0,
+    tempHp: 0,
+    armorClass: 10,
+    heroicInspiration: false,
+    conditions: createDefaultConditions(),
+    exhaustion: createDefaultExhaustionState(),
+    restHistory: createDefaultRestHistory(),
+  });
+  
+  // Helper to update character stats
+  const updateCharacterStats = (updates: Partial<CharacterStats>) => {
+    const currentStats = characterStats || createDefaultCharacterStats();
+    updateData({
+      characterStats: {
+        ...currentStats,
+        ...updates,
+      }
+    });
+  };
+  
+  // Toggle heroic inspiration
+  const toggleHeroicInspiration = () => {
+    if (!canUserEdit) return;
+    const currentStats = characterStats || createDefaultCharacterStats();
+    updateCharacterStats({ heroicInspiration: !currentStats.heroicInspiration });
+  };
+  
+  // Update condition
+  const updateCondition = (conditionType: ConditionType, value: boolean) => {
+    const currentStats = characterStats || createDefaultCharacterStats();
+    updateCharacterStats({
+      conditions: {
+        ...currentStats.conditions,
+        [conditionType]: value,
+      }
+    });
+  };
+  
+  // Update exhaustion level
+  const updateExhaustionLevel = (level: number) => {
+    const currentStats = characterStats || createDefaultCharacterStats();
+    updateCharacterStats({
+      exhaustion: {
+        ...currentStats.exhaustion,
+        currentLevel: level,
+      }
+    });
+  };
+  
+  // Handle rest completion
+  const handleRest = (restType: RestType, selectedOptionIds: string[]) => {
+    const currentStats = characterStats || createDefaultCharacterStats();
+    const now = Date.now();
+    
+    if (restType === 'short') {
+      updateCharacterStats({
+        restHistory: {
+          ...currentStats.restHistory,
+          lastShortRest: {
+            timestamp: now,
+            chosenOptionIds: selectedOptionIds,
+          }
+        }
+      });
+    } else {
+      // Long rest: also potentially grant heroic inspiration
+      updateCharacterStats({
+        heroicInspiration: true,
+        restHistory: {
+          ...currentStats.restHistory,
+          lastLongRest: {
+            timestamp: now,
+            chosenOptionIds: selectedOptionIds,
+          },
+          heroicInspirationGainedToday: true,
+        }
+      });
+    }
+  };
+  
+  // Check if character is overencumbered
+  const isOverencumbered = stats.totalWeight > stats.maxCapacity;
+  const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
+  const overencumberedText = gmCustomizations?.overencumberedText || '-3 to all DEX & STR rolls, -10 movement per 10 units over';
   
   // Helper to check if trade button should be shown
   const showTradeButton = !activeTrade && tokenId && 
@@ -307,25 +411,74 @@ export function HomeTab({
             padding: showCoverPhoto && characterData.coverPhotoUrl ? '20px 16px 16px 16px' : '8px 0',
             minHeight: showCoverPhoto && characterData.coverPhotoUrl ? '200px' : undefined
           }}>
+            {/* Token Image with Heroic Inspiration border */}
             {tokenImage && (
-              <div style={{
-                width: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
-                height: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
-                borderRadius: '50%',
-                overflow: 'hidden',
-                border: '3px solid var(--accent-gold)',
-                background: 'transparent',
-                marginBottom: '8px',
-                alignSelf: 'center',
-                boxShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 4px 12px rgba(0,0,0,0.5)' : undefined
-              }}>
-                <img
-                  src={tokenImage}
-                  alt="Token"
-                  style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                />
+              <div 
+                onClick={canUserEdit && characterData.tokenType !== 'lore' ? toggleHeroicInspiration : undefined}
+                style={{
+                  position: 'relative',
+                  width: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
+                  height: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
+                  cursor: canUserEdit && characterData.tokenType !== 'lore' ? 'pointer' : 'default',
+                }}
+                title={canUserEdit && characterData.tokenType !== 'lore' ? 
+                  (characterStats?.heroicInspiration ? 'Click to remove Heroic Inspiration' : 'Click to grant Heroic Inspiration') : undefined}
+              >
+                {/* Gold glow for Heroic Inspiration */}
+                {characterStats?.heroicInspiration && characterData.tokenType !== 'lore' && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    left: '-4px',
+                    right: '-4px',
+                    bottom: '-4px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, rgba(255, 215, 0, 0) 70%)',
+                    animation: 'pulse 2s infinite',
+                  }} />
+                )}
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: characterStats?.heroicInspiration && characterData.tokenType !== 'lore'
+                    ? '4px solid gold'
+                    : '3px solid var(--accent-gold)',
+                  background: 'transparent',
+                  boxShadow: characterStats?.heroicInspiration && characterData.tokenType !== 'lore'
+                    ? '0 0 20px rgba(255, 215, 0, 0.6), 0 4px 12px rgba(0,0,0,0.5)'
+                    : (showCoverPhoto && characterData.coverPhotoUrl ? '0 4px 12px rgba(0,0,0,0.5)' : undefined),
+                  transition: 'all 0.3s ease',
+                }}>
+                  <img
+                    src={tokenImage}
+                    alt="Token"
+                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                  />
+                </div>
+                {/* Heroic Inspiration indicator */}
+                {characterStats?.heroicInspiration && characterData.tokenType !== 'lore' && (
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '5px',
+                    right: '5px',
+                    background: 'gold',
+                    borderRadius: '50%',
+                    width: '24px',
+                    height: '24px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '14px',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                  }}>
+                    ✨
+                  </div>
+                )}
               </div>
             )}
+            
             {/* Token Name - GM can edit for lore tokens */}
             {playerRole === 'GM' && characterData.tokenType === 'lore' ? (
               <DebouncedInput
@@ -345,6 +498,7 @@ export function HomeTab({
                   padding: '4px 8px',
                   width: '80%',
                   maxWidth: '300px',
+                  marginTop: '8px',
                 }}
               />
             ) : (
@@ -354,9 +508,29 @@ export function HomeTab({
                 color: 'var(--text-main)',
                 textAlign: 'center',
                 textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 2px 4px rgba(0,0,0,0.8)' : undefined,
-                paddingBottom: '4px'
+                paddingBottom: '4px',
+                marginTop: '8px',
               }}>
                 {characterData.name || tokenName || 'Unknown Character'}
+              </div>
+            )}
+
+            {/* Race, Class, Level display - only for non-lore tokens */}
+            {characterData.tokenType !== 'lore' && characterStats && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '11px',
+                color: 'var(--text-muted)',
+                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
+                marginTop: '4px',
+              }}>
+                <span>{characterStats.race}</span>
+                <span>•</span>
+                <span>{characterStats.characterClass}</span>
+                <span>•</span>
+                <span>Level {characterStats.level || 1}</span>
               </div>
             )}
 
@@ -370,7 +544,8 @@ export function HomeTab({
                 textTransform: 'uppercase',
                 letterSpacing: '1px',
                 textAlign: 'center',
-                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined
+                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
+                marginTop: '4px',
               }}>
                 {characterData.tokenType} Token
               </div>
@@ -445,6 +620,189 @@ export function HomeTab({
           </>
         );
       })()}
+
+      {/* === HP SECTION - Editable HP display for non-lore tokens === */}
+      {!viewingStorageId && characterData.tokenType !== 'lore' && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
+        <div style={{
+          background: 'rgba(0, 0, 0, 0.2)',
+          borderRadius: '8px',
+          padding: '12px',
+          border: '1px solid var(--glass-border)',
+          marginBottom: '12px',
+        }}>
+          <h3 style={{
+            margin: '0 0 10px 0',
+            fontSize: '11px',
+            color: 'var(--accent-gold)',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+          }}>
+            ❤️ Hit Points
+          </h3>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Current</label>
+              <input
+                type="number"
+                value={characterStats?.currentHp ?? characterData.characterSheet?.hitPoints?.current ?? 0}
+                onChange={(e) => {
+                  if (canUserEdit) {
+                    updateCharacterStats({ currentHp: parseInt(e.target.value) || 0 });
+                  }
+                }}
+                className="search-input"
+                disabled={!canUserEdit}
+                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}
+              />
+            </div>
+            <span style={{ color: 'var(--text-muted)', marginTop: '14px', fontSize: '16px' }}>/</span>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Max</label>
+              <input
+                type="number"
+                value={characterStats?.maxHp ?? characterData.characterSheet?.hitPoints?.max ?? 0}
+                onChange={(e) => {
+                  if (canUserEdit) {
+                    updateCharacterStats({ maxHp: parseInt(e.target.value) || 0 });
+                  }
+                }}
+                className="search-input"
+                disabled={!canUserEdit}
+                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold' }}
+              />
+            </div>
+            <span style={{ color: 'var(--text-muted)', marginTop: '14px', fontSize: '16px' }}>+</span>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>Temp</label>
+              <input
+                type="number"
+                value={characterStats?.tempHp ?? characterData.characterSheet?.hitPoints?.temp ?? 0}
+                onChange={(e) => {
+                  if (canUserEdit) {
+                    updateCharacterStats({ tempHp: parseInt(e.target.value) || 0 });
+                  }
+                }}
+                className="search-input"
+                disabled={!canUserEdit}
+                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold', color: '#4dabf7' }}
+              />
+            </div>
+          </div>
+          
+          {/* Armor Class */}
+          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ flex: 0 }}>
+              <label style={{ fontSize: '9px', color: 'var(--text-muted)', display: 'block', marginBottom: '2px' }}>AC</label>
+              <input
+                type="number"
+                value={characterStats?.armorClass ?? characterData.characterSheet?.armorClass ?? 10}
+                onChange={(e) => {
+                  if (canUserEdit) {
+                    updateCharacterStats({ armorClass: parseInt(e.target.value) || 10 });
+                  }
+                }}
+                className="search-input"
+                disabled={!canUserEdit}
+                style={{ textAlign: 'center', fontSize: '14px', fontWeight: 'bold', width: '60px' }}
+              />
+            </div>
+            
+            {/* Rest Button */}
+            <button
+              onClick={() => setShowRestModal(true)}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 87, 34, 0.2))',
+                border: '1px solid #ff9800',
+                borderRadius: '6px',
+                color: '#ff9800',
+                cursor: 'pointer',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+              }}
+            >
+              🏕️ Take a Rest
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* === OVERENCUMBERED WARNING === */}
+      {!viewingStorageId && isOverencumbered && characterData.tokenType !== 'lore' && (
+        <div style={{
+          background: 'rgba(255, 87, 34, 0.15)',
+          borderRadius: '8px',
+          padding: '10px 12px',
+          border: '1px solid rgba(255, 87, 34, 0.4)',
+          marginBottom: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}>
+          <span style={{ fontSize: '18px' }}>⚠️</span>
+          <div>
+            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#ff5722' }}>
+              OVERENCUMBERED (+{overencumberedAmount} units)
+            </div>
+            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+              {overencumberedText}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* === CONDITIONS PANEL (Compact) - Show active conditions === */}
+      {!viewingStorageId && characterData.tokenType !== 'lore' && characterStats && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
+        <ConditionsPanel
+          conditions={characterStats.conditions}
+          onConditionChange={updateCondition}
+          canEdit={canUserEdit}
+          compact={true}
+        />
+      )}
+
+      {/* === CONDITIONS & EXHAUSTION - Collapsible section === */}
+      {!viewingStorageId && characterData.tokenType !== 'lore' && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
+        <CollapsibleSection title="Conditions & Exhaustion" defaultExpanded={false}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {/* Full Conditions Panel */}
+            <ConditionsPanel
+              conditions={characterStats?.conditions || createDefaultConditions()}
+              onConditionChange={updateCondition}
+              canEdit={canUserEdit}
+            />
+            
+            {/* Exhaustion Meter */}
+            <ExhaustionMeter
+              exhaustion={characterStats?.exhaustion || createDefaultExhaustionState()}
+              onExhaustionChange={updateExhaustionLevel}
+              canEdit={canUserEdit}
+              customEffects={gmCustomizations?.exhaustionEffects}
+            />
+          </div>
+        </CollapsibleSection>
+      )}
+
+      {/* Rest Modal */}
+      <RestModal
+        isOpen={showRestModal}
+        onClose={() => setShowRestModal(false)}
+        race={characterStats?.race}
+        characterClass={characterStats?.characterClass}
+        secondaryRace={characterStats?.secondaryRace}
+        secondaryClass={characterStats?.secondaryClass}
+        level={characterStats?.level || 1}
+        restHistory={characterStats?.restHistory || createDefaultRestHistory()}
+        onRest={handleRest}
+        gmRestRulesMessage={gmCustomizations?.restRulesMessage}
+        customRestOptions={gmCustomizations?.customRestOptions}
+        disabledRestOptionIds={gmCustomizations?.disabledRestOptions}
+      />
 
       {/* === LORE TOKEN SPECIFIC UI === */}
       {!viewingStorageId && characterData.tokenType === 'lore' && (

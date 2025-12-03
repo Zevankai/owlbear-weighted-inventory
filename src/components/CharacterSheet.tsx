@@ -419,49 +419,6 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
             </div>
           </div>
 
-          {/* Heroic Inspiration */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                cursor: canEdit ? 'pointer' : 'default',
-              }}
-              onClick={() => canEdit && updateSheet({ heroicInspiration: !sheet.heroicInspiration })}
-            >
-              <div
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  border: `2px solid ${sheet.heroicInspiration ? 'var(--accent-gold)' : 'var(--glass-border)'}`,
-                  background: sheet.heroicInspiration ? 'var(--accent-gold)' : 'transparent',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {sheet.heroicInspiration && (
-                  <span style={{ color: '#000', fontSize: '14px' }}>✓</span>
-                )}
-              </div>
-              <span style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: sheet.heroicInspiration ? 'var(--accent-gold)' : 'var(--text-main)',
-              }}>
-                Heroic Inspiration
-              </span>
-            </label>
-          </div>
-
           {/* Skills Section - Collapsible */}
           <CollapsibleSection title="Skills & Proficiencies" defaultExpanded={false}>
             <div style={{

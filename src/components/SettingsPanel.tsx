@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import type { CharacterData, Theme, TokenType, CharacterRace, CharacterClass, CharacterStats, GMCustomizations } from '../types';
-import { createDefaultConditions } from '../data/conditions';
-import { createDefaultExhaustionState } from './ExhaustionMeter';
-import { createDefaultRestHistory } from './RestModal';
+import { createDefaultCharacterStats } from '../utils/characterStats';
 
 interface DebugInfo {
   roomKeys: string[];
@@ -62,19 +60,7 @@ export function SettingsPanel({
   
   // Helper to update character stats
   const updateCharacterStats = (updates: Partial<CharacterStats>) => {
-    const currentStats: CharacterStats = characterStats || {
-      race: 'Human',
-      characterClass: 'Fighter',
-      level: 1,
-      currentHp: 0,
-      maxHp: 0,
-      tempHp: 0,
-      armorClass: 10,
-      heroicInspiration: false,
-      conditions: createDefaultConditions(),
-      exhaustion: createDefaultExhaustionState(),
-      restHistory: createDefaultRestHistory(),
-    };
+    const currentStats: CharacterStats = characterStats || createDefaultCharacterStats();
     updateData({
       characterStats: {
         ...currentStats,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
@@ -6,9 +6,10 @@ import { CharacterSheetSection } from '../CharacterSheet';
 import { CollapsibleSection } from '../CollapsibleSection';
 import { PinnedSkillsBar } from '../PinnedSkillsBar';
 import { ConditionsPanel } from '../ConditionsPanel';
-import { ExhaustionMeter, createDefaultExhaustionState } from '../ExhaustionMeter';
-import { RestModal, createDefaultRestHistory } from '../RestModal';
+import { ExhaustionMeter } from '../ExhaustionMeter';
+import { RestModal } from '../RestModal';
 import { createDefaultCharacterSheet } from '../../utils/characterSheet';
+import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats } from '../../utils/characterStats';
 import { createDefaultConditions } from '../../data/conditions';
 
 // Token image sizing constants
@@ -191,27 +192,13 @@ export function HomeTab({
   // Helper to check if user can edit this token (GM, owner, or party token)
   const canUserEdit = playerRole === 'GM' || characterData.claimedBy === playerId || characterData.tokenType === 'party';
   
-  // Get character stats with defaults
+  // Get character stats with defaults - memoize to avoid recreating on every render
   const characterStats = characterData.characterStats;
-  
-  // Helper to create default character stats
-  const createDefaultCharacterStats = (): CharacterStats => ({
-    race: 'Human',
-    characterClass: 'Fighter',
-    level: 1,
-    currentHp: 0,
-    maxHp: 0,
-    tempHp: 0,
-    armorClass: 10,
-    heroicInspiration: false,
-    conditions: createDefaultConditions(),
-    exhaustion: createDefaultExhaustionState(),
-    restHistory: createDefaultRestHistory(),
-  });
+  const defaultStats = useMemo(() => createDefaultCharacterStats(), []);
   
   // Helper to update character stats
   const updateCharacterStats = (updates: Partial<CharacterStats>) => {
-    const currentStats = characterStats || createDefaultCharacterStats();
+    const currentStats = characterStats || defaultStats;
     updateData({
       characterStats: {
         ...currentStats,
@@ -223,13 +210,13 @@ export function HomeTab({
   // Toggle heroic inspiration
   const toggleHeroicInspiration = () => {
     if (!canUserEdit) return;
-    const currentStats = characterStats || createDefaultCharacterStats();
+    const currentStats = characterStats || defaultStats;
     updateCharacterStats({ heroicInspiration: !currentStats.heroicInspiration });
   };
   
   // Update condition
   const updateCondition = (conditionType: ConditionType, value: boolean) => {
-    const currentStats = characterStats || createDefaultCharacterStats();
+    const currentStats = characterStats || defaultStats;
     updateCharacterStats({
       conditions: {
         ...currentStats.conditions,
@@ -240,7 +227,7 @@ export function HomeTab({
   
   // Update exhaustion level
   const updateExhaustionLevel = (level: number) => {
-    const currentStats = characterStats || createDefaultCharacterStats();
+    const currentStats = characterStats || defaultStats;
     updateCharacterStats({
       exhaustion: {
         ...currentStats.exhaustion,
@@ -251,7 +238,7 @@ export function HomeTab({
   
   // Handle rest completion
   const handleRest = (restType: RestType, selectedOptionIds: string[]) => {
-    const currentStats = characterStats || createDefaultCharacterStats();
+    const currentStats = characterStats || defaultStats;
     const now = Date.now();
     
     if (restType === 'short') {

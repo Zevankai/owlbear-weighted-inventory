@@ -186,14 +186,3 @@ export const ExhaustionMeter: React.FC<ExhaustionMeterProps> = ({
     </div>
   );
 };
-
-/**
- * Create default exhaustion state
- */
-export function createDefaultExhaustionState(): ExhaustionState {
-  return {
-    currentLevel: 0,
-    maxLevels: 6,
-    customEffects: [],
-  };
-}

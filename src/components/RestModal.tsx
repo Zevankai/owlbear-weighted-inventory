@@ -496,14 +496,3 @@ const OptionSection: React.FC<OptionSectionProps> = ({
     </div>
   </div>
 );
-
-/**
- * Create default rest history
- */
-export function createDefaultRestHistory(): RestHistory {
-  return {
-    lastShortRest: null,
-    lastLongRest: null,
-    heroicInspirationGainedToday: false,
-  };
-}

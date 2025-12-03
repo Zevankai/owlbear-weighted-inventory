@@ -1,7 +1,7 @@
 // Character Stats Utilities
 // Helper functions for creating default character stats values
 
-import type { ExhaustionState, RestHistory, CharacterStats } from '../types';
+import type { ExhaustionState, RestHistory, CharacterStats, DeathSaves } from '../types';
 import { createDefaultConditions } from '../data/conditions';
 
 /**
@@ -27,6 +27,16 @@ export function createDefaultRestHistory(): RestHistory {
 }
 
 /**
+ * Create default death saves state
+ */
+export function createDefaultDeathSaves(): DeathSaves {
+  return {
+    successes: 0,
+    failures: 0,
+  };
+}
+
+/**
  * Create default character stats with all default values
  */
 export function createDefaultCharacterStats(): CharacterStats {
@@ -42,5 +52,6 @@ export function createDefaultCharacterStats(): CharacterStats {
     conditions: createDefaultConditions(),
     exhaustion: createDefaultExhaustionState(),
     restHistory: createDefaultRestHistory(),
+    deathSaves: createDefaultDeathSaves(),
   };
 }

@@ -374,6 +374,12 @@ export interface GMCustomizations {
   restRulesMessage: string;
 }
 
+// Death Saves state
+export interface DeathSaves {
+  successes: number;  // 0-3
+  failures: number;   // 0-3
+}
+
 // Character Stats (unified character stats for dashboard)
 export interface CharacterStats {
   race: CharacterRace;
@@ -390,6 +396,7 @@ export interface CharacterStats {
   injuryData?: CharacterInjuryData; // Extended injury condition data
   exhaustion: ExhaustionState;
   restHistory: RestHistory;
+  deathSaves?: DeathSaves; // Death saving throws tracking
 }
 
 export interface CharacterData {

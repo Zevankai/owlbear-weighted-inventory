@@ -3,6 +3,7 @@
 // ║                                                                              ║
 // ║  This file contains all 14 standard D&D 5e conditions with descriptions.    ║
 // ║  These conditions can be toggled on/off for character tokens.               ║
+// ║  Also includes custom injury/infection conditions.                          ║
 // ╚════════════════════════════════════════════════════════════════════════════╝
 
 import type { ConditionType, CharacterConditions } from '../types';
@@ -15,10 +16,11 @@ export interface ConditionDefinition {
   name: string;
   description: string;
   icon: string; // Emoji icon for visual representation
+  isInjury?: boolean; // True for injury conditions that require location selection
 }
 
 /**
- * All 14 standard D&D 5e conditions
+ * All 14 standard D&D 5e conditions + custom injury conditions
  */
 export const CONDITIONS: ConditionDefinition[] = [
   {
@@ -105,6 +107,35 @@ export const CONDITIONS: ConditionDefinition[] = [
     description: 'You drop everything and go prone. ATK against you have ADV. If within 5 feet, ATK against you are CRIT. You fail STR & DEX saves.',
     icon: '😴',
   },
+  // === INJURY CONDITIONS ===
+  {
+    id: 'minorInjury',
+    name: 'Minor Injury',
+    description: 'Temporary cosmetic damage only (no mechanical penalty). Triggered when HP decreases by 10+ in one hit.',
+    icon: '🩹',
+    isInjury: true,
+  },
+  {
+    id: 'seriousInjury',
+    name: 'Serious Injury',
+    description: 'Leaves a permanent scar. Effects vary by location: Limb (DIS on STR & DEX rolls), Torso (DIS on STR & CON rolls), Head (DIS on CON, WIS & INT rolls). Triggered by rolling 4-5 on d6 when taking 20+ damage.',
+    icon: '🩸',
+    isInjury: true,
+  },
+  {
+    id: 'criticalInjury',
+    name: 'Critical Injury',
+    description: 'Large permanent scar with location effects (same as Serious Injury). Additionally: DIS on ALL attack rolls, DIS on Death Saves, HP maximum cut by 25%. Triggered by rolling 6 on d6 when taking 20+ damage.',
+    icon: '💀',
+    isInjury: true,
+  },
+  {
+    id: 'infection',
+    name: 'Infection',
+    description: 'If any injury goes 3+ days without rest treatment, add this condition. Each long rest with the injury, roll a Death Save. 3 failed saves = death. DC 15 Medicine check can override a failed save.',
+    icon: '🦠',
+    isInjury: true,
+  },
 ];
 
 /**
@@ -126,6 +157,11 @@ export function createDefaultConditions(): CharacterConditions {
     restrained: false,
     stunned: false,
     unconscious: false,
+    // Injury conditions
+    minorInjury: false,
+    seriousInjury: false,
+    criticalInjury: false,
+    infection: false,
   };
 }
 
@@ -151,9 +187,9 @@ export function countActiveConditions(conditions: CharacterConditions): number {
 }
 
 /**
- * Condition type array for iteration
+ * Standard condition types (non-injury)
  */
-export const CONDITION_TYPES: ConditionType[] = [
+export const STANDARD_CONDITION_TYPES: ConditionType[] = [
   'blinded',
   'charmed',
   'deafened',
@@ -168,6 +204,24 @@ export const CONDITION_TYPES: ConditionType[] = [
   'restrained',
   'stunned',
   'unconscious',
+];
+
+/**
+ * Injury condition types
+ */
+export const INJURY_CONDITION_TYPES: ConditionType[] = [
+  'minorInjury',
+  'seriousInjury',
+  'criticalInjury',
+  'infection',
+];
+
+/**
+ * Condition type array for iteration (all conditions)
+ */
+export const CONDITION_TYPES: ConditionType[] = [
+  ...STANDARD_CONDITION_TYPES,
+  ...INJURY_CONDITION_TYPES,
 ];
 
 /**
@@ -188,4 +242,9 @@ export const CONDITION_LABELS: Record<ConditionType, string> = {
   restrained: 'Restrained',
   stunned: 'Stunned',
   unconscious: 'Unconscious',
+  // Injury conditions
+  minorInjury: 'Minor Injury',
+  seriousInjury: 'Serious Injury',
+  criticalInjury: 'Critical Injury',
+  infection: 'Infection',
 };

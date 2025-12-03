@@ -158,5 +158,5 @@ export const TRADE_POPOVER_ID = 'com.weighted-inventory.trade-window';
 export const EXPANDED_POPOVER_ID = 'com.weighted-inventory.expanded-window';
 
 // Default UI dimensions
-export const DEFAULT_POPOVER_WIDTH = 500; // Increased by 25% from 400
-export const WIDE_POPOVER_WIDTH = 1000; // Increased by 25% from 800
+export const DEFAULT_POPOVER_WIDTH = 625; // Increased by 25% from 500
+export const WIDE_POPOVER_WIDTH = 1250; // Increased by 25% from 1000

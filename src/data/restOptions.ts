@@ -5,429 +5,662 @@
 // ║  To add/edit options, find the appropriate section below.                   ║
 // ║                                                                              ║
 // ║  SECTIONS:                                                                   ║
-// ║  1. SHORT REST - Standard Options                                           ║
-// ║  2. SHORT REST - Race-Specific Options                                      ║
+// ║  1. SHORT REST - Standard Options (auto-applied)                            ║
+// ║  2. SHORT REST - Race-Specific Options (1 additional choice)                ║
 // ║  3. SHORT REST - Class-Specific Options                                     ║
-// ║  4. LONG REST - Standard Options                                            ║
-// ║  5. LONG REST - Race-Specific Options                                       ║
+// ║  4. LONG REST - Standard Options (auto-applied)                             ║
+// ║  5. LONG REST - Race-Specific Options (2 additional choices)                ║
 // ║  6. LONG REST - Class-Specific Options                                      ║
 // ╚════════════════════════════════════════════════════════════════════════════╝
 
 import type { RestOption } from '../types';
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 1: SHORT REST - Standard Options
+// SECTION 1: SHORT REST - Standard Options (Auto-applied - not selectable)
 // ═══════════════════════════════════════════════════════════════════════════════
-// These options are available to all characters during a short rest.
+// These options are automatically applied to all characters during a short rest.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const SHORT_REST_STANDARD_OPTIONS: RestOption[] = [
   {
-    id: 'short-standard-hit-dice',
-    name: 'Spend Hit Dice',
-    description: 'You can spend one or more Hit Dice to heal. Roll each die and add your Constitution modifier to regain hit points.',
+    id: 'short-standard-project',
+    name: 'Work on Project',
+    description: 'Progress a project by 1 mark.',
     category: 'standard',
     restType: 'short',
   },
   {
-    id: 'short-standard-recharge-abilities',
-    name: 'Recharge Abilities',
-    description: 'Some class features and abilities recharge after a short rest. Check your class features for specifics.',
+    id: 'short-standard-maintain-gear',
+    name: 'Maintain Gear',
+    description: 'Roll a DC 10 tool check. On success: One weapon gains +5 damage on its next attack, OR one piece of armor negates 5 damage on the next attack against you. (Brief roleplay required.)',
     category: 'standard',
     restType: 'short',
   },
   {
-    id: 'short-standard-attune-item',
-    name: 'Attune to Magic Item',
-    description: 'You can spend the short rest attuning to a magic item, focusing on it while maintaining physical contact.',
+    id: 'short-standard-bond-companion',
+    name: 'Bond with Companion',
+    description: 'Two players must choose this. You both auto-succeed your next Saving Throw. Your next attack crits on a roll of 18+.',
+    category: 'standard',
+    restType: 'short',
+  },
+  {
+    id: 'short-standard-snack',
+    name: 'Prepare a Snack',
+    description: 'Costs 1 ration per member; cooking tools required. The party gains +10 temporary HP.',
+    category: 'standard',
+    restType: 'short',
+  },
+  {
+    id: 'short-standard-patch-wounds',
+    name: 'Patch Wounds',
+    description: 'DC 10 Medicine Check: Remove 1 level of injury.',
+    category: 'standard',
+    restType: 'short',
+  },
+  {
+    id: 'short-standard-quick-practice',
+    name: 'Quick Practice',
+    description: 'Choose 1 skill you have not used since your last rest. Your next roll with that skill is made with Advantage. (Roleplay how you practice.)',
     category: 'standard',
     restType: 'short',
   },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 2: SHORT REST - Race-Specific Options
+// SECTION 2: SHORT REST - Race-Specific Options (2 per race)
 // ═══════════════════════════════════════════════════════════════════════════════
 // These options are only available to characters of the specified race.
-// Note: Tiefling, Goblin, and Fairy are intentionally left blank for GM customization.
+// Player can select 1 additional option from race or class during short rest.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const SHORT_REST_RACE_OPTIONS: RestOption[] = [
-  // Human options
+  // Dwarf options
   {
-    id: 'short-race-human-versatile',
-    name: 'Human Versatility',
-    description: 'Humans can spend a short rest practicing a skill, gaining advantage on the next check with that skill within 1 hour.',
+    id: 'short-race-dwarf-stonebound',
+    name: 'Stonebound Focus',
+    description: 'Advantage on your next Saving Throw.',
     category: 'race',
-    raceRestriction: 'Human',
+    raceRestriction: 'Dwarf',
+    restType: 'short',
+  },
+  {
+    id: 'short-race-dwarf-ale',
+    name: 'Ale & Ember',
+    description: 'Restore 8 HP.',
+    category: 'race',
+    raceRestriction: 'Dwarf',
     restType: 'short',
   },
   // Elf options
   {
-    id: 'short-race-elf-trance',
-    name: 'Elven Trance',
-    description: 'Elves only need 4 hours to complete a short rest, meditating in a trance-like state while remaining aware of surroundings.',
+    id: 'short-race-elf-tranceflash',
+    name: 'Tranceflash',
+    description: 'Advantage on your next Initiative roll.',
     category: 'race',
     raceRestriction: 'Elf',
     restType: 'short',
   },
-  // Dragonborn options
   {
-    id: 'short-race-dragonborn-breath-recovery',
-    name: 'Draconic Recovery',
-    description: 'Dragonborn can meditate on their draconic heritage to regain their breath weapon if expended.',
+    id: 'short-race-elf-precision',
+    name: 'Refined Precision',
+    description: '+2 to your next Dexterity check.',
     category: 'race',
-    raceRestriction: 'Dragonborn',
+    raceRestriction: 'Elf',
+    restType: 'short',
+  },
+  // Human options
+  {
+    id: 'short-race-human-adaptive',
+    name: 'Adaptive Burst',
+    description: 'Choose any one skill; its next effect is increased by +1 until your next rest.',
+    category: 'race',
+    raceRestriction: 'Human',
+    restType: 'short',
+  },
+  {
+    id: 'short-race-human-tenacity',
+    name: 'Tenacity',
+    description: 'Gain 5 temporary HP.',
+    category: 'race',
+    raceRestriction: 'Human',
     restType: 'short',
   },
   // Orc options
   {
-    id: 'short-race-orc-aggressive-rest',
-    name: 'Aggressive Recovery',
-    description: 'Orcs can channel their aggressive nature during rest. Gain temporary HP equal to your Constitution modifier until your next rest.',
+    id: 'short-race-orc-battle-rush',
+    name: 'Battle Rush',
+    description: '+4 to your next Attack roll.',
+    category: 'race',
+    raceRestriction: 'Orc',
+    restType: 'short',
+  },
+  {
+    id: 'short-race-orc-relentless-grip',
+    name: 'Relentless Grip',
+    description: 'You cannot be disarmed during the next combat encounter unless a limb is severed.',
     category: 'race',
     raceRestriction: 'Orc',
     restType: 'short',
   },
   // Halfling options
   {
-    id: 'short-race-halfling-second-breakfast',
-    name: 'Second Breakfast',
-    description: 'Halflings who eat a proper meal during a short rest regain an additional 1d4 HP when spending Hit Dice.',
+    id: 'short-race-halfling-lucky-pause',
+    name: 'Lucky Pause',
+    description: 'You may reroll one roll during your next social interaction.',
     category: 'race',
     raceRestriction: 'Halfling',
     restType: 'short',
   },
-  // Dwarf options
   {
-    id: 'short-race-dwarf-stonecunning-rest',
-    name: 'Dwarven Resilience',
-    description: 'Dwarves can spend the short rest tending to their equipment. Gain +1 AC against the next attack before your next rest.',
+    id: 'short-race-halfling-comforts',
+    name: 'Small Comforts',
+    description: 'Restore 8 HP.',
     category: 'race',
-    raceRestriction: 'Dwarf',
+    raceRestriction: 'Halfling',
     restType: 'short',
   },
-  // Mixed race options
+  // Gnome options
   {
-    id: 'short-race-mixed-adaptable',
-    name: 'Adaptable Heritage',
-    description: 'Mixed-race characters can choose one short rest benefit from either of their parent races.',
+    id: 'short-race-gnome-ingenuity',
+    name: 'Spark of Ingenuity',
+    description: 'ADV on your next crafting, tinkering, or manipulation check.',
     category: 'race',
-    raceRestriction: 'Mixed',
+    raceRestriction: 'Gnome',
+    restType: 'short',
+  },
+  {
+    id: 'short-race-gnome-blink',
+    name: 'Quick Blink',
+    description: '+3 to your next Dexterity check or Saving Throw.',
+    category: 'race',
+    raceRestriction: 'Gnome',
+    restType: 'short',
+  },
+  // Dragonborn options
+  {
+    id: 'short-race-dragonborn-prayer',
+    name: 'Ancestral Prayer',
+    description: 'Roleplay a prayer to your ancestors. Gain Heroic Inspiration. If unused before your next rest: all saves until the next rest are at DIS.',
+    category: 'race',
+    raceRestriction: 'Dragonborn',
+    restType: 'short',
+  },
+  {
+    id: 'short-race-dragonborn-presence',
+    name: 'Draconic Presence',
+    description: '+2 to your next Intimidation roll.',
+    category: 'race',
+    raceRestriction: 'Dragonborn',
     restType: 'short',
   },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 3: SHORT REST - Class-Specific Options
+// SECTION 3: SHORT REST - Class-Specific Options (2 per class)
 // ═══════════════════════════════════════════════════════════════════════════════
 // These options are only available to characters of the specified class.
-// Note: Druid, Paladin, and Monk are intentionally left blank for GM customization.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const SHORT_REST_CLASS_OPTIONS: RestOption[] = [
   // Fighter options
   {
-    id: 'short-class-fighter-second-wind',
-    name: 'Second Wind',
-    description: 'Fighters regain Second Wind usage after a short rest. Use a bonus action to regain 1d10 + fighter level HP.',
+    id: 'short-class-fighter-edge',
+    name: 'Edge Maintenance',
+    description: 'Your next weapon attack gains +2 damage.',
     category: 'class',
     classRestriction: 'Fighter',
     restType: 'short',
   },
   {
-    id: 'short-class-fighter-action-surge',
-    name: 'Action Surge Recovery',
-    description: 'Fighters regain their Action Surge usage after a short rest.',
+    id: 'short-class-fighter-shield',
+    name: 'Shield Settle',
+    description: 'Your next block/guard reduces damage by +2.',
     category: 'class',
     classRestriction: 'Fighter',
+    restType: 'short',
+  },
+  // Rogue options
+  {
+    id: 'short-class-rogue-silent',
+    name: 'Silent Reset',
+    description: 'ADV on your next Stealth attempt.',
+    category: 'class',
+    classRestriction: 'Rogue',
+    restType: 'short',
+  },
+  {
+    id: 'short-class-rogue-hands',
+    name: 'Light Hands',
+    description: '+2 to your next Dex check.',
+    category: 'class',
+    classRestriction: 'Rogue',
+    restType: 'short',
+  },
+  // Cleric options
+  {
+    id: 'short-class-cleric-breath',
+    name: 'Reverent Breath',
+    description: 'Restore 10 HP to an ally within reach as an action, once.',
+    category: 'class',
+    classRestriction: 'Cleric',
+    restType: 'short',
+  },
+  {
+    id: 'short-class-cleric-insight',
+    name: 'Sacred Insight',
+    description: '+1 to your next Wisdom or Intelligence roll.',
+    category: 'class',
+    classRestriction: 'Cleric',
+    restType: 'short',
+  },
+  // Wizard options
+  {
+    id: 'short-class-wizard-arcane',
+    name: 'Arcane Moment',
+    description: 'Restore 1 spell slot of level 3 or lower.',
+    category: 'class',
+    classRestriction: 'Wizard',
+    restType: 'short',
+  },
+  {
+    id: 'short-class-wizard-geometry',
+    name: 'Spell Geometry',
+    description: '+1 to your next spell attack roll.',
+    category: 'class',
+    classRestriction: 'Wizard',
     restType: 'short',
   },
   // Ranger options
   {
-    id: 'short-class-ranger-natural-recovery',
-    name: 'Natural Recovery',
-    description: 'Rangers can attune to their surroundings, gaining advantage on the next Survival or Nature check within 1 hour.',
+    id: 'short-class-ranger-nose',
+    name: "Hunter's Nose",
+    description: 'ADV on your next Animal Handling or Survival check.',
+    category: 'class',
+    classRestriction: 'Ranger',
+    restType: 'short',
+  },
+  {
+    id: 'short-class-ranger-stalker',
+    name: "Stalker's Readiness",
+    description: '+1 to your next ranged attack roll.',
     category: 'class',
     classRestriction: 'Ranger',
     restType: 'short',
   },
   // Bard options
   {
-    id: 'short-class-bard-song-of-rest',
-    name: 'Song of Rest',
-    description: 'Bards can use soothing music during a short rest. Allies who spend Hit Dice regain extra HP: 1d6 (level 2+), 1d8 (level 9+), 1d10 (level 13+), 1d12 (level 17+).',
+    id: 'short-class-bard-tuneup',
+    name: 'Tune-Up',
+    description: 'ADV on your next Performance or Persuasion roll.',
     category: 'class',
     classRestriction: 'Bard',
     restType: 'short',
   },
-  // Wizard options
   {
-    id: 'short-class-wizard-arcane-recovery',
-    name: 'Arcane Recovery',
-    description: 'Wizards can recover spell slots during a short rest. Recover slots with combined level equal to half wizard level (rounded up). Once per long rest.',
+    id: 'short-class-bard-whisper',
+    name: 'Whispered Motif',
+    description: 'Give an ally +5 to their next roll of any kind; you must name them immediately.',
     category: 'class',
-    classRestriction: 'Wizard',
+    classRestriction: 'Bard',
     restType: 'short',
   },
   // Warlock options
   {
-    id: 'short-class-warlock-pact-magic',
-    name: 'Pact Magic Recovery',
-    description: 'Warlocks regain all expended spell slots after a short rest.',
+    id: 'short-class-warlock-deity',
+    name: 'Blessed Deity',
+    description: 'Commune with your deity. Gain +5 to your next roll of any kind.',
     category: 'class',
     classRestriction: 'Warlock',
     restType: 'short',
   },
-  // Rogue options
   {
-    id: 'short-class-rogue-cunning-action-prep',
-    name: 'Cunning Preparation',
-    description: 'Rogues can spend a short rest studying their environment. Gain advantage on the next Stealth or Sleight of Hand check within 1 hour.',
+    id: 'short-class-warlock-selfless',
+    name: 'Selfless Act',
+    description: 'At the cost of 1d20 HP, grant Heroic Inspiration to a party member. (HP cannot drop below 1.)',
     category: 'class',
-    classRestriction: 'Rogue',
+    classRestriction: 'Warlock',
     restType: 'short',
   },
   // Barbarian options
   {
-    id: 'short-class-barbarian-rage-recovery',
-    name: 'Primal Recovery',
-    description: 'Barbarians can meditate on their rage. If you have no rages remaining, regain one use of Rage after this short rest (once per long rest).',
+    id: 'short-class-barbarian-headbang',
+    name: 'Head Bang',
+    description: 'Your next unarmed melee attack has +3 to hit and deals +1d12 damage. Roleplay the attack.',
     category: 'class',
     classRestriction: 'Barbarian',
     restType: 'short',
   },
-  // Cleric options
   {
-    id: 'short-class-cleric-channel-divinity',
-    name: 'Channel Divinity Recovery',
-    description: 'Clerics can pray during a short rest to regain one use of Channel Divinity.',
+    id: 'short-class-barbarian-berserker',
+    name: "Berserker's Rest",
+    description: 'Choose two short-rest options to use at the cost of 1 exhaustion and DIS on your next attack roll or saving throw.',
     category: 'class',
-    classRestriction: 'Cleric',
-    restType: 'short',
-  },
-  // Multiclass options
-  {
-    id: 'short-class-multiclass-versatile',
-    name: 'Multiclass Versatility',
-    description: 'Multiclass characters can choose short rest benefits from any of their classes.',
-    category: 'class',
-    classRestriction: 'Multiclass',
+    classRestriction: 'Barbarian',
     restType: 'short',
   },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 4: LONG REST - Standard Options
+// SECTION 4: LONG REST - Standard Options (Auto-applied - not selectable)
 // ═══════════════════════════════════════════════════════════════════════════════
-// These options are available to all characters during a long rest.
+// These options are automatically applied to all characters during a long rest.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const LONG_REST_STANDARD_OPTIONS: RestOption[] = [
   {
-    id: 'long-standard-full-hp',
-    name: 'Full HP Recovery',
-    description: 'You regain all lost hit points at the end of a long rest.',
+    id: 'long-standard-project',
+    name: 'Work on Project',
+    description: 'Progress a project by 2 marks. If race = Elf → progress 3 marks.',
     category: 'standard',
     restType: 'long',
   },
   {
-    id: 'long-standard-hit-dice-recovery',
-    name: 'Hit Dice Recovery',
-    description: 'You regain spent Hit Dice up to half your total number of them (minimum 1).',
+    id: 'long-standard-maintain-gear',
+    name: 'Maintain Gear',
+    description: 'Roll a DC 5 tool check. On success: One weapon gains +5 damage on its next attack, OR one armor piece negates 5 damage on the next attack against you.',
     category: 'standard',
     restType: 'long',
   },
   {
-    id: 'long-standard-spell-slots',
-    name: 'Spell Slot Recovery',
-    description: 'Spellcasters regain all expended spell slots at the end of a long rest.',
+    id: 'long-standard-bond-companion',
+    name: 'Bond with Companion',
+    description: 'Two players must choose this. You both auto-succeed your next Saving Throw. Your next attack crits on a natural 15+.',
     category: 'standard',
     restType: 'long',
   },
   {
-    id: 'long-standard-class-features',
-    name: 'Class Feature Recovery',
-    description: 'Most class features that have limited uses are restored after a long rest.',
+    id: 'long-standard-meal',
+    name: 'Prepare a Meal',
+    description: 'Costs 1 ration per member; cooking tools required. Party gains +15 temporary HP.',
     category: 'standard',
     restType: 'long',
   },
   {
-    id: 'long-standard-exhaustion',
-    name: 'Reduce Exhaustion',
-    description: 'If you have food and drink, reduce your exhaustion level by 1.',
+    id: 'long-standard-patch-wounds',
+    name: 'Patch Wounds',
+    description: 'DC 10 Medicine Check: Remove 2 levels of injury.',
     category: 'standard',
     restType: 'long',
   },
   {
-    id: 'long-standard-heroic-inspiration',
-    name: 'Heroic Inspiration',
-    description: 'At the end of a long rest, if you do not have Heroic Inspiration, you gain it.',
+    id: 'long-standard-quick-practice',
+    name: 'Quick Practice',
+    description: 'Choose one skill you have not used since your last rest. Your next two rolls with that skill are made with ADV.',
     category: 'standard',
     restType: 'long',
   },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 5: LONG REST - Race-Specific Options
+// SECTION 5: LONG REST - Race-Specific Options (2 per race)
 // ═══════════════════════════════════════════════════════════════════════════════
 // These options are only available to characters of the specified race.
-// Note: Tiefling, Goblin, and Fairy are intentionally left blank for GM customization.
+// Player can select 2 additional options from race or class during long rest.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const LONG_REST_RACE_OPTIONS: RestOption[] = [
-  // Human options
+  // Dwarf options
   {
-    id: 'long-race-human-determined',
-    name: 'Human Determination',
-    description: 'Humans gain an extra Hit Die worth of temporary HP after a long rest that lasts until the next long rest.',
+    id: 'long-race-dwarf-stonebed',
+    name: 'Stonebed Restoration',
+    description: 'Negate all damage from the next hit against you.',
     category: 'race',
-    raceRestriction: 'Human',
+    raceRestriction: 'Dwarf',
+    restType: 'long',
+  },
+  {
+    id: 'long-race-dwarf-ancestral',
+    name: 'Ancestral Dream',
+    description: '+4 to your next crafting-related check.',
+    category: 'race',
+    raceRestriction: 'Dwarf',
     restType: 'long',
   },
   // Elf options
   {
-    id: 'long-race-elf-trance',
-    name: 'Elven Trance (Long)',
-    description: 'Elves only need 4 hours to gain the benefits of a long rest, remaining semiconscious during this time.',
+    id: 'long-race-elf-moonlit',
+    name: 'Moonlit Trance',
+    description: 'Automatically clear all ongoing effects except curses or narrative-designed effects.',
     category: 'race',
     raceRestriction: 'Elf',
     restType: 'long',
   },
-  // Dragonborn options
   {
-    id: 'long-race-dragonborn-draconic-might',
-    name: 'Draconic Might',
-    description: 'Dragonborn can channel their draconic ancestry. After a long rest, your breath weapon deals an extra die of damage on its next use.',
+    id: 'long-race-elf-song',
+    name: 'Song of the Boughs',
+    description: '+3 to passive Perception.',
     category: 'race',
-    raceRestriction: 'Dragonborn',
+    raceRestriction: 'Elf',
+    restType: 'long',
+  },
+  // Human options
+  {
+    id: 'long-race-human-versatile',
+    name: 'Versatile Renewal',
+    description: 'Choose any non-project Standard Long-Rest option; double its numeric effect. (Cannot choose this or the doubled option during the next rest.)',
+    category: 'race',
+    raceRestriction: 'Human',
+    restType: 'long',
+  },
+  {
+    id: 'long-race-human-resolve',
+    name: 'Resolve Surge',
+    description: '+3 to passive Investigation.',
+    category: 'race',
+    raceRestriction: 'Human',
     restType: 'long',
   },
   // Orc options
   {
-    id: 'long-race-orc-relentless',
-    name: 'Relentless Endurance Refresh',
-    description: 'Orcs regain use of Relentless Endurance after a long rest, allowing them to drop to 1 HP instead of 0 once.',
+    id: 'long-race-orc-bloodfire',
+    name: 'Bloodfire Dream',
+    description: 'Your first melee attack roll is an automatic critical hit.',
+    category: 'race',
+    raceRestriction: 'Orc',
+    restType: 'long',
+  },
+  {
+    id: 'long-race-orc-warlust',
+    name: 'Warlust Renewal',
+    description: 'If you drop an enemy to 0 HP, restore 3 HP.',
     category: 'race',
     raceRestriction: 'Orc',
     restType: 'long',
   },
   // Halfling options
   {
-    id: 'long-race-halfling-lucky-rest',
-    name: 'Halfling Luck Refresh',
-    description: 'Halflings feel particularly lucky after a good rest. Your Lucky trait allows you to reroll two 1s on your next ability check.',
+    id: 'long-race-halfling-hearthsleep',
+    name: 'Hearthsleep',
+    description: 'Begin the day with Heroic Inspiration.',
     category: 'race',
     raceRestriction: 'Halfling',
     restType: 'long',
   },
-  // Dwarf options
   {
-    id: 'long-race-dwarf-stout-constitution',
-    name: 'Dwarven Fortitude',
-    description: 'Dwarves recover particularly well. Regain all Hit Dice instead of half after a long rest.',
+    id: 'long-race-halfling-comfort',
+    name: 'Comfort Feast',
+    description: 'At the cost of 2 exhaustion, grant the rest of the party Heroic Inspiration.',
     category: 'race',
-    raceRestriction: 'Dwarf',
+    raceRestriction: 'Halfling',
     restType: 'long',
   },
-  // Mixed race options
+  // Gnome options
   {
-    id: 'long-race-mixed-dual-heritage',
-    name: 'Dual Heritage',
-    description: 'Mixed-race characters can choose one long rest benefit from either of their parent races.',
+    id: 'long-race-gnome-tinker',
+    name: "Tinker's Twilight",
+    description: 'Homebrew a small craft/item from available materials (DM discretion).',
     category: 'race',
-    raceRestriction: 'Mixed',
+    raceRestriction: 'Gnome',
+    restType: 'long',
+  },
+  {
+    id: 'long-race-gnome-glintdream',
+    name: 'Glintdream',
+    description: 'The next attack roll against you has disadvantage.',
+    category: 'race',
+    raceRestriction: 'Gnome',
+    restType: 'long',
+  },
+  // Dragonborn options
+  {
+    id: 'long-race-dragonborn-dreamfire',
+    name: 'Draconic Dreamfire',
+    description: 'Your next elemental-type damage roll (breath or spell) gains +3.',
+    category: 'race',
+    raceRestriction: 'Dragonborn',
+    restType: 'long',
+  },
+  {
+    id: 'long-race-dragonborn-scaled',
+    name: 'Scaled Presence',
+    description: 'Your next Intimidation or Insight check gains +2.',
+    category: 'race',
+    raceRestriction: 'Dragonborn',
     restType: 'long',
   },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 6: LONG REST - Class-Specific Options
+// SECTION 6: LONG REST - Class-Specific Options (2 per class)
 // ═══════════════════════════════════════════════════════════════════════════════
 // These options are only available to characters of the specified class.
-// Note: Druid, Paladin, and Monk are intentionally left blank for GM customization.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export const LONG_REST_CLASS_OPTIONS: RestOption[] = [
   // Fighter options
   {
-    id: 'long-class-fighter-indomitable',
-    name: 'Indomitable Recovery',
-    description: 'Fighters regain all uses of Indomitable after a long rest.',
+    id: 'long-class-fighter-iron',
+    name: 'Iron Dawn',
+    description: 'The first attack against you automatically fails.',
     category: 'class',
     classRestriction: 'Fighter',
     restType: 'long',
   },
+  {
+    id: 'long-class-fighter-battle',
+    name: 'Battle Mindset',
+    description: '+5 to your next melee attack roll.',
+    category: 'class',
+    classRestriction: 'Fighter',
+    restType: 'long',
+  },
+  // Rogue options
+  {
+    id: 'long-class-rogue-night',
+    name: 'Night Patterns',
+    description: 'ADV on your next Charisma check.',
+    category: 'class',
+    classRestriction: 'Rogue',
+    restType: 'long',
+  },
+  {
+    id: 'long-class-rogue-silent',
+    name: 'Silent Preparation',
+    description: '+1 to your next Dexterity check or save.',
+    category: 'class',
+    classRestriction: 'Rogue',
+    restType: 'long',
+  },
+  // Cleric options
+  {
+    id: 'long-class-cleric-sacred',
+    name: 'Sacred Renewal',
+    description: 'The party gains 1d20 temporary HP.',
+    category: 'class',
+    classRestriction: 'Cleric',
+    restType: 'long',
+  },
+  {
+    id: 'long-class-cleric-dawn',
+    name: "Dawn's Blessing",
+    description: 'The next healing you perform also grants the target ADV on their next roll.',
+    category: 'class',
+    classRestriction: 'Cleric',
+    restType: 'long',
+  },
+  // Wizard options
+  {
+    id: 'long-class-wizard-meditation',
+    name: 'Arcane Meditation',
+    description: 'Restore one spell slot / major spell use.',
+    category: 'class',
+    classRestriction: 'Wizard',
+    restType: 'long',
+  },
+  {
+    id: 'long-class-wizard-runic',
+    name: 'Runic Prep',
+    description: 'Your first spell attack or spellcraft check gains +2.',
+    category: 'class',
+    classRestriction: 'Wizard',
+    restType: 'long',
+  },
   // Ranger options
   {
-    id: 'long-class-ranger-prepared',
-    name: 'Ranger Preparation',
-    description: 'Rangers can spend part of the long rest preparing new spells. Choose your prepared spells from the ranger spell list.',
+    id: 'long-class-ranger-vigil',
+    name: 'Wild Vigil',
+    description: 'Your first Survival or Tracking check gains +2.',
+    category: 'class',
+    classRestriction: 'Ranger',
+    restType: 'long',
+  },
+  {
+    id: 'long-class-ranger-resolve',
+    name: "Hunter's Resolve",
+    description: '+5 to your next ranged attack roll.',
     category: 'class',
     classRestriction: 'Ranger',
     restType: 'long',
   },
   // Bard options
   {
-    id: 'long-class-bard-inspiration',
-    name: 'Bardic Inspiration Recovery',
-    description: 'Bards regain all expended uses of Bardic Inspiration after a long rest.',
+    id: 'long-class-bard-encore',
+    name: 'Encore Dream',
+    description: 'Your first Charisma roll gains ADV.',
     category: 'class',
     classRestriction: 'Bard',
     restType: 'long',
   },
-  // Wizard options
   {
-    id: 'long-class-wizard-spell-preparation',
-    name: 'Spell Preparation',
-    description: 'Wizards can prepare a new set of spells during a long rest. Choose from your spellbook.',
+    id: 'long-class-bard-melodic',
+    name: 'Melodic Shield',
+    description: '+5 to passive Insight.',
     category: 'class',
-    classRestriction: 'Wizard',
+    classRestriction: 'Bard',
     restType: 'long',
   },
   // Warlock options
   {
-    id: 'long-class-warlock-mystic-arcanum',
-    name: 'Mystic Arcanum Recovery',
-    description: 'Warlocks regain uses of Mystic Arcanum spells after a long rest.',
+    id: 'long-class-warlock-deity',
+    name: 'Blessed Deity',
+    description: 'Commune with your deity. Gain +6 to your next roll of any kind.',
     category: 'class',
     classRestriction: 'Warlock',
     restType: 'long',
   },
-  // Rogue options
   {
-    id: 'long-class-rogue-stroke-of-luck',
-    name: 'Stroke of Luck Recovery',
-    description: 'Rogues (level 20) regain use of Stroke of Luck after a long rest.',
+    id: 'long-class-warlock-selfless',
+    name: 'Selfless Act',
+    description: 'At the cost of 1d20 HP, grant Heroic Inspiration to yourself and one party member. (HP cannot drop below 1.)',
     category: 'class',
-    classRestriction: 'Rogue',
+    classRestriction: 'Warlock',
     restType: 'long',
   },
   // Barbarian options
   {
-    id: 'long-class-barbarian-rage-full',
-    name: 'Full Rage Recovery',
-    description: 'Barbarians regain all expended uses of Rage after a long rest.',
+    id: 'long-class-barbarian-headbang',
+    name: 'Head Bang',
+    description: 'Your next unarmed melee attack has +3 to hit and deals +1d20 damage. Roleplay the attack.',
     category: 'class',
     classRestriction: 'Barbarian',
     restType: 'long',
   },
-  // Cleric options
   {
-    id: 'long-class-cleric-divine-intervention',
-    name: 'Divine Intervention Recovery',
-    description: 'Clerics regain use of Divine Intervention after a long rest (if successful on previous use, must wait 7 days).',
+    id: 'long-class-barbarian-berserker',
+    name: "Berserker's Rest",
+    description: 'Choose three long-rest options to use at the cost of 2 exhaustion and DIS on your next attack roll or saving throw.',
     category: 'class',
-    classRestriction: 'Cleric',
-    restType: 'long',
-  },
-  // Multiclass options
-  {
-    id: 'long-class-multiclass-combined',
-    name: 'Multiclass Recovery',
-    description: 'Multiclass characters regain all class-specific resources from each of their classes after a long rest.',
-    category: 'class',
-    classRestriction: 'Multiclass',
+    classRestriction: 'Barbarian',
     restType: 'long',
   },
 ];
@@ -521,4 +754,34 @@ export function getAvailableRestOptions(
  */
 export function getRestOptionById(id: string): RestOption | undefined {
   return ALL_REST_OPTIONS.find(option => option.id === id);
+}
+
+/**
+ * Get only standard options (for auto-apply display)
+ */
+export function getStandardRestOptions(restType: 'short' | 'long'): RestOption[] {
+  return restType === 'short' ? SHORT_REST_STANDARD_OPTIONS : LONG_REST_STANDARD_OPTIONS;
+}
+
+/**
+ * Get non-standard options available for selection
+ */
+export function getNonStandardRestOptions(
+  restType: 'short' | 'long',
+  race?: string,
+  characterClass?: string,
+  secondaryRace?: string,
+  secondaryClass?: string
+): RestOption[] {
+  const allAvailable = getAvailableRestOptions(restType, race, characterClass, secondaryRace, secondaryClass);
+  return allAvailable.filter(opt => opt.category !== 'standard');
+}
+
+/**
+ * Get max additional options allowed for rest type
+ * Short rest: 1 additional option
+ * Long rest: 2 additional options
+ */
+export function getMaxAdditionalOptions(restType: 'short' | 'long'): number {
+  return restType === 'short' ? 1 : 2;
 }

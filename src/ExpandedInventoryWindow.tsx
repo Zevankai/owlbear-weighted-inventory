@@ -844,7 +844,22 @@ export default function ExpandedInventoryWindow() {
               </div>
             )}
             <div>
-              <h1 style={{margin: 0, fontSize: '18px', color: 'var(--accent-gold)'}}>{tokenName}</h1>
+              <h1 style={{margin: 0, fontSize: '18px', color: 'var(--accent-gold)'}}>
+                {tokenName}
+                {/* Exhaustion indicator in header */}
+                {characterData.characterStats?.exhaustion && characterData.characterStats.exhaustion.currentLevel > 0 && (
+                  <span 
+                    style={{ 
+                      marginLeft: '8px', 
+                      fontSize: '14px',
+                      color: '#ff9632',
+                    }}
+                    title={`Exhaustion Level ${characterData.characterStats.exhaustion.currentLevel}`}
+                  >
+                    (+{characterData.characterStats.exhaustion.currentLevel}) 💤
+                  </span>
+                )}
+              </h1>
               <div style={{fontSize: '11px', color: 'var(--text-muted)'}}>
                 {characterData.tokenType === 'lore' 
                   ? '📜 Lore Token'

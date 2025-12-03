@@ -129,7 +129,7 @@ function App() {
       id: EXPANDED_POPOVER_ID,
       url,
       height: 700,
-      width: 1125, // Increased by 25% from 900
+      width: 1400, // Increased by ~25% from 1125
     });
   };
 

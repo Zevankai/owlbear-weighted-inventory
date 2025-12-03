@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet } from '../../types';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
@@ -272,7 +272,7 @@ const HorizontalBanner = ({
           </div>
         )}
         
-        {/* Level | Token Type | Trade */}
+        {/* Level | Exhaustion | Token Type | Trade */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
@@ -281,6 +281,24 @@ const HorizontalBanner = ({
           color: 'var(--accent-gold)'
         }}>
           <span style={{ fontWeight: 'bold' }}>Lv {sheet.level || 1}</span>
+          {/* Exhaustion Indicator - only show if level > 0 */}
+          {characterStats?.exhaustion && characterStats.exhaustion.currentLevel > 0 && (
+            <>
+              <span style={{ color: 'var(--text-muted)' }}>|</span>
+              <span 
+                style={{
+                  color: '#ff9632',
+                  fontWeight: 'bold',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                }}
+                title={`Exhaustion Level ${characterStats.exhaustion.currentLevel}`}
+              >
+                (+{characterStats.exhaustion.currentLevel}) 💤
+              </span>
+            </>
+          )}
           {characterData.tokenType && characterData.tokenType !== 'player' && (
             <>
               <span style={{ color: 'var(--text-muted)' }}>|</span>
@@ -523,13 +541,52 @@ export function HomeTab({
   };
   
   // Update condition
-  const updateCondition = (conditionType: ConditionType, value: boolean) => {
+  const updateCondition = (conditionType: ConditionType, value: boolean, location?: InjuryLocation) => {
     const currentStats = characterStats || defaultStats;
+    const newConditions = {
+      ...currentStats.conditions,
+      [conditionType]: value,
+    };
+    
+    // If enabling an injury with location, also update injuryData
+    if (value && location) {
+      const newInjuryData: CharacterInjuryData = {
+        ...(currentStats.injuryData || {}),
+        [conditionType]: { injuryLocation: location },
+      };
+      updateCharacterStats({
+        conditions: newConditions,
+        injuryData: newInjuryData,
+      });
+    } else if (!value) {
+      // When disabling an injury condition, clear its injury data
+      const newInjuryData = { ...(currentStats.injuryData || {}) };
+      delete newInjuryData[conditionType as keyof CharacterInjuryData];
+      updateCharacterStats({
+        conditions: newConditions,
+        injuryData: Object.keys(newInjuryData).length > 0 ? newInjuryData : undefined,
+      });
+    } else {
+      updateCharacterStats({
+        conditions: newConditions,
+      });
+    }
+  };
+  
+  // Update injury data (for additional injury tracking like days since rest)
+  const updateInjuryData = (conditionType: ConditionType, data: Partial<CharacterInjuryData[keyof CharacterInjuryData]>) => {
+    const currentStats = characterStats || defaultStats;
+    const currentInjuryData = currentStats.injuryData || {};
+    const currentConditionData = currentInjuryData[conditionType as keyof CharacterInjuryData] || {};
+    
     updateCharacterStats({
-      conditions: {
-        ...currentStats.conditions,
-        [conditionType]: value,
-      }
+      injuryData: {
+        ...currentInjuryData,
+        [conditionType]: {
+          ...currentConditionData,
+          ...data,
+        },
+      },
     });
   };
   
@@ -945,6 +1002,8 @@ export function HomeTab({
               conditions={characterStats?.conditions || createDefaultConditions()}
               onConditionChange={updateCondition}
               canEdit={canUserEdit}
+              injuryData={characterStats?.injuryData}
+              onInjuryDataChange={updateInjuryData}
             />
             
             {/* Exhaustion Meter */}

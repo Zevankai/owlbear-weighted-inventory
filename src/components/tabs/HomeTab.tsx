@@ -39,9 +39,16 @@ interface DeathSavesDisplayProps {
 const DeathSavesDisplay = ({ deathSaves, onUpdate, canEdit }: DeathSavesDisplayProps) => {
   const handleFailureClick = (index: number) => {
     if (!canEdit) return;
-    // Toggle: if clicking at or before current failures, set to that index, otherwise extend
-    const newFailures = index + 1 <= deathSaves.failures ? index : index + 1;
-    onUpdate({ failures: Math.min(3, Math.max(0, newFailures)) });
+    // Toggle logic: clicking on an active skull turns it off (sets failures to that index)
+    // Clicking on an inactive skull turns it on (sets failures to index + 1)
+    const clickedPosition = index + 1; // 1-based position
+    if (clickedPosition <= deathSaves.failures) {
+      // Clicking on active skull - toggle it off (set to the skull before this one)
+      onUpdate({ failures: index });
+    } else {
+      // Clicking on inactive skull - toggle it on
+      onUpdate({ failures: clickedPosition });
+    }
   };
 
   return (

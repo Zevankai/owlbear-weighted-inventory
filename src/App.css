@@ -840,3 +840,110 @@ button.action-btn:hover {
 .spell-edit-btn:hover {
   color: var(--accent-gold);
 }
+
+/* --- HP Color Classes (standalone) --- */
+.hp-healthy {
+  color: #4dff88;
+  text-shadow: 0 0 10px rgba(77, 255, 136, 0.4);
+}
+
+.hp-wounded {
+  color: #ffd700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+}
+
+.hp-critical {
+  color: var(--danger);
+  text-shadow: 0 0 10px rgba(255, 77, 77, 0.5);
+}
+
+/* --- Heroic Inspiration Pulse Animation --- */
+@keyframes pulse {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+/* --- Dashboard Banner Styles --- */
+.dashboard-banner {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.dashboard-stats-panel {
+  display: flex;
+  gap: 8px;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 8px;
+  border: 1px solid var(--glass-border);
+  align-items: stretch;
+}
+
+.dashboard-stat-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  min-width: 40px;
+  transition: all 0.2s ease;
+}
+
+.dashboard-stat-box:hover {
+  border-color: var(--border-bright);
+  transform: translateY(-1px);
+}
+
+.dashboard-action-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 6px;
+  border: 1px solid var(--glass-border);
+}
+
+.dashboard-action-btn {
+  background: rgba(240, 225, 48, 0.1);
+  border: 1px solid rgba(240, 225, 48, 0.3);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.dashboard-action-btn:hover {
+  background: rgba(240, 225, 48, 0.2);
+  transform: translateY(-1px);
+}
+
+.dashboard-action-btn.rest {
+  background: rgba(255, 152, 0, 0.1);
+  border: 1px solid rgba(255, 152, 0, 0.3);
+  color: #ff9800;
+}
+
+.dashboard-action-btn.rest:hover {
+  background: rgba(255, 152, 0, 0.2);
+}

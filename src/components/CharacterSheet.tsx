@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterSheet, CharacterData, AbilityScores, Skills, HitPoints, SkillProficiency } from '../types';
+import type { CharacterSheet, CharacterData, AbilityScores, Skills, SkillProficiency } from '../types';
 import { DebouncedTextarea } from './DebouncedInput';
 import { createDefaultCharacterSheet, calculateModifier, migrateSkillProficiency, getProficiencyContribution, calculateProficiencyBonus, SKILL_DEFINITIONS, ABILITY_ABBREV } from '../utils/characterSheet';
 import { CollapsibleSection } from './CollapsibleSection';
@@ -74,15 +74,6 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
     }
   };
 
-  const updateHitPoints = (updates: Partial<HitPoints>) => {
-    updateSheet({
-      hitPoints: {
-        ...sheet.hitPoints,
-        ...updates,
-      },
-    });
-  };
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       {/* Ability Scores Section - Collapsible */}
@@ -146,175 +137,6 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
               </div>
             </div>
           </CollapsibleSection>
-
-          {/* Combat Stats Section */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <h3 style={{
-              margin: '0 0 10px 0',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}>
-              Combat Stats
-            </h3>
-            
-            {/* Hit Points */}
-            <div style={{ marginBottom: '12px' }}>
-              <label style={{ ...labelStyle, marginBottom: '6px', display: 'block' }}>Hit Points</label>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ ...labelStyle, fontSize: '8px' }}>Current</label>
-                  <input
-                    type="number"
-                    value={sheet.hitPoints.current}
-                    onChange={(e) => canEdit && updateHitPoints({ current: parseInt(e.target.value) || 0 })}
-                    className="search-input"
-                    disabled={!canEdit}
-                    style={{ ...inputStyle, textAlign: 'center' }}
-                  />
-                </div>
-                <span style={{ color: 'var(--text-muted)', marginTop: '14px' }}>/</span>
-                <div style={{ flex: 1 }}>
-                  <label style={{ ...labelStyle, fontSize: '8px' }}>Max</label>
-                  <input
-                    type="number"
-                    value={sheet.hitPoints.max}
-                    onChange={(e) => canEdit && updateHitPoints({ max: parseInt(e.target.value) || 0 })}
-                    className="search-input"
-                    disabled={!canEdit}
-                    style={{ ...inputStyle, textAlign: 'center' }}
-                  />
-                </div>
-                <span style={{ color: 'var(--text-muted)', marginTop: '14px' }}>+</span>
-                <div style={{ flex: 1 }}>
-                  <label style={{ ...labelStyle, fontSize: '8px' }}>Temp</label>
-                  <input
-                    type="number"
-                    value={sheet.hitPoints.temp}
-                    onChange={(e) => canEdit && updateHitPoints({ temp: parseInt(e.target.value) || 0 })}
-                    className="search-input"
-                    disabled={!canEdit}
-                    style={{ ...inputStyle, textAlign: 'center' }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Other Combat Stats */}
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: '8px',
-            }}>
-              <div>
-                <label style={labelStyle}>AC</label>
-                <input
-                  type="number"
-                  value={sheet.armorClass}
-                  onChange={(e) => canEdit && updateSheet({ armorClass: parseInt(e.target.value) || 10 })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  style={{ ...inputStyle, textAlign: 'center' }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Initiative</label>
-                <input
-                  type="number"
-                  value={sheet.initiative}
-                  onChange={(e) => canEdit && updateSheet({ initiative: parseInt(e.target.value) || 0 })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  style={{ ...inputStyle, textAlign: 'center' }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Prof. Bonus</label>
-                <input
-                  type="number"
-                  value={sheet.proficiencyBonus}
-                  onChange={(e) => canEdit && updateSheet({ proficiencyBonus: parseInt(e.target.value) || 2 })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  style={{ ...inputStyle, textAlign: 'center' }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Speed (ft)</label>
-                <input
-                  type="number"
-                  value={sheet.speed}
-                  onChange={(e) => canEdit && updateSheet({ speed: parseInt(e.target.value) || 30 })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  style={{ ...inputStyle, textAlign: 'center' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Passive Scores Section */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <h3 style={{
-              margin: '0 0 10px 0',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}>
-              Passive Scores
-            </h3>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: '8px',
-            }}>
-              <div>
-                <label style={labelStyle}>Perception</label>
-                <input
-                  type="number"
-                  value={sheet.passivePerception}
-                  onChange={(e) => canEdit && updateSheet({ passivePerception: parseInt(e.target.value) || 10 })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  style={{ ...inputStyle, textAlign: 'center' }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Investigation</label>
-                <input
-                  type="number"
-                  value={sheet.passiveInvestigation}
-                  onChange={(e) => canEdit && updateSheet({ passiveInvestigation: parseInt(e.target.value) || 10 })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  style={{ ...inputStyle, textAlign: 'center' }}
-                />
-              </div>
-              <div>
-                <label style={labelStyle}>Insight</label>
-                <input
-                  type="number"
-                  value={sheet.passiveInsight}
-                  onChange={(e) => canEdit && updateSheet({ passiveInsight: parseInt(e.target.value) || 10 })}
-                  className="search-input"
-                  disabled={!canEdit}
-                  style={{ ...inputStyle, textAlign: 'center' }}
-                />
-              </div>
-            </div>
-          </div>
 
           {/* Skills Section - Collapsible */}
           <CollapsibleSection title="Skills & Proficiencies" defaultExpanded={false}>
@@ -462,14 +284,6 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
     };
 
 // Shared styles
-const labelStyle: React.CSSProperties = {
-  display: 'block',
-  fontSize: '9px',
-  color: 'var(--text-muted)',
-  textTransform: 'uppercase',
-  marginBottom: '2px',
-};
-
 const inputStyle: React.CSSProperties = {
   fontSize: '12px',
   padding: '6px 8px',

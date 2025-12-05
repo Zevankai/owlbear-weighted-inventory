@@ -784,46 +784,158 @@ const TwoColumnDashboard = ({
           flexDirection: 'column',
           gap: '6px',
         }}>
+          {/* Icon Row - Smaller buttons - Above Defenses */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '3px',
+            padding: '2px 4px',
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '4px',
+            border: '1px solid var(--glass-border)',
+          }}>
+            {/* Trade Icon - Gold Coin with gold $ */}
+            {showTradeButton && onOpenTradePartnerModal && (
+              <button
+                onClick={onOpenTradePartnerModal}
+                aria-label="Trade with nearby tokens"
+                style={{
+                  background: 'rgba(240, 225, 48, 0.15)',
+                  border: '1px solid rgba(240, 225, 48, 0.4)',
+                  borderRadius: '50%',
+                  cursor: 'pointer',
+                  width: '20px',
+                  height: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '9px',
+                  fontWeight: 'bold',
+                  color: '#f0e130',
+                  boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(240, 225, 48, 0.3)',
+                }}
+                title="Trade with nearby tokens"
+              >
+                $
+              </button>
+            )}
+
+            {/* Rest Icon */}
+            {onOpenRestModal && (
+              <button
+                onClick={onOpenRestModal}
+                style={{
+                  background: 'rgba(255, 152, 0, 0.1)',
+                  border: '1px solid rgba(255, 152, 0, 0.3)',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '9px',
+                  padding: '2px 4px',
+                  color: '#ff9800',
+                }}
+                title="Take a rest"
+              >
+                🏕️
+              </button>
+            )}
+
+            {/* Favorite Star */}
+            <button
+              onClick={toggleFavorite}
+              style={{
+                background: isFavorited ? 'rgba(240, 225, 48, 0.15)' : 'transparent',
+                color: isFavorited ? 'var(--accent-gold)' : '#666',
+                border: '1px solid ' + (isFavorited ? 'rgba(240, 225, 48, 0.3)' : '#333'),
+                padding: '2px 4px',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontSize: '9px',
+              }}
+              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {isFavorited ? '⭐' : '☆'}
+            </button>
+
+            {/* View Favorites List */}
+            {(favorites.length > 0 || hasClaimedToken) && (
+              <button
+                onClick={() => setViewingFavorites(true)}
+                style={{
+                  background: 'transparent',
+                  color: 'var(--accent-gold)',
+                  border: '1px solid #333',
+                  padding: '2px 4px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '8px',
+                }}
+                title="View all favorite tokens"
+              >
+                📋
+              </button>
+            )}
+
+            {/* Settings */}
+            {canEditToken() && (
+              <button
+                onClick={() => { setShowSettings(true); loadDebugInfo(); }}
+                style={{
+                  background: 'transparent',
+                  color: '#666',
+                  border: '1px solid #333',
+                  padding: '2px 4px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '8px',
+                }}
+                title="Settings"
+              >
+                ⚙️
+              </button>
+            )}
+          </div>
+
           {/* Status Boxes - Stacked vertically (Defenses on top, Conditions below) */}
           <div style={{
             display: 'flex',
             flexDirection: 'column',
             gap: '4px',
           }}>
-            {/* Defenses Box - Green */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(56, 142, 60, 0.2))',
-              border: '1px solid rgba(76, 175, 80, 0.4)',
-              borderRadius: '5px',
-              padding: '5px',
-            }}>
-              <div style={{ fontSize: '7px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
-                🛡️ Defenses
+            {/* Defenses Box - Green - Only show if defenses exist */}
+            {sheet.defenses && sheet.defenses.trim() !== '' && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(56, 142, 60, 0.2))',
+                border: '1px solid rgba(76, 175, 80, 0.4)',
+                borderRadius: '5px',
+                padding: '5px',
+              }}>
+                <div style={{ fontSize: '7px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
+                  🛡️ Defenses
+                </div>
+                <div style={{ fontSize: '8px', color: 'var(--text-main)' }}>
+                  {sheet.defenses}
+                </div>
               </div>
-              <div style={{ fontSize: '8px', color: 'var(--text-main)' }}>
-                {sheet.defenses || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None</span>}
-              </div>
-            </div>
+            )}
 
-            {/* Active Conditions Box - Red/Pink */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(194, 24, 91, 0.2))',
-              border: '1px solid rgba(233, 30, 99, 0.4)',
-              borderRadius: '5px',
-              padding: '5px',
-            }}>
-              <div style={{ fontSize: '7px', color: '#f06292', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
-                ❗ Conditions
-              </div>
-              {activeConditions.length > 0 ? (
+            {/* Active Conditions Box - Red/Pink - Only show if conditions exist */}
+            {activeConditions.length > 0 && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(194, 24, 91, 0.2))',
+                border: '1px solid rgba(233, 30, 99, 0.4)',
+                borderRadius: '5px',
+                padding: '5px',
+              }}>
+                <div style={{ fontSize: '7px', color: '#f06292', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
+                  ❗ Conditions
+                </div>
                 <div style={{ fontSize: '8px', color: '#ff5722' }}>
                   {activeConditions.slice(0, 2).join(', ')}
                   {activeConditions.length > 2 && ` +${activeConditions.length - 2}`}
                 </div>
-              ) : (
-                <div style={{ fontSize: '8px', color: 'var(--text-muted)', fontStyle: 'italic' }}>None</div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Exhaustion/Injury/Infection Notice Bar */}
             {(() => {
@@ -866,118 +978,6 @@ const TwoColumnDashboard = ({
                 </div>
               );
             })()}
-          </div>
-
-          {/* Icon Row - Smaller buttons */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            gap: '4px',
-            padding: '3px 6px',
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '5px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            {/* Trade Icon - Gold Coin with $ */}
-            {showTradeButton && onOpenTradePartnerModal && (
-              <button
-                onClick={onOpenTradePartnerModal}
-                aria-label="Trade with nearby tokens"
-                style={{
-                  background: 'rgba(240, 225, 48, 0.15)',
-                  border: '1px solid rgba(240, 225, 48, 0.4)',
-                  borderRadius: '50%',
-                  cursor: 'pointer',
-                  width: '24px',
-                  height: '24px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '11px',
-                  fontWeight: 'bold',
-                  color: '#000',
-                  boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(240, 225, 48, 0.3)',
-                }}
-                title="Trade with nearby tokens"
-              >
-                $
-              </button>
-            )}
-
-            {/* Rest Icon */}
-            {onOpenRestModal && (
-              <button
-                onClick={onOpenRestModal}
-                style={{
-                  background: 'rgba(255, 152, 0, 0.1)',
-                  border: '1px solid rgba(255, 152, 0, 0.3)',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '11px',
-                  padding: '3px 5px',
-                  color: '#ff9800',
-                }}
-                title="Take a rest"
-              >
-                🏕️
-              </button>
-            )}
-
-            {/* Favorite Star */}
-            <button
-              onClick={toggleFavorite}
-              style={{
-                background: isFavorited ? 'rgba(240, 225, 48, 0.15)' : 'transparent',
-                color: isFavorited ? 'var(--accent-gold)' : '#666',
-                border: '1px solid ' + (isFavorited ? 'rgba(240, 225, 48, 0.3)' : '#333'),
-                padding: '3px 5px',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '11px',
-              }}
-              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              {isFavorited ? '⭐' : '☆'}
-            </button>
-
-            {/* View Favorites List */}
-            {(favorites.length > 0 || hasClaimedToken) && (
-              <button
-                onClick={() => setViewingFavorites(true)}
-                style={{
-                  background: 'transparent',
-                  color: 'var(--accent-gold)',
-                  border: '1px solid #333',
-                  padding: '3px 5px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                }}
-                title="View all favorite tokens"
-              >
-                📋
-              </button>
-            )}
-
-            {/* Settings */}
-            {canEditToken() && (
-              <button
-                onClick={() => { setShowSettings(true); loadDebugInfo(); }}
-                style={{
-                  background: 'transparent',
-                  color: '#666',
-                  border: '1px solid #333',
-                  padding: '3px 5px',
-                  borderRadius: '4px',
-                  cursor: 'pointer',
-                  fontSize: '10px',
-                }}
-                title="Settings"
-              >
-                ⚙️
-              </button>
-            )}
           </div>
 
           {/* Ability Score Circles */}
@@ -1659,6 +1659,19 @@ export function HomeTab({
         </PurpleCollapsibleSection>
       )}
 
+      {/* === SKILLS & PROFICIENCIES - Purple Collapsible section - Just beneath Conditions and Exhaustion === */}
+      {!viewingStorageId && 
+       characterData.tokenType !== 'lore' &&
+       (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
+        <PurpleCollapsibleSection title="Skills & Proficiencies" defaultExpanded={false}>
+          <CharacterSheetSection
+            characterData={characterData}
+            canEdit={canUserEdit}
+            updateData={updateData}
+          />
+        </PurpleCollapsibleSection>
+      )}
+
       {/* Rest Modal */}
       <RestModal
         isOpen={showRestModal}
@@ -1964,23 +1977,35 @@ export function HomeTab({
                 />
               </div>
               
+              {/* Known Languages */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Known Languages
+                </label>
+                <DebouncedTextarea
+                  value={sheet.languages || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ languages: val })}
+                  className="search-input"
+                  rows={2}
+                  disabled={!canUserEdit}
+                  placeholder="e.g., Common, Elvish, Dwarvish..."
+                  style={{
+                    width: '100%',
+                    minHeight: '50px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    opacity: 1,
+                    cursor: canUserEdit ? 'text' : 'default',
+                    fontSize: '13px'
+                  }}
+                />
+              </div>
+              
               {canUserEdit && <MarkdownHint />}
             </div>
           );
         })()}
       </PurpleCollapsibleSection>
-
-      {/* Character Sheet - wrapped in purple collapsible section - show for player/party tokens, and NPC tokens when user is GM */}
-      {!viewingStorageId && 
-       (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
-        <PurpleCollapsibleSection title="Skills & Proficiencies" defaultExpanded={false}>
-          <CharacterSheetSection
-            characterData={characterData}
-            canEdit={canUserEdit}
-            updateData={updateData}
-          />
-        </PurpleCollapsibleSection>
-      )}
 
       {/* Storage Notes - only show when viewing storage and can edit */}
       {viewingStorageId && canEditToken() && (

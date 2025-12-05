@@ -37,14 +37,14 @@ export const PinnedSkillsBar = ({
   // Calculate proficiency bonus
   const profBonus = sheet.proficiencyBonus || calculateProficiencyBonus(sheet.level || 1);
 
-  // Size scaling based on enlarged prop
-  const iconSize = enlarged ? '12px' : '8px';
-  const abbrevSize = enlarged ? '11px' : '8px';
-  const bonusSize = enlarged ? '13px' : '9px';
-  const padding = enlarged ? '6px 10px' : '4px 8px';
-  const itemPadding = enlarged ? '4px 8px' : '2px 4px';
-  const gap = enlarged ? '6px' : '4px';
-  const itemGap = enlarged ? '4px' : '2px';
+  // Size scaling based on enlarged prop - reduced sizes for narrower appearance
+  const iconSize = enlarged ? '10px' : '8px';
+  const abbrevSize = enlarged ? '9px' : '8px';
+  const bonusSize = enlarged ? '11px' : '9px';
+  const padding = enlarged ? '4px 6px' : '4px 8px';
+  const itemPadding = enlarged ? '3px 5px' : '2px 4px';
+  const gap = enlarged ? '4px' : '4px';
+  const itemGap = enlarged ? '3px' : '2px';
 
   return (
     <div style={{ 

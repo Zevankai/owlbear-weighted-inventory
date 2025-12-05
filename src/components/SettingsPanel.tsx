@@ -778,17 +778,21 @@ export function SettingsPanel({
                       💤 Exhaustion Level Effects
                     </label>
                     <p style={{ fontSize: '9px', color: '#666', marginBottom: '8px' }}>
-                      Customize what happens at each exhaustion level (0-6)
+                      Customize what happens at each exhaustion level (0-10)
                     </p>
-                    {[0, 1, 2, 3, 4, 5, 6].map(level => {
+                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(level => {
                       const defaultEffects = [
                         'No effect',
-                        'Disadvantage on ability checks',
-                        'Speed halved',
-                        'Disadvantage on attack rolls and saving throws',
-                        'Hit point maximum halved',
-                        'Speed reduced to 0',
-                        'Death',
+                        'Weary - DIS on ability checks',
+                        'Fatigued - Speed reduced by 10 feet',
+                        'Sluggish - Speed halved',
+                        'Shaken - DIS on attack rolls',
+                        'Vulnerable - DIS on saving throws',
+                        'Weak - HP maximum reduced by 25%',
+                        'Frail - HP maximum reduced by 50%',
+                        'Collapsed - Speed reduced to 0. Incapacitated.',
+                        'Comatose - Unconscious until stabilized (magic/hospitalized)',
+                        'Death - Character dies',
                       ];
                       const currentEffect = gmCustomizations?.exhaustionEffects?.[level] || defaultEffects[level];
                       
@@ -796,12 +800,12 @@ export function SettingsPanel({
                         <div key={level} style={{ marginBottom: '6px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ 
-                              minWidth: '24px', 
+                              minWidth: '28px', 
                               fontSize: '11px', 
                               fontWeight: 'bold',
                               color: level === 0 ? '#51cf66' : 
-                                     level <= 2 ? '#fcc419' : 
-                                     level <= 4 ? '#ff922b' : '#ff6b6b',
+                                     level <= 3 ? '#fcc419' : 
+                                     level <= 6 ? '#ff922b' : '#ff6b6b',
                             }}>
                               L{level}:
                             </span>

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores } from '../../types';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
@@ -12,9 +12,10 @@ import type { RestEffectsToApply } from '../RestModal';
 import { EditPopup } from '../EditPopup';
 import { InjuryPromptModal } from '../InjuryPromptModal';
 import { createDefaultCharacterSheet, calculateModifier, ABILITY_ABBREV } from '../../utils/characterSheet';
-import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats, createDefaultDeathSaves } from '../../utils/characterStats';
+import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats, createDefaultDeathSaves, createDefaultHitDice, createDefaultSuperiorityDice } from '../../utils/characterStats';
 import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } from '../../data/conditions';
 import { deductRationsFromInventory } from '../../utils/inventory';
+import { deductCopperPieces } from '../../utils/currency';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -308,6 +309,8 @@ interface TwoColumnDashboardProps {
   onPackTypeChange: (packType: PackType) => void;
   inventoryCount: number;
   onPinnedSkillClick?: () => void;
+  // Superiority dice props
+  onUpdateSuperiorityDice?: (updates: Partial<SuperiorityDice>) => void;
 }
 
 const TwoColumnDashboard = ({
@@ -338,10 +341,11 @@ const TwoColumnDashboard = ({
   packDefinitions,
   onPackTypeChange,
   inventoryCount,
-  onPinnedSkillClick
+  onPinnedSkillClick,
+  onUpdateSuperiorityDice
 }: TwoColumnDashboardProps) => {
   const [editPopup, setEditPopup] = useState<{
-    type: 'hp' | 'ac' | 'init' | 'passive' | null;
+    type: 'hp' | 'ac' | 'init' | 'passive' | 'superiority' | null;
     position: { top: number; left: number };
   }>({ type: null, position: { top: 0, left: 0 } });
   
@@ -365,6 +369,7 @@ const TwoColumnDashboard = ({
   const initRef = useRef<HTMLDivElement>(null);
   const passiveRef = useRef<HTMLDivElement>(null);
   const weightRef = useRef<HTMLDivElement>(null);
+  const superiorityRef = useRef<HTMLButtonElement>(null);
   
   const isOverencumbered = stats.totalWeight > stats.maxCapacity;
   const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
@@ -379,7 +384,7 @@ const TwoColumnDashboard = ({
   
   const hpColorClass = getHpColorClass(sheet.hitPoints.current, sheet.hitPoints.max);
 
-  const handleStatClick = (type: 'hp' | 'ac' | 'init' | 'passive', ref: RefObject<HTMLDivElement | null>) => {
+  const handleStatClick = (type: 'hp' | 'ac' | 'init' | 'passive' | 'superiority', ref: RefObject<HTMLDivElement | HTMLButtonElement | null>) => {
     if (!canEdit || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     // Capture HP before editing so we can detect damage when popup closes
@@ -400,6 +405,21 @@ const TwoColumnDashboard = ({
     
     // Close the edit popup first
     setEditPopup({ type: null, position: { top: 0, left: 0 } });
+    
+    // Check if HP dropped to 0 (for exhaustion penalty)
+    // Add 1 level of exhaustion when HP drops to 0
+    if (hpAfter === 0 && hpBefore > 0 && characterStats) {
+      const currentExhaustion = characterStats.exhaustion?.currentLevel || 0;
+      const maxExhaustion = characterStats.exhaustion?.maxLevels || 10;
+      if (currentExhaustion < maxExhaustion) {
+        onUpdateCharacterStats({
+          exhaustion: {
+            ...(characterStats.exhaustion || { currentLevel: 0, maxLevels: 10, customEffects: [] }),
+            currentLevel: currentExhaustion + 1,
+          }
+        });
+      }
+    }
     
     // Check if damage meets injury thresholds (only actual HP damage, not temp HP)
     // Only show if onApplyInjury callback is provided, damage is positive (not healing), and >= 10
@@ -864,6 +884,32 @@ const TwoColumnDashboard = ({
                 🏕️
               </button>
             )}
+            
+            {/* Superiority Dice Icon */}
+            {characterStats?.superiorityDice && characterStats.superiorityDice.max > 0 && (
+              <button
+                ref={superiorityRef}
+                onClick={() => handleStatClick('superiority', superiorityRef)}
+                style={{
+                  background: 'rgba(220, 53, 69, 0.1)',
+                  border: '1px solid rgba(220, 53, 69, 0.3)',
+                  borderRadius: '3px',
+                  cursor: canEdit ? 'pointer' : 'default',
+                  fontSize: '9px',
+                  padding: '2px 6px',
+                  color: characterStats.superiorityDice.current > 0 ? '#dc3545' : '#888',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                }}
+                title={`Superiority Dice: ${characterStats.superiorityDice.current}/${characterStats.superiorityDice.max}`}
+              >
+                <span>⚔️</span>
+                <span style={{ fontWeight: 'bold', fontSize: '10px' }}>
+                  {characterStats.superiorityDice.current}/{characterStats.superiorityDice.max}
+                </span>
+              </button>
+            )}
 
             {/* Favorite Star */}
             <button
@@ -1189,6 +1235,19 @@ const TwoColumnDashboard = ({
           { label: 'Insight', value: sheet.passiveInsight, onChange: (val) => onUpdateSheet({ passiveInsight: val }) },
         ]}
       />
+      {/* Superiority Dice Edit Popup */}
+      {characterStats?.superiorityDice && onUpdateSuperiorityDice && (
+        <EditPopup
+          isOpen={editPopup.type === 'superiority'}
+          onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
+          title="Edit Superiority Dice"
+          position={editPopup.position}
+          fields={[
+            { label: 'Current', value: characterStats.superiorityDice.current, onChange: (val) => onUpdateSuperiorityDice({ current: Math.max(0, Math.min(characterStats.superiorityDice?.max || 4, val)) }), min: 0 },
+            { label: 'Max', value: characterStats.superiorityDice.max, onChange: (val) => onUpdateSuperiorityDice({ max: Math.max(0, val) }), min: 0 },
+          ]}
+        />
+      )}
       
       {/* Overencumbered Popup */}
       {showOverencumberedPopup && (
@@ -1457,7 +1516,7 @@ export function HomeTab({
       statsUpdates.heroicInspiration = true;
     }
     
-    // Apply exhaustion reduction (long rest auto-reduces by 1)
+    // Apply exhaustion reduction (based on location for long rest)
     if (effects.reduceExhaustion && effects.reduceExhaustion > 0) {
       const currentExhaustionLevel = currentStats.exhaustion?.currentLevel || 0;
       const newExhaustionLevel = Math.max(0, currentExhaustionLevel - effects.reduceExhaustion);
@@ -1507,7 +1566,25 @@ export function HomeTab({
       statsUpdates.injuryData = Object.keys(injuryData).length > 0 ? injuryData : undefined;
     }
     
-    // Update rest history
+    // Handle hit dice recovery on long rest
+    if (restType === 'long' && effects.hitDiceRecovered && effects.hitDiceRecovered > 0) {
+      const currentHitDice = currentStats.hitDice || createDefaultHitDice(currentStats.level, currentStats.characterClass);
+      const newHitDiceCurrent = Math.min(currentHitDice.max, currentHitDice.current + effects.hitDiceRecovered);
+      statsUpdates.hitDice = {
+        ...currentHitDice,
+        current: newHitDiceCurrent,
+      };
+    }
+    
+    // Handle superiority dice recovery on any rest
+    if (effects.recoverSuperiorityDice && currentStats.superiorityDice) {
+      statsUpdates.superiorityDice = {
+        ...currentStats.superiorityDice,
+        current: currentStats.superiorityDice.max,
+      };
+    }
+    
+    // Update rest history with location tracking for long rests
     if (restType === 'short') {
       statsUpdates.restHistory = {
         ...currentStats.restHistory,
@@ -1517,13 +1594,44 @@ export function HomeTab({
         }
       };
     } else {
+      // Long rest - track wilderness streaks
+      let newConsecutiveWildernessRests = currentStats.restHistory?.consecutiveWildernessRests || 0;
+      let newWildernessExhaustionBlocked = currentStats.restHistory?.wildernessExhaustionBlocked || false;
+      
+      if (effects.restLocation === 'wilderness') {
+        // Increment wilderness counter
+        newConsecutiveWildernessRests++;
+        
+        // Check if we've hit 7 consecutive wilderness rests
+        if (newConsecutiveWildernessRests >= 7 && !newWildernessExhaustionBlocked) {
+          // Add 1 level of exhaustion
+          const currentExhaustionLevel = statsUpdates.exhaustion?.currentLevel ?? (currentStats.exhaustion?.currentLevel || 0);
+          const maxLevels = currentStats.exhaustion?.maxLevels || 10;
+          statsUpdates.exhaustion = {
+            ...currentStats.exhaustion,
+            ...statsUpdates.exhaustion,
+            currentLevel: Math.min(maxLevels, currentExhaustionLevel + 1),
+          };
+          // Block future exhaustion reduction until settlement rest
+          newWildernessExhaustionBlocked = true;
+        }
+      } else if (effects.restLocation === 'settlement') {
+        // Settlement rest resets the wilderness counter and unblocks exhaustion
+        newConsecutiveWildernessRests = 0;
+        newWildernessExhaustionBlocked = false;
+      }
+      
       statsUpdates.restHistory = {
         ...currentStats.restHistory,
         lastLongRest: {
           timestamp: now,
           chosenOptionIds: selectedOptionIds,
+          location: effects.restLocation,
+          roomType: effects.roomType,
         },
         heroicInspirationGainedToday: effects.heroicInspiration || false,
+        consecutiveWildernessRests: newConsecutiveWildernessRests,
+        wildernessExhaustionBlocked: newWildernessExhaustionBlocked,
       };
     }
     
@@ -1549,6 +1657,46 @@ export function HomeTab({
       const updatedInventory = deductRationsFromInventory(characterData.inventory, effects.rationsToDeduct);
       updateData({ inventory: updatedInventory });
     }
+    
+    // Deduct GP for settlement room
+    if (effects.gpCost && effects.gpCost > 0) {
+      const updatedCurrency = { ...characterData.currency };
+      const gpInCopper = effects.gpCost * 100;
+      deductCopperPieces(updatedCurrency, gpInCopper);
+      updateData({ currency: updatedCurrency });
+    }
+  };
+  
+  // Handle spending a hit die
+  const handleSpendHitDie = (hpRecovered: number) => {
+    if (!canUserEdit) return;
+    const currentStats = characterStats || defaultStats;
+    const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+    
+    // Get or create hit dice
+    const currentHitDice = currentStats.hitDice || createDefaultHitDice(currentStats.level, currentStats.characterClass);
+    
+    if (currentHitDice.current <= 0) return;
+    
+    // Spend one hit die
+    updateCharacterStats({
+      hitDice: {
+        ...currentHitDice,
+        current: currentHitDice.current - 1,
+      },
+    });
+    
+    // Heal HP
+    const newCurrentHp = Math.min(sheet.hitPoints.max, sheet.hitPoints.current + hpRecovered);
+    updateData({
+      characterSheet: {
+        ...sheet,
+        hitPoints: {
+          ...sheet.hitPoints,
+          current: newCurrentHp,
+        },
+      },
+    });
   };
   
   // Update death saves
@@ -1558,6 +1706,19 @@ export function HomeTab({
     updateCharacterStats({
       deathSaves: {
         ...(currentStats.deathSaves || createDefaultDeathSaves()),
+        ...updates,
+      }
+    });
+  };
+  
+  // Update superiority dice
+  const updateSuperiorityDice = (updates: Partial<SuperiorityDice>) => {
+    if (!canUserEdit) return;
+    const currentStats = characterStats || defaultStats;
+    const currentSuperiorityDice = currentStats.superiorityDice || createDefaultSuperiorityDice();
+    updateCharacterStats({
+      superiorityDice: {
+        ...currentSuperiorityDice,
         ...updates,
       }
     });
@@ -1799,6 +1960,7 @@ export function HomeTab({
             onPackTypeChange={(packType) => updateData({ packType })}
             inventoryCount={currentDisplayData.inventory.length}
             onPinnedSkillClick={handlePinnedSkillClick}
+            onUpdateSuperiorityDice={updateSuperiorityDice}
           />
         );
       })()}
@@ -1856,6 +2018,10 @@ export function HomeTab({
         disabledRestOptionIds={gmCustomizations?.disabledRestOptions}
         inventory={characterData.inventory}
         tokenId={tokenId || 'default'}
+        hitDice={characterStats?.hitDice || createDefaultHitDice(characterStats?.level || 1, characterStats?.characterClass || 'Fighter')}
+        superiorityDice={characterStats?.superiorityDice}
+        currency={characterData.currency}
+        onSpendHitDie={handleSpendHitDie}
       />
 
       {/* === LORE TOKEN SPECIFIC UI === */}

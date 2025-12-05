@@ -1,26 +1,210 @@
 import { useState, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves } from '../../types';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
-import { CollapsibleSection } from '../CollapsibleSection';
 import { PinnedSkillsBar } from '../PinnedSkillsBar';
 import { ConditionsPanel } from '../ConditionsPanel';
 import { ExhaustionMeter } from '../ExhaustionMeter';
 import { RestModal } from '../RestModal';
 import { EditPopup } from '../EditPopup';
-import { createDefaultCharacterSheet } from '../../utils/characterSheet';
+import { createDefaultCharacterSheet, calculateModifier, ABILITY_ABBREV } from '../../utils/characterSheet';
 import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats, createDefaultDeathSaves } from '../../utils/characterStats';
 import { createDefaultConditions, CONDITION_LABELS } from '../../data/conditions';
 
 // Token image sizing constants
-const TOKEN_SIZE_BANNER = '80px'; // Smaller for horizontal banner layout
+const TOKEN_SIZE_SIDEBAR = '90px'; // Circular token in sidebar
 const TOKEN_SIZE_EDITABLE = '160px';
 const TOKEN_SIZE_READONLY = '160px';
 
 // Description box width constants
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
+
+// Purple Collapsible Section Component
+interface PurpleCollapsibleSectionProps {
+  title: string;
+  defaultExpanded?: boolean;
+  children: React.ReactNode;
+}
+
+const PurpleCollapsibleSection = ({ 
+  title, 
+  defaultExpanded = false, 
+  children 
+}: PurpleCollapsibleSectionProps) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <div style={{ marginTop: '12px' }}>
+      <div
+        onClick={() => setIsExpanded(!isExpanded)}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }
+        }}
+        aria-expanded={isExpanded}
+        aria-label={`${title} section, ${isExpanded ? 'click to collapse' : 'click to expand'}`}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          cursor: 'pointer',
+          padding: '10px 14px',
+          background: isHovered 
+            ? 'linear-gradient(135deg, rgba(138, 43, 226, 0.35), rgba(75, 0, 130, 0.35))' 
+            : 'linear-gradient(135deg, rgba(138, 43, 226, 0.25), rgba(75, 0, 130, 0.25))',
+          borderRadius: '8px',
+          border: `1px solid ${isHovered ? 'rgba(186, 85, 211, 0.5)' : 'rgba(138, 43, 226, 0.3)'}`,
+          marginBottom: isExpanded ? '12px' : '0',
+          transition: 'all 0.2s ease',
+        }}
+      >
+        <span style={{
+          fontSize: '12px',
+          fontWeight: 'bold',
+          color: '#fff',
+          textTransform: 'uppercase',
+          letterSpacing: '1px',
+        }}>
+          {title}
+        </span>
+        <span 
+          style={{ 
+            color: '#e0b0ff', 
+            fontSize: '12px',
+            transition: 'transform 0.2s ease',
+            transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
+          }}
+          aria-hidden="true"
+        >
+          ▼
+        </span>
+      </div>
+      {isExpanded && (
+        <div style={{
+          background: 'rgba(75, 0, 130, 0.1)',
+          borderRadius: '8px',
+          padding: '12px',
+          border: '1px solid rgba(138, 43, 226, 0.2)',
+        }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Ability Score Circle Component
+interface AbilityScoreCircleProps {
+  ability: keyof AbilityScores;
+  score: number;
+  modifier: number;
+  canEdit: boolean;
+  onScoreChange: (score: number) => void;
+}
+
+const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }: AbilityScoreCircleProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(score.toString());
+
+  const handleClick = () => {
+    if (canEdit) {
+      setEditValue(score.toString());
+      setIsEditing(true);
+    }
+  };
+
+  const handleSave = () => {
+    const parsed = parseInt(editValue, 10);
+    const newScore = isNaN(parsed) ? 10 : Math.max(1, Math.min(30, parsed));
+    onScoreChange(newScore);
+    setIsEditing(false);
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '4px',
+    }}>
+      <span style={{
+        fontSize: '9px',
+        color: 'var(--text-muted)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.5px',
+      }}>
+        {ABILITY_ABBREV[ability]}
+      </span>
+      <div
+        onClick={handleClick}
+        style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.3), rgba(0, 150, 170, 0.3))',
+          border: '2px solid rgba(0, 188, 212, 0.6)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: canEdit ? 'pointer' : 'default',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 8px rgba(0, 188, 212, 0.2)',
+        }}
+        title={canEdit ? 'Click to edit' : undefined}
+      >
+        {isEditing ? (
+          <input
+            type="number"
+            value={editValue}
+            min={1}
+            max={30}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            autoFocus
+            style={{
+              width: '32px',
+              background: 'transparent',
+              border: 'none',
+              color: '#00bcd4',
+              fontSize: '14px',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              outline: 'none',
+            }}
+          />
+        ) : (
+          <>
+            <span style={{
+              fontSize: '16px',
+              fontWeight: 'bold',
+              color: '#00bcd4',
+              lineHeight: 1,
+            }}>
+              {modifier >= 0 ? `+${modifier}` : modifier}
+            </span>
+            <span style={{
+              fontSize: '10px',
+              color: 'rgba(0, 188, 212, 0.8)',
+            }}>
+              {score}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
 
 // Markdown formatting hint component
 const MarkdownHint = () => (
@@ -86,8 +270,8 @@ const getHpColorClass = (current: number, max: number): string => {
   return 'hp-critical';
 };
 
-// Horizontal Banner Component - Redesigned compact layout matching mockup
-interface HorizontalBannerProps {
+// Two Column Dashboard Component - Redesigned layout matching mockup
+interface TwoColumnDashboardProps {
   sheet: CharacterSheet;
   characterStats: CharacterStats | undefined;
   tokenImage: string | null;
@@ -101,9 +285,17 @@ interface HorizontalBannerProps {
   onOpenRestModal?: () => void;
   onUpdateDeathSaves?: (updates: Partial<DeathSaves>) => void;
   showTradeButton: boolean;
+  toggleFavorite: () => void;
+  isFavorited: boolean;
+  favorites: Array<{ id: string; name: string }>;
+  setViewingFavorites: (viewing: boolean) => void;
+  setShowSettings: (show: boolean) => void;
+  loadDebugInfo: () => void;
+  canEditToken: () => boolean;
+  hasClaimedToken?: boolean;
 }
 
-const HorizontalBanner = ({
+const TwoColumnDashboard = ({
   sheet,
   characterStats,
   tokenImage,
@@ -116,8 +308,16 @@ const HorizontalBanner = ({
   onOpenTradePartnerModal,
   onOpenRestModal,
   onUpdateDeathSaves,
-  showTradeButton
-}: HorizontalBannerProps) => {
+  showTradeButton,
+  toggleFavorite,
+  isFavorited,
+  favorites,
+  setViewingFavorites,
+  setShowSettings,
+  loadDebugInfo,
+  canEditToken,
+  hasClaimedToken
+}: TwoColumnDashboardProps) => {
   const [editPopup, setEditPopup] = useState<{
     type: 'hp' | 'ac' | 'init' | 'level' | null;
     position: { top: number; left: number };
@@ -147,14 +347,20 @@ const HorizontalBanner = ({
     });
   };
 
-  // Calculate total coins
-  const totalCoins = characterData.currency 
-    ? (characterData.currency.cp || 0) + (characterData.currency.sp || 0) + 
-      (characterData.currency.gp || 0) + (characterData.currency.pp || 0)
-    : 0;
-
   // Death saves state
   const deathSaves = characterStats?.deathSaves || createDefaultDeathSaves();
+
+  // Update ability score
+  const updateAbilityScore = (ability: keyof AbilityScores, newScore: number) => {
+    const clampedScore = Math.max(1, Math.min(30, newScore));
+    const modifier = calculateModifier(clampedScore);
+    onUpdateSheet({
+      abilityScores: {
+        ...sheet.abilityScores,
+        [ability]: { base: clampedScore, modifier },
+      },
+    });
+  };
 
   return (
     <div style={{
@@ -163,17 +369,17 @@ const HorizontalBanner = ({
       gap: '8px',
       marginBottom: '8px',
     }}>
-      {/* Banner Header - Token name with cover image background */}
+      {/* === HEADER AREA === */}
       <div style={{
         position: 'relative',
-        padding: '12px',
+        padding: '16px',
         borderRadius: '8px',
         overflow: 'hidden',
         background: characterData.coverPhotoUrl 
           ? 'transparent' 
           : 'linear-gradient(135deg, rgba(30, 30, 50, 0.9), rgba(20, 20, 40, 0.95))',
         border: '1px solid var(--glass-border)',
-        minHeight: '60px',
+        minHeight: '80px',
       }}>
         {/* Cover photo background */}
         {characterData.coverPhotoUrl && (
@@ -187,7 +393,7 @@ const HorizontalBanner = ({
               backgroundImage: `url(${characterData.coverPhotoUrl})`,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
-              opacity: 0.5,
+              opacity: 0.6,
             }} />
             <div style={{
               position: 'absolute',
@@ -195,50 +401,70 @@ const HorizontalBanner = ({
               left: 0,
               right: 0,
               bottom: 0,
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.7) 100%)',
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.7) 100%)',
             }} />
           </>
         )}
         
-        {/* Content overlay */}
+        {/* Header Content */}
         <div style={{
           position: 'relative',
           zIndex: 1,
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
+          flexDirection: 'column',
+          gap: '4px',
         }}>
-          {/* Token Type Label - Left */}
+          {/* Top row: Token Type + Level */}
           <div style={{
-            fontSize: '9px',
-            color: characterData.tokenType === 'npc' ? '#ff9800' : 
-                   characterData.tokenType === 'party' ? '#4caf50' : 
-                   characterData.tokenType === 'lore' ? '#9c27b0' : 'var(--accent-gold)',
-            textTransform: 'uppercase',
-            letterSpacing: '1px',
-            fontWeight: 'bold',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
           }}>
-            {characterData.tokenType || 'Player'} Token
+            <div style={{
+              fontSize: '9px',
+              color: characterData.tokenType === 'npc' ? '#ff9800' : 
+                     characterData.tokenType === 'party' ? '#4caf50' : 
+                     characterData.tokenType === 'lore' ? '#9c27b0' : 'var(--accent-gold)',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontWeight: 'bold',
+              background: 'rgba(0,0,0,0.4)',
+              padding: '2px 8px',
+              borderRadius: '4px',
+            }}>
+              {characterData.tokenType || 'Player'} Token
+            </div>
+            <div style={{
+              fontSize: '12px',
+              color: 'var(--accent-gold)',
+              fontWeight: 'bold',
+              background: 'rgba(0,0,0,0.4)',
+              padding: '2px 8px',
+              borderRadius: '4px',
+            }}>
+              lvl {characterStats?.level || sheet.level || 1}
+            </div>
           </div>
           
-          {/* Token Name - Center */}
+          {/* Token Name - Large and prominent */}
           <div style={{
-            fontSize: '18px',
+            fontSize: '22px',
             fontWeight: 'bold',
             color: 'var(--text-main)',
-            textShadow: '0 2px 4px rgba(0,0,0,0.5)',
+            textShadow: '0 2px 4px rgba(0,0,0,0.7)',
             textAlign: 'center',
-            flex: 1,
+            padding: '8px 0',
           }}>
             {characterData.name || tokenName || 'Unknown'}
           </div>
           
-          {/* Race + Class Label - Right */}
+          {/* Race + Class subtitle */}
           {characterStats && (
             <div style={{
-              fontSize: '10px',
+              fontSize: '12px',
               color: 'var(--text-muted)',
-              textAlign: 'right',
+              textAlign: 'center',
+              textShadow: '0 1px 2px rgba(0,0,0,0.5)',
             }}>
               {characterStats.race} {characterStats.characterClass}
             </div>
@@ -246,43 +472,39 @@ const HorizontalBanner = ({
         </div>
       </div>
 
-      {/* Main Stats Panel - Horizontal layout */}
+      {/* === TWO COLUMN LAYOUT === */}
       <div style={{
         display: 'flex',
-        gap: '8px',
-        padding: '10px',
-        background: 'rgba(0, 0, 0, 0.25)',
-        borderRadius: '8px',
-        border: '1px solid var(--glass-border)',
-        alignItems: 'stretch',
+        gap: '12px',
       }}>
-        {/* Left - Circular Token Image */}
+        {/* LEFT SIDEBAR COLUMN */}
         <div style={{
+          width: '110px',
+          flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0 8px',
-          borderRight: '1px solid var(--glass-border)',
+          gap: '8px',
         }}>
+          {/* Circular Token Portrait */}
           {tokenImage && (
             <div 
               onClick={canEdit ? onToggleHeroicInspiration : undefined}
               style={{
                 position: 'relative',
-                width: TOKEN_SIZE_BANNER,
-                height: TOKEN_SIZE_BANNER,
+                width: TOKEN_SIZE_SIDEBAR,
+                height: TOKEN_SIZE_SIDEBAR,
                 cursor: canEdit ? 'pointer' : 'default',
+                alignSelf: 'center',
               }}
               title={canEdit ? (characterStats?.heroicInspiration ? 'Click to remove Heroic Inspiration' : 'Click to grant Heroic Inspiration') : undefined}
             >
               {characterStats?.heroicInspiration && (
                 <div style={{
                   position: 'absolute',
-                  top: '-3px',
-                  left: '-3px',
-                  right: '-3px',
-                  bottom: '-3px',
+                  top: '-4px',
+                  left: '-4px',
+                  right: '-4px',
+                  bottom: '-4px',
                   borderRadius: '50%',
                   background: 'radial-gradient(circle, rgba(255, 215, 0, 0.5) 0%, rgba(255, 215, 0, 0) 70%)',
                   animation: 'pulse 2s infinite',
@@ -309,29 +531,37 @@ const HorizontalBanner = ({
                   right: '0',
                   background: 'gold',
                   borderRadius: '50%',
-                  width: '16px',
-                  height: '16px',
+                  width: '20px',
+                  height: '20px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '9px',
+                  fontSize: '10px',
                 }}>
                   ✨
                 </div>
               )}
             </div>
           )}
-        </div>
 
-        {/* Stats Row */}
-        <div style={{
-          display: 'flex',
-          gap: '6px',
-          padding: '0 8px',
-          borderRight: '1px solid var(--glass-border)',
-          alignItems: 'center',
-        }}>
-          {/* HP */}
+          {/* Death Save Skulls */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            background: 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '6px',
+            padding: '4px',
+          }}>
+            {onUpdateDeathSaves && (
+              <DeathSavesDisplay
+                deathSaves={deathSaves}
+                onUpdate={onUpdateDeathSaves}
+                canEdit={canEdit}
+              />
+            )}
+          </div>
+
+          {/* HP Display Box - Green Background */}
           <div
             ref={hpRef}
             onClick={() => handleStatClick('hp', hpRef)}
@@ -339,264 +569,302 @@ const HorizontalBanner = ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: '4px 8px',
-              background: 'rgba(0, 0, 0, 0.3)',
+              padding: '8px',
+              background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(56, 142, 60, 0.3))',
               borderRadius: '6px',
-              border: '1px solid var(--glass-border)',
+              border: '1px solid rgba(76, 175, 80, 0.5)',
               cursor: canEdit ? 'pointer' : 'default',
-              minWidth: '50px',
             }}
             title={canEdit ? 'Click to edit HP' : undefined}
           >
-            <span style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>HP</span>
-            <span style={{ fontSize: '12px', fontWeight: 'bold' }} className={hpColorClass}>
+            <span style={{ fontSize: '9px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold' }}>HP</span>
+            <span style={{ fontSize: '14px', fontWeight: 'bold' }} className={hpColorClass}>
               {sheet.hitPoints.current}/{sheet.hitPoints.max}
             </span>
             {sheet.hitPoints.temp > 0 && (
-              <span style={{ fontSize: '8px', color: '#4dabf7' }}>+{sheet.hitPoints.temp}</span>
+              <span style={{ fontSize: '10px', color: '#4dabf7', fontWeight: 'bold' }}>+{sheet.hitPoints.temp}</span>
             )}
           </div>
-          
-          {/* AC */}
-          <div
-            ref={acRef}
-            onClick={() => handleStatClick('ac', acRef)}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: '4px 8px',
-              background: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '6px',
-              border: '1px solid var(--glass-border)',
-              cursor: canEdit ? 'pointer' : 'default',
-              minWidth: '40px',
-            }}
-            title={canEdit ? 'Click to edit AC' : undefined}
-          >
-            <span style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>AC</span>
-            <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>
-              {sheet.armorClass}
-            </span>
-          </div>
-          
-          {/* Initiative */}
-          <div
-            ref={initRef}
-            onClick={() => handleStatClick('init', initRef)}
-            style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              padding: '4px 8px',
-              background: 'rgba(0, 0, 0, 0.3)',
-              borderRadius: '6px',
-              border: '1px solid var(--glass-border)',
-              cursor: canEdit ? 'pointer' : 'default',
-              minWidth: '40px',
-            }}
-            title={canEdit ? 'Click to edit Initiative' : undefined}
-          >
-            <span style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>INIT</span>
-            <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>
-              {sheet.initiative >= 0 ? `+${sheet.initiative}` : sheet.initiative}
-            </span>
+
+          {/* Passive Traits Section */}
+          <div style={{
+            background: 'rgba(0, 0, 0, 0.25)',
+            borderRadius: '6px',
+            padding: '6px',
+            border: '1px solid var(--glass-border)',
+          }}>
+            <div style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center', marginBottom: '4px' }}>
+              Passive Traits
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '9px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Per</span>
+                <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passivePerception}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Inv</span>
+                <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInvestigation}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span style={{ color: 'var(--text-muted)' }}>Ins</span>
+                <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInsight}</span>
+              </div>
+            </div>
           </div>
 
-          {/* Prof Bonus & Speed - stacked */}
+          {/* Bottom Row: AC, INIT, PROF */}
           <div style={{
             display: 'flex',
-            flexDirection: 'column',
-            gap: '2px',
+            gap: '4px',
           }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '9px',
-            }}>
-              <span style={{ color: 'var(--text-muted)' }}>Prof:</span>
-              <span style={{ color: 'var(--accent-gold)', fontWeight: 'bold' }}>
-                +{sheet.proficiencyBonus || 2}
+            <div
+              ref={acRef}
+              onClick={() => handleStatClick('ac', acRef)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '4px',
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderRadius: '4px',
+                cursor: canEdit ? 'pointer' : 'default',
+              }}
+              title={canEdit ? 'Click to edit AC' : undefined}
+            >
+              <span style={{ fontSize: '7px', color: 'var(--text-muted)' }}>AC</span>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>{sheet.armorClass}</span>
+            </div>
+            <div
+              ref={initRef}
+              onClick={() => handleStatClick('init', initRef)}
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '4px',
+                background: 'rgba(0, 0, 0, 0.4)',
+                borderRadius: '4px',
+                cursor: canEdit ? 'pointer' : 'default',
+              }}
+              title={canEdit ? 'Click to edit Initiative' : undefined}
+            >
+              <span style={{ fontSize: '7px', color: 'var(--text-muted)' }}>INIT</span>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+                {sheet.initiative >= 0 ? `+${sheet.initiative}` : sheet.initiative}
               </span>
             </div>
             <div style={{
+              flex: 1,
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '4px',
-              fontSize: '9px',
+              padding: '4px',
+              background: 'rgba(0, 0, 0, 0.4)',
+              borderRadius: '4px',
             }}>
-              <span style={{ color: 'var(--text-muted)' }}>Speed:</span>
-              <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>
-                {sheet.speed || 30}ft
-              </span>
+              <span style={{ fontSize: '7px', color: 'var(--text-muted)' }}>PROF</span>
+              <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-gold)' }}>+{sheet.proficiencyBonus || 2}</span>
             </div>
           </div>
         </div>
 
-        {/* Conditions Column */}
+        {/* RIGHT CONTENT AREA */}
         <div style={{
+          flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          gap: '2px',
-          padding: '0 8px',
-          borderRight: '1px solid var(--glass-border)',
-          minWidth: '80px',
-          maxWidth: '100px',
+          gap: '8px',
         }}>
-          <span style={{ fontSize: '8px', color: '#ff9800', textTransform: 'uppercase', fontWeight: 'bold' }}>
-            Conditions
-          </span>
-          {activeConditions.length > 0 ? (
-            <div style={{ fontSize: '9px', color: '#ff5722' }}>
-              {activeConditions.slice(0, 3).map((cond, i) => (
-                <div key={i}>• {cond}</div>
-              ))}
-              {activeConditions.length > 3 && (
-                <div style={{ fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '8px' }}>
-                  +{activeConditions.length - 3} more
+          {/* Status Boxes Row */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
+            gap: '6px',
+          }}>
+            {/* Defenses Box - Green */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(56, 142, 60, 0.2))',
+              border: '1px solid rgba(76, 175, 80, 0.4)',
+              borderRadius: '6px',
+              padding: '6px',
+            }}>
+              <div style={{ fontSize: '8px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '2px' }}>
+                🛡️ Defenses
+              </div>
+              <div style={{ fontSize: '9px', color: 'var(--text-main)' }}>
+                {sheet.defenses || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None</span>}
+              </div>
+            </div>
+
+            {/* Current Weight Box - Blue */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(25, 118, 210, 0.2))',
+              border: '1px solid rgba(33, 150, 243, 0.4)',
+              borderRadius: '6px',
+              padding: '6px',
+            }}>
+              <div style={{ fontSize: '8px', color: '#64b5f6', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '2px' }}>
+                ⚖️ Weight
+              </div>
+              <div style={{ fontSize: '11px', fontWeight: 'bold', color: isOverencumbered ? '#ff5722' : 'var(--text-main)' }}>
+                {stats.totalWeight} / {stats.maxCapacity}
+              </div>
+            </div>
+
+            {/* Active Conditions Box - Red/Pink */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(194, 24, 91, 0.2))',
+              border: '1px solid rgba(233, 30, 99, 0.4)',
+              borderRadius: '6px',
+              padding: '6px',
+            }}>
+              <div style={{ fontSize: '8px', color: '#f06292', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '2px' }}>
+                ❗ Conditions
+              </div>
+              {activeConditions.length > 0 ? (
+                <div style={{ fontSize: '9px', color: '#ff5722' }}>
+                  {activeConditions.slice(0, 2).join(', ')}
+                  {activeConditions.length > 2 && ` +${activeConditions.length - 2}`}
+                </div>
+              ) : (
+                <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic' }}>None</div>
+              )}
+              {characterStats?.exhaustion && characterStats.exhaustion.currentLevel > 0 && (
+                <div style={{ fontSize: '9px', color: '#ff9632', marginTop: '2px' }}>
+                  💤 Exhaustion Lv{characterStats.exhaustion.currentLevel}
                 </div>
               )}
             </div>
-          ) : (
-            <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic' }}>
-              None
-            </div>
-          )}
-          {/* Exhaustion Level */}
-          {characterStats?.exhaustion && characterStats.exhaustion.currentLevel > 0 && (
-            <div style={{
-              fontSize: '9px',
-              color: '#ff9632',
-              fontWeight: 'bold',
-              marginTop: '2px',
-            }}>
-              💤 Exhaustion (Lv {characterStats.exhaustion.currentLevel})
-            </div>
-          )}
-        </div>
+          </div>
 
-        {/* Weight Column */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0 8px',
-          borderRight: '1px solid var(--glass-border)',
-          minWidth: '70px',
-        }}>
-          <span style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Weight</span>
+          {/* Icon Row */}
           <div style={{
-            fontSize: '11px',
-            fontWeight: 'bold',
-            color: isOverencumbered ? '#ff5722' : 'var(--text-main)',
             display: 'flex',
+            justifyContent: 'center',
             alignItems: 'center',
-            gap: '2px',
+            gap: '8px',
+            padding: '6px 10px',
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '6px',
+            border: '1px solid var(--glass-border)',
           }}>
-            {isOverencumbered && <span>⚠️</span>}
-            {stats.totalWeight}/{stats.maxCapacity}
-          </div>
-        </div>
+            {/* Trade Icon */}
+            {showTradeButton && onOpenTradePartnerModal && (
+              <button
+                onClick={onOpenTradePartnerModal}
+                style={{
+                  background: 'rgba(240, 225, 48, 0.1)',
+                  border: '1px solid rgba(240, 225, 48, 0.3)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  padding: '6px 8px',
+                  color: 'var(--accent-gold)',
+                }}
+                title="Trade with nearby tokens"
+              >
+                🪙
+              </button>
+            )}
 
-        {/* Coins Column */}
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '0 8px',
-          minWidth: '50px',
-        }}>
-          <span style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Coins</span>
+            {/* Rest Icon */}
+            {onOpenRestModal && (
+              <button
+                onClick={onOpenRestModal}
+                style={{
+                  background: 'rgba(255, 152, 0, 0.1)',
+                  border: '1px solid rgba(255, 152, 0, 0.3)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '16px',
+                  padding: '6px 8px',
+                  color: '#ff9800',
+                }}
+                title="Take a rest"
+              >
+                🏕️
+              </button>
+            )}
+
+            {/* Favorite Star */}
+            <button
+              onClick={toggleFavorite}
+              style={{
+                background: isFavorited ? 'rgba(240, 225, 48, 0.15)' : 'transparent',
+                color: isFavorited ? 'var(--accent-gold)' : '#666',
+                border: '1px solid ' + (isFavorited ? 'rgba(240, 225, 48, 0.3)' : '#333'),
+                padding: '6px 8px',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                fontSize: '16px',
+              }}
+              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {isFavorited ? '⭐' : '☆'}
+            </button>
+
+            {/* View Favorites List */}
+            {(favorites.length > 0 || hasClaimedToken) && (
+              <button
+                onClick={() => setViewingFavorites(true)}
+                style={{
+                  background: 'transparent',
+                  color: 'var(--accent-gold)',
+                  border: '1px solid #333',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+                title="View all favorite tokens"
+              >
+                📋
+              </button>
+            )}
+
+            {/* Settings */}
+            {canEditToken() && (
+              <button
+                onClick={() => { setShowSettings(true); loadDebugInfo(); }}
+                style={{
+                  background: 'transparent',
+                  color: '#666',
+                  border: '1px solid #333',
+                  padding: '6px 8px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                }}
+                title="Settings"
+              >
+                ⚙️
+              </button>
+            )}
+          </div>
+
+          {/* Ability Score Circles */}
           <div style={{
-            fontSize: '11px',
-            fontWeight: 'bold',
-            color: 'var(--accent-gold)',
+            display: 'flex',
+            justifyContent: 'space-between',
+            padding: '8px',
+            background: 'rgba(0, 0, 0, 0.2)',
+            borderRadius: '8px',
+            border: '1px solid var(--glass-border)',
           }}>
-            {totalCoins}
+            {(Object.keys(sheet.abilityScores) as Array<keyof AbilityScores>).map((ability) => (
+              <AbilityScoreCircle
+                key={ability}
+                ability={ability}
+                score={sheet.abilityScores[ability].base}
+                modifier={sheet.abilityScores[ability].modifier}
+                canEdit={canEdit}
+                onScoreChange={(newScore) => updateAbilityScore(ability, newScore)}
+              />
+            ))}
           </div>
         </div>
-      </div>
-
-      {/* Action Icons Row */}
-      <div style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        gap: '16px',
-        padding: '8px 12px',
-        background: 'rgba(0, 0, 0, 0.2)',
-        borderRadius: '6px',
-        border: '1px solid var(--glass-border)',
-      }}>
-        {/* Death Saves */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-        }}>
-          <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
-            Death Saves:
-          </span>
-          {onUpdateDeathSaves && (
-            <DeathSavesDisplay
-              deathSaves={deathSaves}
-              onUpdate={onUpdateDeathSaves}
-              canEdit={canEdit}
-            />
-          )}
-        </div>
-
-        {/* Divider */}
-        <div style={{ width: '1px', height: '20px', background: 'var(--glass-border)' }} />
-
-        {/* Trade Icon */}
-        {showTradeButton && onOpenTradePartnerModal && (
-          <button
-            onClick={onOpenTradePartnerModal}
-            style={{
-              background: 'rgba(240, 225, 48, 0.1)',
-              border: '1px solid rgba(240, 225, 48, 0.3)',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '18px',
-              padding: '6px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: 'var(--accent-gold)',
-            }}
-            title="Trade with nearby tokens"
-          >
-            💰
-            <span style={{ fontSize: '10px' }}>Trade</span>
-          </button>
-        )}
-
-        {/* Rest Icon */}
-        {onOpenRestModal && (
-          <button
-            onClick={onOpenRestModal}
-            style={{
-              background: 'rgba(255, 152, 0, 0.1)',
-              border: '1px solid rgba(255, 152, 0, 0.3)',
-              borderRadius: '6px',
-              cursor: 'pointer',
-              fontSize: '18px',
-              padding: '6px 12px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              color: '#ff9800',
-            }}
-            title="Take a rest"
-          >
-            🏕️
-            <span style={{ fontSize: '10px' }}>Rest</span>
-          </button>
-        )}
       </div>
       
       {/* Edit Popups */}
@@ -865,57 +1133,9 @@ export function HomeTab({
     <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '8px'}}>
       <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
         <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
-        {/* Action buttons - star, list, and debug icons */}
-        <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>
-          {!viewingStorageId && (
-            <>
-              {/* Favorite star button */}
-              <button
-                onClick={toggleFavorite}
-                style={{
-                  background: 'transparent',
-                  color: isFavorited ? 'var(--accent-gold)' : '#666',
-                  border: '1px solid #333',
-                  padding: '2px 6px',
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                  fontWeight: 'normal'
-                }}
-                title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                {isFavorited ? '⭐' : '☆'}
-              </button>
-              {/* View favorites list button */}
-              {(favorites.length > 0 || hasClaimedToken) && (
-                <button
-                  onClick={() => setViewingFavorites(true)}
-                  style={{
-                    background: 'transparent',
-                    color: 'var(--accent-gold)',
-                    border: '1px solid #333',
-                    padding: '2px 6px',
-                    borderRadius: '3px',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    fontWeight: 'normal'
-                  }}
-                  title="View all favorite tokens"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="8" y1="6" x2="21" y2="6"></line>
-                    <line x1="8" y1="12" x2="21" y2="12"></line>
-                    <line x1="8" y1="18" x2="21" y2="18"></line>
-                    <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                    <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                    <line x1="3" y1="18" x2="3.01" y2="18"></line>
-                  </svg>
-                </button>
-              )}
-            </>
-          )}
-          {/* Settings button - only show for users who can edit the token */}
-          {canEditToken() && (
+        {/* Action buttons are now shown only for storage view or handled in the TwoColumnDashboard */}
+        {viewingStorageId && canEditToken() && (
+          <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>
             <button
               onClick={() => { setShowSettings(true); loadDebugInfo(); }}
               style={{
@@ -932,8 +1152,8 @@ export function HomeTab({
             >
               ⚙
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* --- TOKEN PROFILE WITH COVER PHOTO --- */}
@@ -1112,7 +1332,7 @@ export function HomeTab({
         </div>
       )}
 
-      {/* === HORIZONTAL BANNER - Compact layout with stats, token, and weight === */}
+      {/* === TWO COLUMN DASHBOARD - Main layout with stats, token, and status boxes === */}
       {(() => {
         // Show for player tokens, party tokens, or NPC tokens when user is GM
         const showCharacterSheet = characterData.tokenType !== 'lore' && 
@@ -1140,7 +1360,7 @@ export function HomeTab({
         
         return (
           <>
-            <HorizontalBanner
+            <TwoColumnDashboard
               sheet={sheet}
               characterStats={characterStats}
               tokenImage={tokenImage}
@@ -1154,6 +1374,14 @@ export function HomeTab({
               onOpenRestModal={() => setShowRestModal(true)}
               onUpdateDeathSaves={updateDeathSaves}
               showTradeButton={!!showTradeButton}
+              toggleFavorite={toggleFavorite}
+              isFavorited={isFavorited}
+              favorites={favorites}
+              setViewingFavorites={setViewingFavorites}
+              setShowSettings={setShowSettings}
+              loadDebugInfo={loadDebugInfo}
+              canEditToken={canEditToken}
+              hasClaimedToken={hasClaimedToken}
             />
             {/* Pinned Skills Bar - shown below combat stats */}
             <PinnedSkillsBar
@@ -1188,9 +1416,9 @@ export function HomeTab({
         </div>
       )}
 
-      {/* === CONDITIONS & EXHAUSTION - Collapsible section === */}
+      {/* === CONDITIONS & EXHAUSTION - Purple Collapsible section === */}
       {!viewingStorageId && characterData.tokenType !== 'lore' && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
-        <CollapsibleSection title="Conditions & Exhaustion" defaultExpanded={false}>
+        <PurpleCollapsibleSection title="Conditions & Exhaustion" defaultExpanded={false}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* Full Conditions Panel */}
             <ConditionsPanel
@@ -1209,7 +1437,7 @@ export function HomeTab({
               customEffects={gmCustomizations?.exhaustionEffects}
             />
           </div>
-        </CollapsibleSection>
+        </PurpleCollapsibleSection>
       )}
 
       {/* Rest Modal */}
@@ -1348,7 +1576,7 @@ export function HomeTab({
           </div>
 
           {!viewingStorageId && (
-            <CollapsibleSection title="Slot Usage" defaultExpanded={false}>
+            <PurpleCollapsibleSection title="Inventory & Coins" defaultExpanded={false}>
               <div className="totals-grid">
                 <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
                   <div className="stat-label">WEAPONS</div>
@@ -1362,16 +1590,13 @@ export function HomeTab({
                 <div className="stat-box"><div className="stat-label">JEWELRY</div><div className="stat-value">{stats.usedSlots.jewelry} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.jewelry}</span></div></div>
                 <div className="stat-box" style={{gridColumn: 'span 2', background: 'rgba(240, 225, 48, 0.05)'}}><div className="stat-label" style={{color: 'var(--accent-gold)'}}>UTILITY / QUICK</div><div className="stat-value">{stats.usedSlots.utility} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.utility}</span></div></div>
               </div>
-            </CollapsibleSection>
+            </PurpleCollapsibleSection>
           )}
         </>
       )}
 
       {/* Show description - editable only if GM, owner, or party token */}
-      <div style={{marginTop: '12px', width: DESCRIPTION_WIDTH_EDITABLE, alignSelf: 'stretch'}}>
-        <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>
-          Description
-        </label>
+      <PurpleCollapsibleSection title="Biography & Description" defaultExpanded={false}>
         <DebouncedTextarea
           value={currentDisplayData.condition}
           onChange={(val) => canUserEdit && handleUpdateData({ condition: val })}
@@ -1389,16 +1614,18 @@ export function HomeTab({
           }}
         />
         {canUserEdit && <MarkdownHint />}
-      </div>
+      </PurpleCollapsibleSection>
 
-      {/* Character Sheet - show for player/party tokens, and NPC tokens when user is GM */}
+      {/* Character Sheet - wrapped in purple collapsible section - show for player/party tokens, and NPC tokens when user is GM */}
       {!viewingStorageId && 
        (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
-        <CharacterSheetSection
-          characterData={characterData}
-          canEdit={canUserEdit}
-          updateData={updateData}
-        />
+        <PurpleCollapsibleSection title="Skills & Proficiencies" defaultExpanded={false}>
+          <CharacterSheetSection
+            characterData={characterData}
+            canEdit={canUserEdit}
+            updateData={updateData}
+          />
+        </PurpleCollapsibleSection>
       )}
 
       {/* Storage Notes - only show when viewing storage and can edit */}

@@ -123,8 +123,9 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
   };
 
   const handleSave = () => {
-    const newScore = parseInt(editValue) || 10;
-    onScoreChange(Math.max(1, Math.min(30, newScore)));
+    const parsed = parseInt(editValue, 10);
+    const newScore = isNaN(parsed) ? 10 : Math.max(1, Math.min(30, parsed));
+    onScoreChange(newScore);
     setIsEditing(false);
   };
 
@@ -165,6 +166,8 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
           <input
             type="number"
             value={editValue}
+            min={1}
+            max={30}
             onChange={(e) => setEditValue(e.target.value)}
             onBlur={handleSave}
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
@@ -325,7 +328,6 @@ const TwoColumnDashboard = ({
   const initRef = useRef<HTMLDivElement>(null);
   
   const isOverencumbered = stats.totalWeight > stats.maxCapacity;
-  const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
   
   // Get active conditions
   const activeConditions = characterStats?.conditions 
@@ -678,7 +680,7 @@ const TwoColumnDashboard = ({
           {/* Status Boxes Row */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
             gap: '6px',
           }}>
             {/* Defenses Box - Green */}
@@ -710,23 +712,6 @@ const TwoColumnDashboard = ({
                 {stats.totalWeight} / {stats.maxCapacity}
               </div>
             </div>
-
-            {/* Overencumbered Box - Red (only shown when overencumbered) */}
-            {isOverencumbered && (
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(211, 47, 47, 0.2))',
-                border: '1px solid rgba(244, 67, 54, 0.4)',
-                borderRadius: '6px',
-                padding: '6px',
-              }}>
-                <div style={{ fontSize: '8px', color: '#ef5350', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '2px' }}>
-                  ⚠️ Overencumbered
-                </div>
-                <div style={{ fontSize: '9px', color: '#ff5722' }}>
-                  +{overencumberedAmount} units over
-                </div>
-              </div>
-            )}
 
             {/* Active Conditions Box - Red/Pink */}
             <div style={{

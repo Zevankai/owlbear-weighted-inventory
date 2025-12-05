@@ -10,10 +10,13 @@ import { getMoonPhase } from '../../utils/calendar/calendarMath';
 import '../../styles/calendar.css';
 
 interface CalendarTabProps {
+  // playerRole prop is received for API consistency but the calendar uses 
+  // its own role detection via useCalendar hook for better integration
   playerRole: 'GM' | 'PLAYER';
 }
 
-export function CalendarTab({ playerRole }: CalendarTabProps) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
   const { ready, config, logs, actions, isGM, waitingForGM, currentMonthMeta } = useCalendar();
   
   // View state - initialize with null, will be set when config loads
@@ -83,7 +86,10 @@ export function CalendarTab({ playerRole }: CalendarTabProps) {
     if (newCondition) {
       const newTemp = window.prompt('Enter temperature:', String(config?.currentWeather.temperature));
       if (newTemp !== null) {
-        actions.updateWeather(newCondition, parseInt(newTemp) || config?.currentWeather.temperature);
+        const parsedTemp = parseInt(newTemp, 10);
+        // Use parsed temperature if valid, otherwise keep current temperature
+        const finalTemp = !isNaN(parsedTemp) ? parsedTemp : config?.currentWeather.temperature;
+        actions.updateWeather(newCondition, finalTemp);
       }
     }
   };
@@ -121,10 +127,6 @@ export function CalendarTab({ playerRole }: CalendarTabProps) {
   // Calculate moon phase
   const moonPhase = getMoonPhase(config, viewDate.year, viewDate.monthIndex, viewDate.day);
 
-  // Use actual role from hook rather than prop for calendar-specific operations
-  // But we still receive playerRole prop for consistency with parent
-  const isCalendarGM = isGM || playerRole === 'GM';
-
   return (
     <div className="app-container">
       {showSettings ? (
@@ -144,7 +146,7 @@ export function CalendarTab({ playerRole }: CalendarTabProps) {
             weather={config.currentWeather}
             moon={moonPhase}
             yearName={config.yearName}
-            isGM={isCalendarGM}
+            isGM={isGM}
             onAdvanceTime={handleAdvanceTime}
             onWeatherClick={handleWeatherClick}
             onConfigClick={() => setShowSettings(true)}
@@ -169,7 +171,7 @@ export function CalendarTab({ playerRole }: CalendarTabProps) {
                 />
               ) : (
                 <>
-                  {isCalendarGM && (
+                  {isGM && (
                     <button
                       onClick={() => setIsCreatingNote(true)}
                       style={{
@@ -202,7 +204,7 @@ export function CalendarTab({ playerRole }: CalendarTabProps) {
                   <NoteList
                     logs={logs}
                     selectedDate={viewDate}
-                    isGM={isCalendarGM}
+                    isGM={isGM}
                     onDelete={handleDeleteNote}
                   />
                 </>

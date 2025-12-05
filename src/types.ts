@@ -279,6 +279,13 @@ export interface CharacterSheet {
   conditions: string;    // Text field for active conditions
   languages: string;     // Text field for known languages
   
+  // Biography fields
+  scars?: string;           // Text field for character scars
+  values?: string;          // Text field for character values
+  alignment?: string;       // Alignment (e.g., "Lawful Good", "Chaotic Neutral")
+  birthplace?: string;      // Text field for birthplace
+  majorLifeMoments?: string; // Text area for major life moments
+  
   // Spells
   spellManagement?: SpellManagement;
 }

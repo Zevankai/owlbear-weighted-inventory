@@ -284,6 +284,7 @@ interface TwoColumnDashboardProps {
   stats: Stats;
   canEdit: boolean;
   onUpdateSheet: (updates: Partial<CharacterSheet>) => void;
+  onUpdateCharacterStats: (updates: Partial<CharacterStats>) => void;
   onToggleHeroicInspiration: () => void;
   onOpenTradePartnerModal?: () => void;
   onOpenRestModal?: () => void;
@@ -314,6 +315,7 @@ const TwoColumnDashboard = ({
   stats,
   canEdit,
   onUpdateSheet,
+  onUpdateCharacterStats,
   onToggleHeroicInspiration,
   onOpenTradePartnerModal,
   onOpenRestModal,
@@ -383,7 +385,9 @@ const TwoColumnDashboard = ({
   const handleLevelSave = () => {
     const parsed = parseInt(levelEditValue, 10);
     const newLevel = isNaN(parsed) ? MIN_LEVEL : Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, parsed));
+    // Update both sheet.level and characterStats.level
     onUpdateSheet({ level: newLevel });
+    onUpdateCharacterStats({ level: newLevel });
     setIsEditingLevel(false);
   };
 
@@ -666,48 +670,24 @@ const TwoColumnDashboard = ({
             )}
           </div>
 
-          {/* Passive Traits Section - Editable */}
-          <div 
+          {/* Combined Row: AC, INIT, PROF, and Passive Traits */}
+          <div
             ref={passiveRef}
             onClick={() => handleStatClick('passive', passiveRef)}
             style={{
-              background: 'rgba(0, 0, 0, 0.25)',
-              borderRadius: '5px',
-              padding: '4px',
-              border: '1px solid var(--glass-border)',
+              display: 'flex',
+              gap: '3px',
+              flexWrap: 'wrap',
               cursor: canEdit ? 'pointer' : 'default',
             }}
-            title={canEdit ? 'Click to edit passive traits' : undefined}
+            title={canEdit ? 'Click to edit stats' : undefined}
           >
-            <div style={{ fontSize: '7px', color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center', marginBottom: '2px' }}>
-              Passive Traits
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', fontSize: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Perception</span>
-                <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passivePerception}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Investigation</span>
-                <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInvestigation}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Insight</span>
-                <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInsight}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom Row: AC, INIT, PROF */}
-          <div style={{
-            display: 'flex',
-            gap: '3px',
-          }}>
             <div
               ref={acRef}
-              onClick={() => handleStatClick('ac', acRef)}
+              onClick={(e) => { e.stopPropagation(); handleStatClick('ac', acRef); }}
               style={{
                 flex: 1,
+                minWidth: '28px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -723,9 +703,10 @@ const TwoColumnDashboard = ({
             </div>
             <div
               ref={initRef}
-              onClick={() => handleStatClick('init', initRef)}
+              onClick={(e) => { e.stopPropagation(); handleStatClick('init', initRef); }}
               style={{
                 flex: 1,
+                minWidth: '28px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
@@ -743,6 +724,7 @@ const TwoColumnDashboard = ({
             </div>
             <div style={{
               flex: 1,
+              minWidth: '28px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -753,36 +735,45 @@ const TwoColumnDashboard = ({
               <span style={{ fontSize: '6px', color: 'var(--text-muted)' }}>PROF</span>
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent-gold)' }}>+{sheet.proficiencyBonus || 2}</span>
             </div>
-          </div>
-
-          {/* Weight Box - Below AC/INIT/PROF, turns red when overencumbered */}
-          <div
-            ref={weightRef}
-            onClick={handleWeightClick}
-            style={{
+            <div style={{
+              flex: 1,
+              minWidth: '28px',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: '4px',
-              background: isOverencumbered 
-                ? 'linear-gradient(135deg, rgba(255, 87, 34, 0.3), rgba(244, 67, 54, 0.3))'
-                : 'rgba(0, 0, 0, 0.3)',
+              padding: '3px 2px',
+              background: 'rgba(0, 0, 0, 0.4)',
               borderRadius: '4px',
-              border: isOverencumbered 
-                ? '1px solid rgba(255, 87, 34, 0.6)'
-                : '1px solid var(--glass-border)',
-              cursor: isOverencumbered ? 'pointer' : 'default',
-            }}
-            title={isOverencumbered ? 'Click to see overencumbered effects' : 'Current weight'}
-          >
-            <span style={{ fontSize: '6px', color: isOverencumbered ? '#ff5722' : 'var(--text-muted)' }}>WEIGHT</span>
-            <span style={{ 
-              fontSize: '10px', 
-              fontWeight: 'bold', 
-              color: isOverencumbered ? '#ff5722' : 'var(--text-main)' 
             }}>
-              {stats.totalWeight}/{stats.maxCapacity}
-            </span>
+              <span style={{ fontSize: '6px', color: 'var(--text-muted)' }}>PER</span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-main)' }}>{sheet.passivePerception}</span>
+            </div>
+            <div style={{
+              flex: 1,
+              minWidth: '28px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '3px 2px',
+              background: 'rgba(0, 0, 0, 0.4)',
+              borderRadius: '4px',
+            }}>
+              <span style={{ fontSize: '6px', color: 'var(--text-muted)' }}>INV</span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-main)' }}>{sheet.passiveInvestigation}</span>
+            </div>
+            <div style={{
+              flex: 1,
+              minWidth: '28px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '3px 2px',
+              background: 'rgba(0, 0, 0, 0.4)',
+              borderRadius: '4px',
+            }}>
+              <span style={{ fontSize: '6px', color: 'var(--text-muted)' }}>INS</span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-main)' }}>{sheet.passiveInsight}</span>
+            </div>
           </div>
         </div>
 
@@ -832,12 +823,49 @@ const TwoColumnDashboard = ({
               ) : (
                 <div style={{ fontSize: '8px', color: 'var(--text-muted)', fontStyle: 'italic' }}>None</div>
               )}
-              {characterStats?.exhaustion && characterStats.exhaustion.currentLevel > 0 && (
-                <div style={{ fontSize: '8px', color: '#ff9632', marginTop: '1px' }}>
-                  💤 Exhaustion Lv{characterStats.exhaustion.currentLevel}
-                </div>
-              )}
             </div>
+
+            {/* Exhaustion/Injury/Infection Notice Bar */}
+            {(() => {
+              const exhaustionLevel = characterStats?.exhaustion?.currentLevel || 0;
+              const hasMinorInjury = characterStats?.conditions?.minorInjury;
+              const hasSeriousInjury = characterStats?.conditions?.seriousInjury;
+              const hasCriticalInjury = characterStats?.conditions?.criticalInjury;
+              const hasInfection = characterStats?.conditions?.infection;
+              
+              const hasAnyStatus = exhaustionLevel > 0 || hasMinorInjury || hasSeriousInjury || hasCriticalInjury || hasInfection;
+              
+              if (!hasAnyStatus) return null;
+              
+              const statusItems: string[] = [];
+              if (exhaustionLevel > 0) statusItems.push(`💤 Exhaustion Lv ${exhaustionLevel}`);
+              if (hasCriticalInjury) statusItems.push('🩹 Critical Injury');
+              if (hasSeriousInjury) statusItems.push('🩹 Serious Injury');
+              if (hasMinorInjury) statusItems.push('🩹 Minor Injury');
+              if (hasInfection) statusItems.push('🦠 Infection');
+              
+              return (
+                <div style={{
+                  background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.25), rgba(255, 87, 34, 0.25))',
+                  border: '1px solid rgba(255, 152, 0, 0.5)',
+                  borderRadius: '5px',
+                  padding: '5px 8px',
+                }}>
+                  <div style={{ 
+                    fontSize: '8px', 
+                    color: '#ffb74d', 
+                    fontWeight: 'bold',
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    gap: '6px',
+                  }}>
+                    {statusItems.map((item, index) => (
+                      <span key={index}>{item}</span>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Icon Row - Smaller buttons */}
@@ -1584,6 +1612,7 @@ export function HomeTab({
             stats={stats}
             canEdit={canUserEdit}
             onUpdateSheet={handleUpdateSheet}
+            onUpdateCharacterStats={updateCharacterStats}
             onToggleHeroicInspiration={toggleHeroicInspiration}
             onOpenTradePartnerModal={onOpenTradePartnerModal}
             onOpenRestModal={() => setShowRestModal(true)}
@@ -1774,23 +1803,171 @@ export function HomeTab({
 
       {/* Show description - editable only if GM, owner, or party token */}
       <PurpleCollapsibleSection title="Biography & Description" defaultExpanded={false}>
-        <DebouncedTextarea
-          value={currentDisplayData.condition}
-          onChange={(val) => canUserEdit && handleUpdateData({ condition: val })}
-          className="search-input"
-          rows={2}
-          disabled={!canUserEdit}
-          style={{
-            width: '100%',
-            minHeight: '50px',
-            resize: 'vertical',
-            boxSizing: 'border-box',
-            opacity: 1,
-            cursor: canUserEdit ? 'text' : 'default',
-            fontSize: '13px'
-          }}
-        />
-        {canUserEdit && <MarkdownHint />}
+        {(() => {
+          const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+          const handleUpdateSheet = (updates: Partial<CharacterSheet>) => {
+            updateData({
+              characterSheet: {
+                ...sheet,
+                ...updates,
+              },
+            });
+          };
+          
+          return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {/* Gender Field */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Gender
+                </label>
+                <DebouncedInput
+                  value={sheet.gender || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ gender: val })}
+                  className="search-input"
+                  disabled={!canUserEdit}
+                  placeholder="Enter gender..."
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    fontSize: '12px',
+                    padding: '6px 8px',
+                  }}
+                />
+              </div>
+              
+              {/* Alignment Field */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Alignment
+                </label>
+                <DebouncedInput
+                  value={sheet.alignment || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ alignment: val })}
+                  className="search-input"
+                  disabled={!canUserEdit}
+                  placeholder="e.g., Lawful Good, Chaotic Neutral..."
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    fontSize: '12px',
+                    padding: '6px 8px',
+                  }}
+                />
+              </div>
+              
+              {/* Birthplace Field */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Birthplace
+                </label>
+                <DebouncedInput
+                  value={sheet.birthplace || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ birthplace: val })}
+                  className="search-input"
+                  disabled={!canUserEdit}
+                  placeholder="Enter birthplace..."
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    fontSize: '12px',
+                    padding: '6px 8px',
+                  }}
+                />
+              </div>
+              
+              {/* Scars Field */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Scars
+                </label>
+                <DebouncedInput
+                  value={sheet.scars || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ scars: val })}
+                  className="search-input"
+                  disabled={!canUserEdit}
+                  placeholder="Describe any scars..."
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    fontSize: '12px',
+                    padding: '6px 8px',
+                  }}
+                />
+              </div>
+              
+              {/* Values Field */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Values
+                </label>
+                <DebouncedInput
+                  value={sheet.values || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ values: val })}
+                  className="search-input"
+                  disabled={!canUserEdit}
+                  placeholder="Character values and beliefs..."
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    fontSize: '12px',
+                    padding: '6px 8px',
+                  }}
+                />
+              </div>
+              
+              {/* Description / Backstory */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Description / Backstory
+                </label>
+                <DebouncedTextarea
+                  value={currentDisplayData.condition}
+                  onChange={(val) => canUserEdit && handleUpdateData({ condition: val })}
+                  className="search-input"
+                  rows={2}
+                  disabled={!canUserEdit}
+                  placeholder="Character description..."
+                  style={{
+                    width: '100%',
+                    minHeight: '50px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    opacity: 1,
+                    cursor: canUserEdit ? 'text' : 'default',
+                    fontSize: '13px'
+                  }}
+                />
+              </div>
+              
+              {/* Major Life Moments */}
+              <div>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                  Major Life Moments
+                </label>
+                <DebouncedTextarea
+                  value={sheet.majorLifeMoments || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ majorLifeMoments: val })}
+                  className="search-input"
+                  rows={3}
+                  disabled={!canUserEdit}
+                  placeholder="Significant events in the character's life..."
+                  style={{
+                    width: '100%',
+                    minHeight: '70px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    opacity: 1,
+                    cursor: canUserEdit ? 'text' : 'default',
+                    fontSize: '13px'
+                  }}
+                />
+              </div>
+              
+              {canUserEdit && <MarkdownHint />}
+            </div>
+          );
+        })()}
       </PurpleCollapsibleSection>
 
       {/* Character Sheet - wrapped in purple collapsible section - show for player/party tokens, and NPC tokens when user is GM */}

@@ -24,7 +24,8 @@ export const ConditionsPanel: React.FC<ConditionsPanelProps> = ({
   canEdit,
   compact = false,
   injuryData,
-  onInjuryDataChange,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onInjuryDataChange: _onInjuryDataChange, // Kept in props for future use, not currently needed
 }) => {
   const [expandedCondition, setExpandedCondition] = useState<ConditionType | null>(null);
   const [showLocationPicker, setShowLocationPicker] = useState<ConditionType | null>(null);
@@ -49,12 +50,11 @@ export const ConditionsPanel: React.FC<ConditionsPanelProps> = ({
   };
 
   // Handle location selection for injury
+  // Note: onConditionChange already handles setting injuryData when location is provided,
+  // so we don't call onInjuryDataChange here to avoid race conditions with state updates
   const handleLocationSelect = (location: InjuryLocation) => {
     if (showLocationPicker) {
       onConditionChange(showLocationPicker, true, location);
-      if (onInjuryDataChange) {
-        onInjuryDataChange(showLocationPicker, { injuryLocation: location });
-      }
       setShowLocationPicker(null);
     }
   };

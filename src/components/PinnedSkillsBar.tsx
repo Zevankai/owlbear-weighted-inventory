@@ -41,7 +41,6 @@ export const PinnedSkillsBar = ({
   const iconSize = enlarged ? '12px' : '8px';
   const abbrevSize = enlarged ? '11px' : '8px';
   const bonusSize = enlarged ? '13px' : '9px';
-  const pinIconSize = enlarged ? '12px' : '9px';
   const padding = enlarged ? '6px 10px' : '4px 8px';
   const itemPadding = enlarged ? '4px 8px' : '2px 4px';
   const gap = enlarged ? '6px' : '4px';
@@ -60,7 +59,6 @@ export const PinnedSkillsBar = ({
       flexWrap: 'nowrap',
     }}>
       {/* Pinned Skills - single line, no wrapping */}
-      <span style={{ fontSize: pinIconSize, color: 'var(--text-muted)', flexShrink: 0 }}>📌</span>
       {pinnedSkills.slice(0, MAX_PINNED_SKILLS).map((skillKey) => {
         const skillDef = SKILL_DEFINITIONS.find(s => s.key === skillKey);
         if (!skillDef) return null;

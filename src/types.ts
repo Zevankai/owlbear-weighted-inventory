@@ -347,6 +347,13 @@ export interface ExhaustionState {
 // Rest System types
 export type RestType = 'short' | 'long';
 
+// Effect types for rest options - used for auto-apply functionality
+export interface RestOptionEffect {
+  type: 'tempHp' | 'heroicInspiration' | 'healInjury';
+  value?: number;              // For tempHp: amount of temp HP to add; For healInjury: levels to heal (default 1)
+  requiresRations?: number;    // Number of rations required per party member
+}
+
 export interface RestOption {
   id: string;
   name: string;
@@ -355,6 +362,7 @@ export interface RestOption {
   raceRestriction?: CharacterRace;
   classRestriction?: CharacterClass;
   restType: RestType;
+  effect?: RestOptionEffect;   // Optional auto-apply effect
 }
 
 export interface RestHistory {

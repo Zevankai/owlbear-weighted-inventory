@@ -49,6 +49,7 @@ export const SHORT_REST_STANDARD_OPTIONS: RestOption[] = [
     description: 'Costs 1 ration per member; cooking tools required. The party gains +10 temporary HP.',
     category: 'standard',
     restType: 'short',
+    effect: { type: 'tempHp', value: 10, requiresRations: 1 },
   },
   {
     id: 'short-standard-patch-wounds',
@@ -56,6 +57,7 @@ export const SHORT_REST_STANDARD_OPTIONS: RestOption[] = [
     description: 'DC 10 Medicine Check: Remove 1 level of injury.',
     category: 'standard',
     restType: 'short',
+    effect: { type: 'healInjury' },
   },
   {
     id: 'short-standard-quick-practice',
@@ -124,6 +126,7 @@ export const SHORT_REST_RACE_OPTIONS: RestOption[] = [
     category: 'race',
     raceRestriction: 'Human',
     restType: 'short',
+    effect: { type: 'tempHp', value: 5 },
   },
   // Orc options
   {
@@ -184,6 +187,7 @@ export const SHORT_REST_RACE_OPTIONS: RestOption[] = [
     category: 'race',
     raceRestriction: 'Dragonborn',
     restType: 'short',
+    effect: { type: 'heroicInspiration' },
   },
   {
     id: 'short-race-dragonborn-presence',
@@ -374,6 +378,7 @@ export const LONG_REST_STANDARD_OPTIONS: RestOption[] = [
     description: 'Costs 1 ration per member; cooking tools required. Party gains +15 temporary HP.',
     category: 'standard',
     restType: 'long',
+    effect: { type: 'tempHp', value: 15, requiresRations: 1 },
   },
   {
     id: 'long-standard-patch-wounds',
@@ -381,6 +386,7 @@ export const LONG_REST_STANDARD_OPTIONS: RestOption[] = [
     description: 'DC 10 Medicine Check: Remove 2 levels of injury.',
     category: 'standard',
     restType: 'long',
+    effect: { type: 'healInjury', value: 2 },
   },
   {
     id: 'long-standard-quick-practice',
@@ -475,6 +481,7 @@ export const LONG_REST_RACE_OPTIONS: RestOption[] = [
     category: 'race',
     raceRestriction: 'Halfling',
     restType: 'long',
+    effect: { type: 'heroicInspiration' },
   },
   {
     id: 'long-race-halfling-comfort',

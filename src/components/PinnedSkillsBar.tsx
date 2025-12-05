@@ -23,9 +23,11 @@ export const PinnedSkillsBar = ({
 }: PinnedSkillsBarProps) => {
   const pinnedSkills = sheet.pinnedSkills || [];
   
-  // Always show the bar if there are pinned skills or to show passive scores
-  // Show passive scores when there are no pinned skills as well
+  // Only show if there are pinned skills
   const hasPinnedSkills = pinnedSkills.length > 0;
+  
+  // Don't render if no pinned skills
+  if (!hasPinnedSkills) return null;
 
   // Calculate proficiency bonus
   const profBonus = sheet.proficiencyBonus || calculateProficiencyBonus(sheet.level || 1);
@@ -33,71 +35,65 @@ export const PinnedSkillsBar = ({
   return (
     <div style={{ 
       display: 'flex', 
-      justifyContent: 'space-between', 
       alignItems: 'center',
-      padding: '8px 12px',
+      padding: '4px 8px',
       background: 'rgba(0,0,0,0.2)',
       borderRadius: '6px',
       marginBottom: '8px',
-      gap: '12px',
-      flexWrap: 'wrap'
+      gap: '4px',
+      overflow: 'hidden',
+      flexWrap: 'nowrap',
     }}>
-      {/* Pinned Skills */}
-      {hasPinnedSkills && (
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>📌</span>
-          {pinnedSkills.map((skillKey) => {
-            const skillDef = SKILL_DEFINITIONS.find(s => s.key === skillKey);
-            if (!skillDef) return null;
+      {/* Pinned Skills - single line, no wrapping */}
+      <span style={{ fontSize: '9px', color: 'var(--text-muted)', flexShrink: 0 }}>📌</span>
+      {pinnedSkills.slice(0, 5).map((skillKey) => {
+        const skillDef = SKILL_DEFINITIONS.find(s => s.key === skillKey);
+        if (!skillDef) return null;
 
-            const skill = sheet.skills[skillDef.key];
-            if (!skill) return null;
+        const skill = sheet.skills[skillDef.key];
+        if (!skill) return null;
 
-            // Migrate old skill format if needed
-            const migratedSkill = migrateSkillProficiency(skill);
-            
-            // Get ability score and calculate modifier
-            const abilityScore = sheet.abilityScores[skillDef.ability];
-            const abilityMod = abilityScore ? calculateModifier(abilityScore.base) : 0;
-            
-            // Calculate total bonus
-            const profContribution = getProficiencyContribution(migratedSkill.proficiencyLevel, profBonus);
-            const totalBonus = abilityMod + profContribution + (migratedSkill.bonus || 0);
-            const bonusDisplay = totalBonus >= 0 ? `+${totalBonus}` : `${totalBonus}`;
+        // Migrate old skill format if needed
+        const migratedSkill = migrateSkillProficiency(skill);
+        
+        // Get ability score and calculate modifier
+        const abilityScore = sheet.abilityScores[skillDef.ability];
+        const abilityMod = abilityScore ? calculateModifier(abilityScore.base) : 0;
+        
+        // Calculate total bonus
+        const profContribution = getProficiencyContribution(migratedSkill.proficiencyLevel, profBonus);
+        const totalBonus = abilityMod + profContribution + (migratedSkill.bonus || 0);
+        const bonusDisplay = totalBonus >= 0 ? `+${totalBonus}` : `${totalBonus}`;
 
-            return (
-              <div
-                key={skillKey}
-                className="pinned-skill-item"
-                onClick={() => onSkillClick?.()}
-                title={`${skillDef.name} (${ABILITY_ABBREV[skillDef.ability]}): ${bonusDisplay}`}
-              >
-                <span className="pinned-skill-icon">
-                  {getProficiencyIcon(migratedSkill.proficiencyLevel)}
-                </span>
-                <span className="pinned-skill-name">{skillDef.abbrev}</span>
-                <span className="pinned-skill-bonus">{bonusDisplay}</span>
-              </div>
-            );
-          })}
-        </div>
-      )}
-      
-      {/* Passive Scores */}
-      <div style={{ 
-        display: 'flex', 
-        gap: '12px', 
-        color: 'var(--text-muted)',
-        fontSize: '10px',
-        marginLeft: hasPinnedSkills ? 'auto' : '0'
-      }}>
-        <span style={{ opacity: 0.7 }}>👁</span>
-        <span title="Passive Perception">Per <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passivePerception}</span></span>
-        <span style={{ opacity: 0.5 }}>|</span>
-        <span title="Passive Investigation">Inv <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInvestigation}</span></span>
-        <span style={{ opacity: 0.5 }}>|</span>
-        <span title="Passive Insight">Ins <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInsight}</span></span>
-      </div>
+        return (
+          <div
+            key={skillKey}
+            onClick={() => onSkillClick?.()}
+            title={`${skillDef.name} (${ABILITY_ABBREV[skillDef.ability]}): ${bonusDisplay}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              padding: '2px 4px',
+              background: 'rgba(240, 225, 48, 0.08)',
+              border: '1px solid rgba(240, 225, 48, 0.25)',
+              borderRadius: '3px',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ fontSize: '8px', color: 'var(--accent-gold)' }}>
+              {getProficiencyIcon(migratedSkill.proficiencyLevel)}
+            </span>
+            <span style={{ fontSize: '8px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+              {skillDef.abbrev}
+            </span>
+            <span style={{ fontSize: '9px', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
+              {bonusDisplay}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 };

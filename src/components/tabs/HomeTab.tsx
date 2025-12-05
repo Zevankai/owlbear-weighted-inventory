@@ -293,6 +293,8 @@ interface TwoColumnDashboardProps {
   loadDebugInfo: () => void;
   canEditToken: () => boolean;
   hasClaimedToken?: boolean;
+  gmCustomizations?: GMCustomizations;
+  overencumberedAmount: number;
 }
 
 const TwoColumnDashboard = ({
@@ -316,18 +318,26 @@ const TwoColumnDashboard = ({
   setShowSettings,
   loadDebugInfo,
   canEditToken,
-  hasClaimedToken
+  hasClaimedToken,
+  gmCustomizations,
+  overencumberedAmount
 }: TwoColumnDashboardProps) => {
   const [editPopup, setEditPopup] = useState<{
-    type: 'hp' | 'ac' | 'init' | 'level' | null;
+    type: 'hp' | 'ac' | 'init' | 'level' | 'passive' | null;
     position: { top: number; left: number };
   }>({ type: null, position: { top: 0, left: 0 } });
+  
+  const [showOverencumberedPopup, setShowOverencumberedPopup] = useState(false);
   
   const hpRef = useRef<HTMLDivElement>(null);
   const acRef = useRef<HTMLDivElement>(null);
   const initRef = useRef<HTMLDivElement>(null);
+  const levelRef = useRef<HTMLDivElement>(null);
+  const passiveRef = useRef<HTMLDivElement>(null);
+  const weightRef = useRef<HTMLDivElement>(null);
   
   const isOverencumbered = stats.totalWeight > stats.maxCapacity;
+  const overencumberedText = gmCustomizations?.overencumberedText || '-3 to all DEX & STR rolls, -10 movement per 10 units over';
   
   // Get active conditions
   const activeConditions = characterStats?.conditions 
@@ -338,13 +348,19 @@ const TwoColumnDashboard = ({
   
   const hpColorClass = getHpColorClass(sheet.hitPoints.current, sheet.hitPoints.max);
 
-  const handleStatClick = (type: 'hp' | 'ac' | 'init', ref: RefObject<HTMLDivElement | null>) => {
+  const handleStatClick = (type: 'hp' | 'ac' | 'init' | 'level' | 'passive', ref: RefObject<HTMLDivElement | null>) => {
     if (!canEdit || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     setEditPopup({
       type,
       position: { top: rect.bottom + 8, left: rect.left }
     });
+  };
+
+  const handleWeightClick = () => {
+    if (isOverencumbered) {
+      setShowOverencumberedPopup(true);
+    }
   };
 
   // Death saves state
@@ -434,15 +450,24 @@ const TwoColumnDashboard = ({
             }}>
               {characterData.tokenType || 'Player'} Token
             </div>
-            <div style={{
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              fontWeight: 'bold',
-              background: 'rgba(0,0,0,0.4)',
-              padding: '2px 6px',
-              borderRadius: '3px',
-            }}>
-              lvl {characterStats?.level || sheet.level || 1}
+            <div
+              ref={levelRef}
+              onClick={() => handleStatClick('level', levelRef)}
+              style={{
+                fontSize: '18px',
+                color: 'var(--accent-gold)',
+                fontWeight: 'bold',
+                background: 'rgba(0,0,0,0.4)',
+                padding: '4px 10px',
+                borderRadius: '4px',
+                cursor: canEdit ? 'pointer' : 'default',
+                textShadow: '0 0 10px rgba(240, 225, 48, 0.5)',
+                minWidth: '28px',
+                textAlign: 'center',
+              }}
+              title={canEdit ? 'Click to edit level' : undefined}
+            >
+              {characterStats?.level || sheet.level || 1}
             </div>
           </div>
           
@@ -586,27 +611,33 @@ const TwoColumnDashboard = ({
             )}
           </div>
 
-          {/* Passive Traits Section */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.25)',
-            borderRadius: '5px',
-            padding: '4px',
-            border: '1px solid var(--glass-border)',
-          }}>
+          {/* Passive Traits Section - Editable */}
+          <div 
+            ref={passiveRef}
+            onClick={() => handleStatClick('passive', passiveRef)}
+            style={{
+              background: 'rgba(0, 0, 0, 0.25)',
+              borderRadius: '5px',
+              padding: '4px',
+              border: '1px solid var(--glass-border)',
+              cursor: canEdit ? 'pointer' : 'default',
+            }}
+            title={canEdit ? 'Click to edit passive traits' : undefined}
+          >
             <div style={{ fontSize: '7px', color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center', marginBottom: '2px' }}>
               Passive Traits
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', fontSize: '9px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', fontSize: '8px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Per</span>
+                <span style={{ color: 'var(--text-muted)' }}>Perception</span>
                 <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passivePerception}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Inv</span>
+                <span style={{ color: 'var(--text-muted)' }}>Investigation</span>
                 <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInvestigation}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Ins</span>
+                <span style={{ color: 'var(--text-muted)' }}>Insight</span>
                 <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passiveInsight}</span>
               </div>
             </div>
@@ -668,6 +699,36 @@ const TwoColumnDashboard = ({
               <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent-gold)' }}>+{sheet.proficiencyBonus || 2}</span>
             </div>
           </div>
+
+          {/* Weight Box - Below AC/INIT/PROF, turns red when overencumbered */}
+          <div
+            ref={weightRef}
+            onClick={handleWeightClick}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              padding: '4px',
+              background: isOverencumbered 
+                ? 'linear-gradient(135deg, rgba(255, 87, 34, 0.3), rgba(244, 67, 54, 0.3))'
+                : 'rgba(0, 0, 0, 0.3)',
+              borderRadius: '4px',
+              border: isOverencumbered 
+                ? '1px solid rgba(255, 87, 34, 0.6)'
+                : '1px solid var(--glass-border)',
+              cursor: isOverencumbered ? 'pointer' : 'default',
+            }}
+            title={isOverencumbered ? 'Click to see overencumbered effects' : 'Current weight'}
+          >
+            <span style={{ fontSize: '6px', color: isOverencumbered ? '#ff5722' : 'var(--text-muted)' }}>WEIGHT</span>
+            <span style={{ 
+              fontSize: '10px', 
+              fontWeight: 'bold', 
+              color: isOverencumbered ? '#ff5722' : 'var(--text-main)' 
+            }}>
+              {stats.totalWeight}/{stats.maxCapacity}
+            </span>
+          </div>
         </div>
 
         {/* RIGHT CONTENT AREA */}
@@ -677,10 +738,10 @@ const TwoColumnDashboard = ({
           flexDirection: 'column',
           gap: '6px',
         }}>
-          {/* Status Boxes Row */}
+          {/* Status Boxes - Stacked vertically (Defenses on top, Conditions below) */}
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(85px, 1fr))',
+            display: 'flex',
+            flexDirection: 'column',
             gap: '4px',
           }}>
             {/* Defenses Box - Green */}
@@ -695,21 +756,6 @@ const TwoColumnDashboard = ({
               </div>
               <div style={{ fontSize: '8px', color: 'var(--text-main)' }}>
                 {sheet.defenses || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None</span>}
-              </div>
-            </div>
-
-            {/* Current Weight Box - Blue */}
-            <div style={{
-              background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(25, 118, 210, 0.2))',
-              border: '1px solid rgba(33, 150, 243, 0.4)',
-              borderRadius: '5px',
-              padding: '5px',
-            }}>
-              <div style={{ fontSize: '7px', color: '#64b5f6', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
-                ⚖️ Weight
-              </div>
-              <div style={{ fontSize: '10px', fontWeight: 'bold', color: isOverencumbered ? '#ff5722' : 'var(--text-main)' }}>
-                {stats.totalWeight} / {stats.maxCapacity}
               </div>
             </div>
 
@@ -739,33 +785,39 @@ const TwoColumnDashboard = ({
             </div>
           </div>
 
-          {/* Icon Row */}
+          {/* Icon Row - Smaller buttons */}
           <div style={{
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: '6px',
-            padding: '4px 8px',
+            gap: '4px',
+            padding: '3px 6px',
             background: 'rgba(0, 0, 0, 0.2)',
             borderRadius: '5px',
             border: '1px solid var(--glass-border)',
           }}>
-            {/* Trade Icon */}
+            {/* Trade Icon - Gold Coin with $ */}
             {showTradeButton && onOpenTradePartnerModal && (
               <button
                 onClick={onOpenTradePartnerModal}
                 style={{
-                  background: 'rgba(240, 225, 48, 0.1)',
-                  border: '1px solid rgba(240, 225, 48, 0.3)',
-                  borderRadius: '5px',
+                  background: 'rgba(240, 225, 48, 0.15)',
+                  border: '1px solid rgba(240, 225, 48, 0.4)',
+                  borderRadius: '50%',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  padding: '4px 6px',
-                  color: 'var(--accent-gold)',
+                  width: '24px',
+                  height: '24px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                  color: '#000',
+                  boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(240, 225, 48, 0.3)',
                 }}
                 title="Trade with nearby tokens"
               >
-                🪙
+                $
               </button>
             )}
 
@@ -776,10 +828,10 @@ const TwoColumnDashboard = ({
                 style={{
                   background: 'rgba(255, 152, 0, 0.1)',
                   border: '1px solid rgba(255, 152, 0, 0.3)',
-                  borderRadius: '5px',
+                  borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '14px',
-                  padding: '4px 6px',
+                  fontSize: '11px',
+                  padding: '3px 5px',
                   color: '#ff9800',
                 }}
                 title="Take a rest"
@@ -795,10 +847,10 @@ const TwoColumnDashboard = ({
                 background: isFavorited ? 'rgba(240, 225, 48, 0.15)' : 'transparent',
                 color: isFavorited ? 'var(--accent-gold)' : '#666',
                 border: '1px solid ' + (isFavorited ? 'rgba(240, 225, 48, 0.3)' : '#333'),
-                padding: '4px 6px',
-                borderRadius: '5px',
+                padding: '3px 5px',
+                borderRadius: '4px',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: '11px',
               }}
               title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
             >
@@ -813,10 +865,10 @@ const TwoColumnDashboard = ({
                   background: 'transparent',
                   color: 'var(--accent-gold)',
                   border: '1px solid #333',
-                  padding: '4px 6px',
-                  borderRadius: '5px',
+                  padding: '3px 5px',
+                  borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '13px',
+                  fontSize: '10px',
                 }}
                 title="View all favorite tokens"
               >
@@ -832,10 +884,10 @@ const TwoColumnDashboard = ({
                   background: 'transparent',
                   color: '#666',
                   border: '1px solid #333',
-                  padding: '4px 6px',
-                  borderRadius: '5px',
+                  padding: '3px 5px',
+                  borderRadius: '4px',
                   cursor: 'pointer',
-                  fontSize: '13px',
+                  fontSize: '10px',
                 }}
                 title="Settings"
               >
@@ -897,6 +949,93 @@ const TwoColumnDashboard = ({
           { label: 'Initiative Modifier', value: sheet.initiative, onChange: (val) => onUpdateSheet({ initiative: val }) },
         ]}
       />
+      <EditPopup
+        isOpen={editPopup.type === 'level'}
+        onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
+        title="Edit Level"
+        position={editPopup.position}
+        fields={[
+          { label: 'Level', value: sheet.level || 1, onChange: (val) => onUpdateSheet({ level: val }), min: 1, max: 20 },
+        ]}
+      />
+      <EditPopup
+        isOpen={editPopup.type === 'passive'}
+        onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
+        title="Edit Passive Traits"
+        position={editPopup.position}
+        fields={[
+          { label: 'Perception', value: sheet.passivePerception, onChange: (val) => onUpdateSheet({ passivePerception: val }) },
+          { label: 'Investigation', value: sheet.passiveInvestigation, onChange: (val) => onUpdateSheet({ passiveInvestigation: val }) },
+          { label: 'Insight', value: sheet.passiveInsight, onChange: (val) => onUpdateSheet({ passiveInsight: val }) },
+        ]}
+      />
+      
+      {/* Overencumbered Popup */}
+      {showOverencumberedPopup && (
+        <>
+          <div 
+            onClick={() => setShowOverencumberedPopup(false)} 
+            style={{ 
+              position: 'fixed', 
+              inset: 0, 
+              zIndex: 999,
+              background: 'rgba(0, 0, 0, 0.3)'
+            }} 
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: 'linear-gradient(135deg, rgba(40, 20, 20, 0.98), rgba(60, 30, 30, 0.98))',
+            border: '2px solid rgba(255, 87, 34, 0.6)',
+            borderRadius: '10px',
+            padding: '16px',
+            zIndex: 1000,
+            minWidth: '200px',
+            maxWidth: '280px',
+            boxShadow: '0 8px 32px rgba(255, 87, 34, 0.3)',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '20px' }}>⚠️</span>
+              <h4 style={{
+                margin: 0,
+                fontSize: '14px',
+                color: '#ff5722',
+                textTransform: 'uppercase',
+                letterSpacing: '1px',
+                fontWeight: 'bold',
+              }}>
+                Overencumbered
+              </h4>
+            </div>
+            <div style={{ marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', color: '#ff8a65', fontWeight: 'bold', marginBottom: '4px' }}>
+                +{overencumberedAmount} units over capacity
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--text-muted)', lineHeight: '1.4' }}>
+                {overencumberedText}
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowOverencumberedPopup(false)}
+              style={{
+                width: '100%',
+                padding: '8px',
+                background: 'rgba(255, 87, 34, 0.3)',
+                color: '#ff5722',
+                border: '1px solid rgba(255, 87, 34, 0.5)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: 'bold',
+              }}
+            >
+              Close
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -1122,7 +1261,6 @@ export function HomeTab({
   // Check if character is overencumbered
   const isOverencumbered = stats.totalWeight > stats.maxCapacity;
   const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
-  const overencumberedText = gmCustomizations?.overencumberedText || '-3 to all DEX & STR rolls, -10 movement per 10 units over';
   
   // Helper to check if trade button should be shown
   const showTradeButton = !activeTrade && tokenId && 
@@ -1157,15 +1295,15 @@ export function HomeTab({
       </div>
 
       {/* --- TOKEN PROFILE WITH COVER PHOTO --- */}
-      {/* Only show for lore tokens OR when there's a cover photo */}
-      {!viewingStorageId && showTokenProfile && (characterData.tokenType === 'lore' || characterData.coverPhotoUrl) && (
+      {/* Only show for lore tokens - non-lore tokens use TwoColumnDashboard which has its own cover photo */}
+      {!viewingStorageId && showTokenProfile && characterData.tokenType === 'lore' && (
         <div style={{
           position: 'relative',
           overflow: 'hidden',
           borderRadius: '8px',
           marginBottom: '12px',
-          minHeight: characterData.tokenType === 'lore' ? '280px' : '100px', // Smaller for non-lore tokens (just cover photo)
-          paddingBottom: characterData.tokenType === 'lore' ? '24px' : '8px'
+          minHeight: '280px',
+          paddingBottom: '24px'
         }}>
           {/* Cover photo as background */}
           {showCoverPhoto && characterData.coverPhotoUrl && (
@@ -1201,50 +1339,30 @@ export function HomeTab({
             alignItems: 'center',
             justifyContent: 'center',
             padding: showCoverPhoto && characterData.coverPhotoUrl 
-              ? (characterData.tokenType === 'lore' ? '20px 16px 16px 16px' : '12px 16px')
+              ? '20px 16px 16px 16px'
               : '8px 0',
             minHeight: showCoverPhoto && characterData.coverPhotoUrl 
-              ? (characterData.tokenType === 'lore' ? '200px' : '80px') 
+              ? '200px'
               : undefined
           }}>
-            {/* Token Image with Heroic Inspiration border - only for lore tokens (non-lore tokens show image in HorizontalBanner) */}
-            {tokenImage && characterData.tokenType === 'lore' && (
+            {/* Token Image for lore tokens */}
+            {tokenImage && (
               <div 
-                onClick={canUserEdit && characterData.tokenType !== 'lore' ? toggleHeroicInspiration : undefined}
                 style={{
                   position: 'relative',
                   width: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
                   height: canEditToken() ? TOKEN_SIZE_EDITABLE : TOKEN_SIZE_READONLY,
-                  cursor: canUserEdit && characterData.tokenType !== 'lore' ? 'pointer' : 'default',
+                  cursor: 'default',
                 }}
-                title={canUserEdit && characterData.tokenType !== 'lore' ? 
-                  (characterStats?.heroicInspiration ? 'Click to remove Heroic Inspiration' : 'Click to grant Heroic Inspiration') : undefined}
               >
-                {/* Gold glow for Heroic Inspiration */}
-                {characterStats?.heroicInspiration && characterData.tokenType !== 'lore' && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    left: '-4px',
-                    right: '-4px',
-                    bottom: '-4px',
-                    borderRadius: '50%',
-                    background: 'radial-gradient(circle, rgba(255, 215, 0, 0.6) 0%, rgba(255, 215, 0, 0) 70%)',
-                    animation: 'pulse 2s infinite',
-                  }} />
-                )}
                 <div style={{
                   width: '100%',
                   height: '100%',
                   borderRadius: '50%',
                   overflow: 'hidden',
-                  border: characterStats?.heroicInspiration && characterData.tokenType !== 'lore'
-                    ? '4px solid gold'
-                    : '3px solid var(--accent-gold)',
+                  border: '3px solid var(--accent-gold)',
                   background: 'transparent',
-                  boxShadow: characterStats?.heroicInspiration && characterData.tokenType !== 'lore'
-                    ? '0 0 20px rgba(255, 215, 0, 0.6), 0 4px 12px rgba(0,0,0,0.5)'
-                    : (showCoverPhoto && characterData.coverPhotoUrl ? '0 4px 12px rgba(0,0,0,0.5)' : undefined),
+                  boxShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 4px 12px rgba(0,0,0,0.5)' : undefined,
                   transition: 'all 0.3s ease',
                 }}>
                   <img
@@ -1253,25 +1371,6 @@ export function HomeTab({
                     style={{width: '100%', height: '100%', objectFit: 'cover'}}
                   />
                 </div>
-                {/* Heroic Inspiration indicator */}
-                {characterStats?.heroicInspiration && characterData.tokenType !== 'lore' && (
-                  <div style={{
-                    position: 'absolute',
-                    bottom: '5px',
-                    right: '5px',
-                    background: 'gold',
-                    borderRadius: '50%',
-                    width: '24px',
-                    height: '24px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '14px',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                  }}>
-                    ✨
-                  </div>
-                )}
               </div>
             )}
             
@@ -1311,22 +1410,18 @@ export function HomeTab({
               </div>
             )}
 
-            {/* Token Type Badge - only show for non-player tokens */}
-            {characterData.tokenType && characterData.tokenType !== 'player' && (
-              <div style={{
-                fontSize: '9px',
-                color: characterData.tokenType === 'npc' ? '#ff9800' : 
-                       characterData.tokenType === 'party' ? '#4caf50' : 
-                       '#9c27b0',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                textAlign: 'center',
-                textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
-                marginTop: '4px',
-              }}>
-                {characterData.tokenType} Token
-              </div>
-            )}
+            {/* Token Type Badge - this section is for lore tokens only */}
+            <div style={{
+              fontSize: '9px',
+              color: '#9c27b0',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              textAlign: 'center',
+              textShadow: showCoverPhoto && characterData.coverPhotoUrl ? '0 1px 2px rgba(0,0,0,0.8)' : undefined,
+              marginTop: '4px',
+            }}>
+              Lore Token
+            </div>
 
           </div>
         </div>
@@ -1382,6 +1477,8 @@ export function HomeTab({
               loadDebugInfo={loadDebugInfo}
               canEditToken={canEditToken}
               hasClaimedToken={hasClaimedToken}
+              gmCustomizations={gmCustomizations}
+              overencumberedAmount={overencumberedAmount}
             />
             {/* Pinned Skills Bar - shown below combat stats */}
             <PinnedSkillsBar
@@ -1391,30 +1488,6 @@ export function HomeTab({
           </>
         );
       })()}
-
-      {/* === OVERENCUMBERED WARNING === */}
-      {!viewingStorageId && isOverencumbered && characterData.tokenType !== 'lore' && (
-        <div style={{
-          background: 'rgba(255, 87, 34, 0.15)',
-          borderRadius: '8px',
-          padding: '10px 12px',
-          border: '1px solid rgba(255, 87, 34, 0.4)',
-          marginBottom: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-        }}>
-          <span style={{ fontSize: '18px' }}>⚠️</span>
-          <div>
-            <div style={{ fontSize: '11px', fontWeight: 'bold', color: '#ff5722' }}>
-              OVERENCUMBERED (+{overencumberedAmount} units)
-            </div>
-            <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
-              {overencumberedText}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* === CONDITIONS & EXHAUSTION - Purple Collapsible section === */}
       {!viewingStorageId && characterData.tokenType !== 'lore' && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (

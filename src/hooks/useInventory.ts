@@ -97,8 +97,11 @@ export function useInventory() {
     characterStats = { ...characterStats };
     
     // 1. Ensure exhaustion.maxLevels exists and is at least 10
+    // Note: maxLevels of 0 is invalid (would mean no exhaustion levels), so we treat it as missing
     if (characterStats.exhaustion) {
-      if (!characterStats.exhaustion.maxLevels || characterStats.exhaustion.maxLevels < 10) {
+      if (characterStats.exhaustion.maxLevels === undefined || 
+          characterStats.exhaustion.maxLevels === null || 
+          characterStats.exhaustion.maxLevels < 10) {
         characterStats.exhaustion = {
           ...characterStats.exhaustion,
           maxLevels: 10,
@@ -142,7 +145,9 @@ export function useInventory() {
     }
     
     // 3. Ensure superiorityDice exists with default { current: 0, max: 0 }
-    // Only create if not present (don't force-create hitDice per requirements)
+    // Note: We intentionally use 0/0 instead of createDefaultSuperiorityDice() which returns 4/4
+    // because not all characters have superiority dice. 0/0 means the dice button won't show
+    // in the UI until the GM/player sets a max value > 0. This is per the issue requirements.
     if (!characterStats.superiorityDice) {
       characterStats.superiorityDice = { current: 0, max: 0 };
       migrated = true;

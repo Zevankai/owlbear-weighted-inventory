@@ -16,6 +16,11 @@ const getMaxBenefitSelections = (restType: RestType): number => {
 };
 
 // Settlement room costs in GP and exhaustion reduction
+// Progression: More expensive rooms provide greater exhaustion recovery
+// Free: Basic shelter, 1 level recovery
+// Basic (1 GP): Simple inn room, 2 levels
+// Quality (3 GP): Comfortable lodging, 3 levels
+// Luxury (6 GP): Premium accommodations, 5 levels (skips 4 as a significant upgrade)
 const SETTLEMENT_ROOMS: Record<SettlementRoomType, { name: string; costGp: number; exhaustionReduction: number; description: string }> = {
   free: { name: 'Free Room', costGp: 0, exhaustionReduction: 1, description: 'Basic accommodations, removes 1 level of exhaustion' },
   basic: { name: 'Basic Room', costGp: 1, exhaustionReduction: 2, description: 'Simple room with bed, removes 2 levels of exhaustion' },

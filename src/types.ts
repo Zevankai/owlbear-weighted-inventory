@@ -292,7 +292,7 @@ export interface CharacterSheet {
 
 // Race and Class types
 export type CharacterRace = 'Human' | 'Elf' | 'Dragonborn' | 'Orc' | 'Halfling' | 'Dwarf' | 'Tiefling' | 'Goblin' | 'Fairy' | 'Mixed' | string;
-export type CharacterClass = 'Fighter' | 'Ranger' | 'Bard' | 'Wizard' | 'Warlock' | 'Rogue' | 'Barbarian' | 'Druid' | 'Cleric' | 'Paladin' | 'Monk' | 'Multiclass' | string;
+export type CharacterClass = 'Fighter' | 'Ranger' | 'Bard' | 'Wizard' | 'Warlock' | 'Rogue' | 'Barbarian' | 'Druid' | 'Cleric' | 'Paladin' | 'Monk' | 'Sorcerer' | 'Multiclass' | string;
 
 // Condition types
 export type ConditionType = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 'grappled' | 'incapacitated' | 'invisible' | 'paralyzed' | 'petrified' | 'poisoned' | 'prone' | 'restrained' | 'stunned' | 'unconscious' | 'minorInjury' | 'seriousInjury' | 'criticalInjury' | 'infection';

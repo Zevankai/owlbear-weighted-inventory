@@ -1243,8 +1243,8 @@ const TwoColumnDashboard = ({
           title="Edit Superiority Dice"
           position={editPopup.position}
           fields={[
-            { label: 'Current', value: characterStats.superiorityDice.current, onChange: (val) => onUpdateSuperiorityDice({ current: Math.max(0, Math.min(characterStats.superiorityDice?.max || 4, val)) }), min: 0 },
-            { label: 'Max', value: characterStats.superiorityDice.max, onChange: (val) => onUpdateSuperiorityDice({ max: Math.max(0, val) }), min: 0 },
+            { label: 'Current', value: characterStats.superiorityDice?.current ?? 0, onChange: (val) => onUpdateSuperiorityDice({ current: Math.max(0, Math.min(characterStats.superiorityDice?.max ?? 4, val)) }), min: 0 },
+            { label: 'Max', value: characterStats.superiorityDice?.max ?? 4, onChange: (val) => onUpdateSuperiorityDice({ max: Math.max(0, val) }), min: 0 },
           ]}
         />
       )}

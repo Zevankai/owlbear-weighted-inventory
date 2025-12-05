@@ -400,8 +400,8 @@ const TwoColumnDashboard = ({
     setEditPopup({ type: null, position: { top: 0, left: 0 } });
     
     // Check if damage meets injury thresholds (only actual HP damage, not temp HP)
-    // Only show if onApplyInjury callback is provided and damage is >= 10
-    if (onApplyInjury && damage >= 10) {
+    // Only show if onApplyInjury callback is provided, damage is positive (not healing), and >= 10
+    if (onApplyInjury && damage > 0 && damage >= 10) {
       setInjuryPrompt({ isOpen: true, damageAmount: damage });
     }
   };

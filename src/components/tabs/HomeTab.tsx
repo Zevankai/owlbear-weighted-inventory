@@ -21,6 +21,10 @@ const TOKEN_SIZE_READONLY = '140px';
 // Description box width constants
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
 
+// Level bounds constants
+const MIN_LEVEL = 1;
+const MAX_LEVEL = 20;
+
 // Purple Collapsible Section Component
 interface PurpleCollapsibleSectionProps {
   title: string;
@@ -371,14 +375,14 @@ const TwoColumnDashboard = ({
   // Inline level editing handlers
   const handleLevelClick = () => {
     if (!canEdit) return;
-    const currentLevel = characterStats?.level || sheet.level || 1;
+    const currentLevel = characterStats?.level || sheet.level || MIN_LEVEL;
     setLevelEditValue(currentLevel.toString());
     setIsEditingLevel(true);
   };
 
   const handleLevelSave = () => {
     const parsed = parseInt(levelEditValue, 10);
-    const newLevel = isNaN(parsed) ? 1 : Math.max(1, Math.min(20, parsed));
+    const newLevel = isNaN(parsed) ? MIN_LEVEL : Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, parsed));
     onUpdateSheet({ level: newLevel });
     setIsEditingLevel(false);
   };
@@ -481,8 +485,8 @@ const TwoColumnDashboard = ({
               <input
                 type="number"
                 value={levelEditValue}
-                min={1}
-                max={20}
+                min={MIN_LEVEL}
+                max={MAX_LEVEL}
                 onChange={(e) => setLevelEditValue(e.target.value)}
                 onBlur={handleLevelSave}
                 onKeyDown={(e) => e.key === 'Enter' && handleLevelSave()}
@@ -517,7 +521,7 @@ const TwoColumnDashboard = ({
                 }}
                 title={canEdit ? 'Click to edit level' : undefined}
               >
-                {characterStats?.level || sheet.level || 1}
+                {characterStats?.level || sheet.level || MIN_LEVEL}
               </div>
             )}
           </div>

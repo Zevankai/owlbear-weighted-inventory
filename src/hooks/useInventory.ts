@@ -4,6 +4,7 @@ import type { Item } from '@owlbear-rodeo/sdk';
 import type { CharacterData, TokenType, GMCustomizations } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
 import type { Vector2 } from '@owlbear-rodeo/sdk';
+import { createDefaultExhaustionState, createDefaultRestHistory } from '../utils/characterStats';
 
 // Favorite entry type with token type for grouping
 export interface FavoriteEntry {
@@ -78,6 +79,85 @@ export function useInventory() {
     return data;
   };
 
+  /**
+   * Migrate character stats to ensure all new fields exist with proper defaults.
+   * This is idempotent - running it multiple times produces the same result.
+   * Returns the migrated data and a boolean indicating if changes were made.
+   */
+  const migrateCharacterStats = (data: CharacterData): { data: CharacterData; migrated: boolean } => {
+    let migrated = false;
+    let characterStats = data.characterStats;
+    
+    // Only migrate if characterStats exists (don't create it if not present)
+    if (!characterStats) {
+      return { data, migrated: false };
+    }
+    
+    // Create a working copy of characterStats
+    characterStats = { ...characterStats };
+    
+    // 1. Ensure exhaustion.maxLevels exists and is at least 10
+    if (characterStats.exhaustion) {
+      if (!characterStats.exhaustion.maxLevels || characterStats.exhaustion.maxLevels < 10) {
+        characterStats.exhaustion = {
+          ...characterStats.exhaustion,
+          maxLevels: 10,
+        };
+        migrated = true;
+        console.log('[Migration] Set exhaustion.maxLevels to 10');
+      }
+    } else {
+      // Create default exhaustion state
+      characterStats.exhaustion = createDefaultExhaustionState();
+      migrated = true;
+      console.log('[Migration] Created default exhaustion state');
+    }
+    
+    // 2. Ensure restHistory exists with new fields
+    if (characterStats.restHistory) {
+      let restHistoryMigrated = false;
+      const restHistory = { ...characterStats.restHistory };
+      
+      if (typeof restHistory.consecutiveWildernessRests !== 'number') {
+        restHistory.consecutiveWildernessRests = 0;
+        restHistoryMigrated = true;
+        console.log('[Migration] Set restHistory.consecutiveWildernessRests to 0');
+      }
+      
+      if (typeof restHistory.wildernessExhaustionBlocked !== 'boolean') {
+        restHistory.wildernessExhaustionBlocked = false;
+        restHistoryMigrated = true;
+        console.log('[Migration] Set restHistory.wildernessExhaustionBlocked to false');
+      }
+      
+      if (restHistoryMigrated) {
+        characterStats.restHistory = restHistory;
+        migrated = true;
+      }
+    } else {
+      // Create default rest history
+      characterStats.restHistory = createDefaultRestHistory();
+      migrated = true;
+      console.log('[Migration] Created default rest history');
+    }
+    
+    // 3. Ensure superiorityDice exists with default { current: 0, max: 0 }
+    // Only create if not present (don't force-create hitDice per requirements)
+    if (!characterStats.superiorityDice) {
+      characterStats.superiorityDice = { current: 0, max: 0 };
+      migrated = true;
+      console.log('[Migration] Created default superiorityDice { current: 0, max: 0 }');
+    }
+    
+    // Note: Do NOT force-create hitDice per requirements
+    
+    if (migrated) {
+      return { data: { ...data, characterStats }, migrated: true };
+    }
+    
+    return { data, migrated: false };
+  };
+
   // Check for and migrate legacy data
   const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
     const name = token.name || 'Unnamed';
@@ -136,9 +216,30 @@ export function useInventory() {
     const finalData = data || DEFAULT_CHARACTER_DATA;
     
     // Migration: ensure tokenType exists (default to 'player' for existing tokens)
-    const migratedData = ensureTokenType(finalData);
-    if (migratedData !== finalData) {
+    let migratedData = ensureTokenType(finalData);
+    let needsPersist = migratedData !== finalData;
+    if (needsPersist) {
       console.log('[Migration] Added default tokenType "player" to token data');
+    }
+    
+    // Migration: ensure characterStats has all required fields
+    const { data: statsMigratedData, migrated: statsMigrated } = migrateCharacterStats(migratedData);
+    if (statsMigrated) {
+      migratedData = statsMigratedData;
+      needsPersist = true;
+    }
+    
+    // Persist migration changes to token metadata if any changes were made
+    if (needsPersist) {
+      console.log('[Migration] Persisting migration changes to token metadata');
+      try {
+        await OBR.scene.items.updateItems([token.id], (items) => {
+          items[0].metadata[TOKEN_DATA_KEY] = migratedData;
+        });
+        console.log('[Migration] Persisted successfully');
+      } catch (err) {
+        console.error('[Migration] Failed to persist changes:', err);
+      }
     }
     
     setCharacterData(migratedData);
@@ -226,8 +327,10 @@ export function useInventory() {
       if (updatedToken) {
         const newData = updatedToken.metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
         if (newData) {
-          // Migration: ensure tokenType exists for synced data
-          setCharacterData(ensureTokenType(newData));
+          // Apply migrations for synced data (but don't persist - the owning player will handle that)
+          const withTokenType = ensureTokenType(newData);
+          const { data: statsMigratedData } = migrateCharacterStats(withTokenType);
+          setCharacterData(statsMigratedData);
         }
       }
     });

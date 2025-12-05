@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterData, Theme, TokenType, CharacterRace, CharacterClass, CharacterStats, GMCustomizations } from '../types';
-import { createDefaultCharacterStats } from '../utils/characterStats';
+import { createDefaultCharacterStats, createDefaultSuperiorityDice } from '../utils/characterStats';
 
 interface DebugInfo {
   roomKeys: string[];
@@ -592,7 +592,7 @@ export function SettingsPanel({
                     onChange={(e) => {
                       if (e.target.checked) {
                         updateCharacterStats({
-                          superiorityDice: { current: 4, max: 4 }
+                          superiorityDice: createDefaultSuperiorityDice()
                         });
                       } else {
                         updateCharacterStats({

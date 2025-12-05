@@ -7,6 +7,7 @@ const MAX_PINNED_SKILLS = 5;
 interface PinnedSkillsBarProps {
   sheet: CharacterSheet;
   onSkillClick?: () => void;
+  enlarged?: boolean;
 }
 
 // Get proficiency icon
@@ -23,6 +24,7 @@ const getProficiencyIcon = (level: SkillProficiencyLevel): string => {
 export const PinnedSkillsBar = ({
   sheet,
   onSkillClick,
+  enlarged = false,
 }: PinnedSkillsBarProps) => {
   const pinnedSkills = sheet.pinnedSkills || [];
   
@@ -35,20 +37,30 @@ export const PinnedSkillsBar = ({
   // Calculate proficiency bonus
   const profBonus = sheet.proficiencyBonus || calculateProficiencyBonus(sheet.level || 1);
 
+  // Size scaling based on enlarged prop
+  const iconSize = enlarged ? '12px' : '8px';
+  const abbrevSize = enlarged ? '11px' : '8px';
+  const bonusSize = enlarged ? '13px' : '9px';
+  const pinIconSize = enlarged ? '12px' : '9px';
+  const padding = enlarged ? '6px 10px' : '4px 8px';
+  const itemPadding = enlarged ? '4px 8px' : '2px 4px';
+  const gap = enlarged ? '6px' : '4px';
+  const itemGap = enlarged ? '4px' : '2px';
+
   return (
     <div style={{ 
       display: 'flex', 
       alignItems: 'center',
-      padding: '4px 8px',
+      padding: padding,
       background: 'rgba(0,0,0,0.2)',
       borderRadius: '6px',
       marginBottom: '8px',
-      gap: '4px',
+      gap: gap,
       overflow: 'hidden',
       flexWrap: 'nowrap',
     }}>
       {/* Pinned Skills - single line, no wrapping */}
-      <span style={{ fontSize: '9px', color: 'var(--text-muted)', flexShrink: 0 }}>📌</span>
+      <span style={{ fontSize: pinIconSize, color: 'var(--text-muted)', flexShrink: 0 }}>📌</span>
       {pinnedSkills.slice(0, MAX_PINNED_SKILLS).map((skillKey) => {
         const skillDef = SKILL_DEFINITIONS.find(s => s.key === skillKey);
         if (!skillDef) return null;
@@ -76,22 +88,22 @@ export const PinnedSkillsBar = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '2px',
-              padding: '2px 4px',
+              gap: itemGap,
+              padding: itemPadding,
               background: 'rgba(240, 225, 48, 0.08)',
               border: '1px solid rgba(240, 225, 48, 0.25)',
-              borderRadius: '3px',
+              borderRadius: enlarged ? '4px' : '3px',
               cursor: 'pointer',
               flexShrink: 0,
             }}
           >
-            <span style={{ fontSize: '8px', color: 'var(--accent-gold)' }}>
+            <span style={{ fontSize: iconSize, color: 'var(--accent-gold)' }}>
               {getProficiencyIcon(migratedSkill.proficiencyLevel)}
             </span>
-            <span style={{ fontSize: '8px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+            <span style={{ fontSize: abbrevSize, fontWeight: 'bold', color: 'var(--text-main)' }}>
               {skillDef.abbrev}
             </span>
-            <span style={{ fontSize: '9px', fontWeight: 'bold', color: 'var(--accent-gold)' }}>
+            <span style={{ fontSize: bonusSize, fontWeight: 'bold', color: 'var(--accent-gold)' }}>
               {bonusDisplay}
             </span>
           </div>

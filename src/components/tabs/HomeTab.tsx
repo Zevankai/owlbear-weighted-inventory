@@ -8,6 +8,7 @@ import { PinnedSkillsBar } from '../PinnedSkillsBar';
 import { ConditionsPanel } from '../ConditionsPanel';
 import { ExhaustionMeter } from '../ExhaustionMeter';
 import { RestModal } from '../RestModal';
+import type { RestEffectsToApply } from '../RestModal';
 import { EditPopup } from '../EditPopup';
 import { InjuryPromptModal } from '../InjuryPromptModal';
 import { createDefaultCharacterSheet, calculateModifier, ABILITY_ABBREV } from '../../utils/characterSheet';
@@ -1441,34 +1442,129 @@ export function HomeTab({
     });
   };
   
-  // Handle rest completion
-  const handleRest = (restType: RestType, selectedOptionIds: string[]) => {
+  // Handle rest completion with effects
+  const handleRest = (restType: RestType, selectedOptionIds: string[], effects: RestEffectsToApply) => {
     const currentStats = characterStats || defaultStats;
+    const sheet = characterData.characterSheet || createDefaultCharacterSheet();
     const now = Date.now();
     
+    // Prepare updates for character stats
+    const statsUpdates: Partial<CharacterStats> = {};
+    
+    // Apply heroic inspiration if granted by effect
+    if (effects.heroicInspiration) {
+      statsUpdates.heroicInspiration = true;
+    }
+    
+    // Apply exhaustion reduction (long rest auto-reduces by 1)
+    if (effects.reduceExhaustion && effects.reduceExhaustion > 0) {
+      const currentExhaustionLevel = currentStats.exhaustion?.currentLevel || 0;
+      const newExhaustionLevel = Math.max(0, currentExhaustionLevel - effects.reduceExhaustion);
+      statsUpdates.exhaustion = {
+        ...currentStats.exhaustion,
+        currentLevel: newExhaustionLevel,
+      };
+    }
+    
+    // Apply injury healing
+    if (effects.healInjuryLevels && effects.healInjuryLevels > 0) {
+      const conditions = { ...currentStats.conditions };
+      const injuryData = { ...(currentStats.injuryData || {}) };
+      let healingRemaining = effects.healInjuryLevels;
+      
+      // Heal injuries from most severe to least (Critical -> Serious -> Minor)
+      if (healingRemaining > 0 && conditions.criticalInjury) {
+        // Critical -> Serious
+        conditions.criticalInjury = false;
+        conditions.seriousInjury = true;
+        // Transfer injury data if present
+        if (injuryData.criticalInjury) {
+          injuryData.seriousInjury = injuryData.criticalInjury;
+          delete injuryData.criticalInjury;
+        }
+        healingRemaining--;
+      }
+      if (healingRemaining > 0 && conditions.seriousInjury) {
+        // Serious -> Minor
+        conditions.seriousInjury = false;
+        conditions.minorInjury = true;
+        // Transfer injury data if present
+        if (injuryData.seriousInjury) {
+          injuryData.minorInjury = injuryData.seriousInjury;
+          delete injuryData.seriousInjury;
+        }
+        healingRemaining--;
+      }
+      if (healingRemaining > 0 && conditions.minorInjury) {
+        // Minor -> Healed (removed)
+        conditions.minorInjury = false;
+        delete injuryData.minorInjury;
+        healingRemaining--;
+      }
+      
+      statsUpdates.conditions = conditions;
+      statsUpdates.injuryData = Object.keys(injuryData).length > 0 ? injuryData : undefined;
+    }
+    
+    // Update rest history
     if (restType === 'short') {
-      updateCharacterStats({
-        restHistory: {
-          ...currentStats.restHistory,
-          lastShortRest: {
-            timestamp: now,
-            chosenOptionIds: selectedOptionIds,
+      statsUpdates.restHistory = {
+        ...currentStats.restHistory,
+        lastShortRest: {
+          timestamp: now,
+          chosenOptionIds: selectedOptionIds,
+        }
+      };
+    } else {
+      statsUpdates.restHistory = {
+        ...currentStats.restHistory,
+        lastLongRest: {
+          timestamp: now,
+          chosenOptionIds: selectedOptionIds,
+        },
+        heroicInspirationGainedToday: effects.heroicInspiration || false,
+      };
+    }
+    
+    // Apply character stats updates
+    updateCharacterStats(statsUpdates);
+    
+    // Apply temp HP if granted by effect (update character sheet)
+    if (effects.tempHp && effects.tempHp > 0) {
+      const newTempHp = Math.max(sheet.hitPoints.temp, effects.tempHp);
+      updateData({
+        characterSheet: {
+          ...sheet,
+          hitPoints: {
+            ...sheet.hitPoints,
+            temp: newTempHp,
+          },
+        },
+      });
+    }
+    
+    // Deduct rations from inventory if required
+    if (effects.rationsToDeduct && effects.rationsToDeduct > 0) {
+      let rationsToDeduct = effects.rationsToDeduct;
+      const updatedInventory = [...characterData.inventory];
+      
+      // Find ration items and deduct from them
+      for (let i = 0; i < updatedInventory.length && rationsToDeduct > 0; i++) {
+        const item = updatedInventory[i];
+        if (item.name.toLowerCase().includes('ration') || item.name.toLowerCase().includes('food')) {
+          const deductAmount = Math.min(item.qty, rationsToDeduct);
+          updatedInventory[i] = { ...item, qty: item.qty - deductAmount };
+          rationsToDeduct -= deductAmount;
+          
+          // Remove item if quantity reaches 0
+          if (updatedInventory[i].qty <= 0) {
+            updatedInventory.splice(i, 1);
+            i--; // Adjust index after removal
           }
         }
-      });
-    } else {
-      // Long rest: also potentially grant heroic inspiration
-      updateCharacterStats({
-        heroicInspiration: true,
-        restHistory: {
-          ...currentStats.restHistory,
-          lastLongRest: {
-            timestamp: now,
-            chosenOptionIds: selectedOptionIds,
-          },
-          heroicInspirationGainedToday: true,
-        }
-      });
+      }
+      
+      updateData({ inventory: updatedInventory });
     }
   };
   
@@ -1775,6 +1871,8 @@ export function HomeTab({
         gmRestRulesMessage={gmCustomizations?.restRulesMessage}
         customRestOptions={gmCustomizations?.customRestOptions}
         disabledRestOptionIds={gmCustomizations?.disabledRestOptions}
+        inventory={characterData.inventory}
+        tokenId={tokenId || 'default'}
       />
 
       {/* === LORE TOKEN SPECIFIC UI === */}

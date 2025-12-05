@@ -812,7 +812,7 @@ const TwoColumnDashboard = ({
                   justifyContent: 'center',
                   fontSize: '9px',
                   fontWeight: 'bold',
-                  color: '#f0e130',
+                  color: 'var(--accent-gold)',
                   boxShadow: 'inset 0 -2px 4px rgba(0,0,0,0.2), 0 1px 2px rgba(240, 225, 48, 0.3)',
                 }}
                 title="Trade with nearby tokens"

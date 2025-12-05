@@ -11,7 +11,7 @@ import { RestModal } from '../RestModal';
 import { EditPopup } from '../EditPopup';
 import { createDefaultCharacterSheet, calculateModifier, ABILITY_ABBREV } from '../../utils/characterSheet';
 import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats, createDefaultDeathSaves } from '../../utils/characterStats';
-import { createDefaultConditions, CONDITION_LABELS } from '../../data/conditions';
+import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } from '../../data/conditions';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -356,10 +356,10 @@ const TwoColumnDashboard = ({
   const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
   const overencumberedText = gmCustomizations?.overencumberedText || '-3 to all DEX & STR rolls, -10 movement per 10 units over';
   
-  // Get active conditions
+  // Get active conditions (excluding injuries and infections which have their own bar)
   const activeConditions = characterStats?.conditions 
     ? Object.entries(characterStats.conditions)
-        .filter(([, isActive]) => isActive)
+        .filter(([key, isActive]) => isActive && !INJURY_CONDITION_TYPES.includes(key as ConditionType))
         .map(([key]) => CONDITION_LABELS[key as ConditionType] || key)
     : [];
   
@@ -628,23 +628,6 @@ const TwoColumnDashboard = ({
             </div>
           )}
 
-          {/* Death Save Skulls */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            background: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '4px',
-            padding: '3px',
-          }}>
-            {onUpdateDeathSaves && (
-              <DeathSavesDisplay
-                deathSaves={deathSaves}
-                onUpdate={onUpdateDeathSaves}
-                canEdit={canEdit}
-              />
-            )}
-          </div>
-
           {/* HP Display Box - Green Background */}
           <div
             ref={hpRef}
@@ -893,6 +876,48 @@ const TwoColumnDashboard = ({
               >
                 ⚙️
               </button>
+            )}
+
+            {/* Separator */}
+            <div style={{
+              width: '1px',
+              height: '16px',
+              background: 'var(--glass-border)',
+              margin: '0 2px',
+            }} />
+
+            {/* Speed Display */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '2px',
+              padding: '2px 4px',
+              background: 'rgba(0, 188, 212, 0.1)',
+              border: '1px solid rgba(0, 188, 212, 0.3)',
+              borderRadius: '3px',
+              fontSize: '9px',
+            }} title="Movement Speed (ft)">
+              <span style={{ color: '#00bcd4' }}>🏃</span>
+              <span style={{ color: '#00bcd4', fontWeight: 'bold' }}>{sheet.speed}ft</span>
+            </div>
+
+            {/* Death Save Skulls */}
+            {onUpdateDeathSaves && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1px',
+                padding: '1px 3px',
+                background: 'rgba(139, 0, 0, 0.15)',
+                border: '1px solid rgba(139, 0, 0, 0.3)',
+                borderRadius: '3px',
+              }} title="Death Save Failures">
+                <DeathSavesDisplay
+                  deathSaves={deathSaves}
+                  onUpdate={onUpdateDeathSaves}
+                  canEdit={canEdit}
+                />
+              </div>
             )}
           </div>
 
@@ -1795,9 +1820,9 @@ export function HomeTab({
         </>
       )}
 
-      {/* Inventory & Coins - collapsible section for main view */}
+      {/* Pack Slots - collapsible section for main view */}
       {!viewingStorageId && canUserEdit && (
-            <PurpleCollapsibleSection title="Inventory & Coins" defaultExpanded={false}>
+            <PurpleCollapsibleSection title="Pack Slots" defaultExpanded={false}>
               <div className="totals-grid">
                 <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
                   <div className="stat-label">WEAPONS</div>

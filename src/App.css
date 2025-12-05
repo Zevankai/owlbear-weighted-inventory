@@ -115,7 +115,7 @@ body {
 /* --- Content Area --- */
 .content {
   flex: 1;
-  padding: 8px;
+  padding: 6px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -135,14 +135,14 @@ body {
 
 /* Section scrollbars for content sections */
 .content > .section::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 .content > .section::-webkit-scrollbar-track {
   background: transparent;
 }
 .content > .section::-webkit-scrollbar-thumb {
   background: rgba(240, 225, 48, 0.3);
-  border-radius: 4px;
+  border-radius: 3px;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 .content > .section::-webkit-scrollbar-thumb:hover {
@@ -155,11 +155,11 @@ body {
   background: var(--bg-panel);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 6px;
+  padding: 8px;
   border: 1px solid var(--glass-border);
   box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.2),
+    0 6px 24px rgba(0, 0, 0, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   position: relative;
 }
@@ -176,12 +176,12 @@ body {
 
 h2 {
   margin-top: 0;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   border-bottom: 1px solid var(--border);
-  padding-bottom: 6px;
-  font-size: 13px;
+  padding-bottom: 4px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1px;
   color: var(--accent-gold);
   text-shadow: 0 0 10px rgba(240, 225, 48, 0.3);
 }
@@ -189,51 +189,51 @@ h2 {
 /* --- Dashboard Grids (Home Tab) --- */
 .totals-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+  gap: 6px;
   text-align: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .stat-box {
   background: rgba(0, 0, 0, 0.25);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  padding: 8px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 5px;
   border: 1px solid var(--glass-border);
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
 }
 
 .stat-box:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
   border-color: var(--border-bright);
 }
 
 .stat-label {
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-muted);
   text-transform: uppercase;
-  margin-bottom: 4px;
-  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+  letter-spacing: 0.3px;
 }
 
 .stat-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: bold;
   color: var(--text-main);
-  text-shadow: 0 2px 8px rgba(255, 255, 255, 0.1);
+  text-shadow: 0 2px 6px rgba(255, 255, 255, 0.1);
 }
 
 .stat-value.warning {
   color: var(--accent-gold);
-  text-shadow: 0 0 8px rgba(240, 225, 48, 0.4);
+  text-shadow: 0 0 6px rgba(240, 225, 48, 0.4);
 }
 .stat-value.danger {
   color: var(--danger);
-  text-shadow: 0 0 8px rgba(255, 77, 77, 0.4);
+  text-shadow: 0 0 6px rgba(255, 77, 77, 0.4);
 }
 
 /* --- Form Elements & Inputs --- */
@@ -876,17 +876,17 @@ button.action-btn:hover {
 /* --- Dashboard Banner Styles --- */
 .dashboard-banner {
   position: relative;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .dashboard-stats-panel {
   display: flex;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 8px;
   background: rgba(0, 0, 0, 0.25);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--glass-border);
   align-items: stretch;
 }
@@ -895,12 +895,12 @@ button.action-btn:hover {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 4px 8px;
+  padding: 3px 6px;
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 6px;
+  border-radius: 5px;
   border: 1px solid var(--glass-border);
   cursor: pointer;
-  min-width: 40px;
+  min-width: 36px;
   transition: all 0.2s ease;
 }
 
@@ -913,23 +913,23 @@ button.action-btn:hover {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 16px;
-  padding: 8px 12px;
+  gap: 10px;
+  padding: 6px 8px;
   background: rgba(0, 0, 0, 0.2);
-  border-radius: 6px;
+  border-radius: 5px;
   border: 1px solid var(--glass-border);
 }
 
 .dashboard-action-btn {
   background: rgba(240, 225, 48, 0.1);
   border: 1px solid rgba(240, 225, 48, 0.3);
-  border-radius: 6px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: 18px;
-  padding: 6px 12px;
+  font-size: 16px;
+  padding: 4px 10px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
   transition: all 0.2s ease;
 }
 

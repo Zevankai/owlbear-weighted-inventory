@@ -14,6 +14,7 @@ import { InjuryPromptModal } from '../InjuryPromptModal';
 import { createDefaultCharacterSheet, calculateModifier, ABILITY_ABBREV } from '../../utils/characterSheet';
 import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats, createDefaultDeathSaves } from '../../utils/characterStats';
 import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } from '../../data/conditions';
+import { deductRationsFromInventory } from '../../utils/inventory';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -1545,25 +1546,7 @@ export function HomeTab({
     
     // Deduct rations from inventory if required
     if (effects.rationsToDeduct && effects.rationsToDeduct > 0) {
-      let rationsToDeduct = effects.rationsToDeduct;
-      const updatedInventory = [...characterData.inventory];
-      
-      // Find ration items and deduct from them
-      for (let i = 0; i < updatedInventory.length && rationsToDeduct > 0; i++) {
-        const item = updatedInventory[i];
-        if (item.name.toLowerCase().includes('ration') || item.name.toLowerCase().includes('food')) {
-          const deductAmount = Math.min(item.qty, rationsToDeduct);
-          updatedInventory[i] = { ...item, qty: item.qty - deductAmount };
-          rationsToDeduct -= deductAmount;
-          
-          // Remove item if quantity reaches 0
-          if (updatedInventory[i].qty <= 0) {
-            updatedInventory.splice(i, 1);
-            i--; // Adjust index after removal
-          }
-        }
-      }
-      
+      const updatedInventory = deductRationsFromInventory(characterData.inventory, effects.rationsToDeduct);
       updateData({ inventory: updatedInventory });
     }
   };

@@ -350,7 +350,7 @@ export type RestType = 'short' | 'long';
 // Effect types for rest options - used for auto-apply functionality
 export interface RestOptionEffect {
   type: 'tempHp' | 'heroicInspiration' | 'healInjury';
-  value?: number;              // For tempHp: the amount of temp HP to add
+  value?: number;              // For tempHp: amount of temp HP to add; For healInjury: levels to heal (default 1)
   requiresRations?: number;    // Number of rations required per party member
 }
 

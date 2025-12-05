@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect } from '../types';
 import { getStandardRestOptions, getNonStandardRestOptions, getRestOptionById } from '../data/restOptions';
+import { getTotalRations } from '../utils/inventory';
 
 // LocalStorage keys for persisting last rest choices
 const LAST_SHORT_REST_CHOICES_KEY = 'owlbear-weighted-inventory-last-short-rest-choices';
@@ -11,22 +12,6 @@ const LAST_LONG_REST_CHOICES_KEY = 'owlbear-weighted-inventory-last-long-rest-ch
 // Long rest: 2 benefits total
 const getMaxBenefitSelections = (restType: RestType): number => {
   return restType === 'short' ? 1 : 2;
-};
-
-// Find ration items in inventory
-const findRationsInInventory = (inventory: Item[]): { item: Item; index: number }[] => {
-  return inventory
-    .map((item, index) => ({ item, index }))
-    .filter(({ item }) => 
-      item.name.toLowerCase().includes('ration') ||
-      item.name.toLowerCase().includes('food')
-    );
-};
-
-// Calculate total rations available
-const getTotalRations = (inventory: Item[]): number => {
-  const rationItems = findRationsInInventory(inventory);
-  return rationItems.reduce((total, { item }) => total + item.qty, 0);
 };
 
 // Rest result effects to apply
@@ -247,7 +232,8 @@ export const RestModal: React.FC<RestModalProps> = ({
           effects.heroicInspiration = true;
           break;
         case 'healInjury':
-          effects.healInjuryLevels = (effects.healInjuryLevels || 0) + 1;
+          // Use value if specified (e.g., long rest heals 2), default to 1
+          effects.healInjuryLevels = (effects.healInjuryLevels || 0) + (effect.value || 1);
           break;
       }
       
@@ -755,6 +741,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
         const isDisabled = isAtMax && !isSelected;
         const { required: rationRequired, hasEnough: hasEnoughRations } = checkRationRequirement(option);
         const hasRationIssue = rationRequired > 0 && !hasEnoughRations && !isSelected;
+        const isOptionUnavailable = isDisabled || hasRationIssue;
         
         return (
           <div key={option.id}>
@@ -767,10 +754,10 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                 background: isSelected ? `${color}15` : hasRationIssue ? 'rgba(255, 107, 107, 0.1)' : 'rgba(0, 0, 0, 0.2)',
                 border: `1px solid ${isSelected ? color : hasRationIssue ? 'rgba(255, 107, 107, 0.3)' : 'transparent'}`,
                 borderRadius: isExpanded ? '6px 6px 0 0' : '6px',
-                cursor: (isDisabled || hasRationIssue) ? 'not-allowed' : 'pointer',
-                opacity: (isDisabled || hasRationIssue) ? 0.6 : 1,
+                cursor: isOptionUnavailable ? 'not-allowed' : 'pointer',
+                opacity: isOptionUnavailable ? 0.6 : 1,
               }}
-              onClick={() => !isDisabled && onToggle(option.id)}
+              onClick={() => !isOptionUnavailable && onToggle(option.id)}
             >
               {/* Checkbox */}
               <div style={{

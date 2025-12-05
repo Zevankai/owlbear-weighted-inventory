@@ -386,7 +386,7 @@ export const LONG_REST_STANDARD_OPTIONS: RestOption[] = [
     description: 'DC 10 Medicine Check: Remove 2 levels of injury.',
     category: 'standard',
     restType: 'long',
-    effect: { type: 'healInjury' },
+    effect: { type: 'healInjury', value: 2 },
   },
   {
     id: 'long-standard-quick-practice',

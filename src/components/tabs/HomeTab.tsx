@@ -294,7 +294,6 @@ interface TwoColumnDashboardProps {
   canEditToken: () => boolean;
   hasClaimedToken?: boolean;
   gmCustomizations?: GMCustomizations;
-  overencumberedAmount: number;
 }
 
 const TwoColumnDashboard = ({
@@ -319,8 +318,7 @@ const TwoColumnDashboard = ({
   loadDebugInfo,
   canEditToken,
   hasClaimedToken,
-  gmCustomizations,
-  overencumberedAmount
+  gmCustomizations
 }: TwoColumnDashboardProps) => {
   const [editPopup, setEditPopup] = useState<{
     type: 'hp' | 'ac' | 'init' | 'level' | 'passive' | null;
@@ -337,6 +335,7 @@ const TwoColumnDashboard = ({
   const weightRef = useRef<HTMLDivElement>(null);
   
   const isOverencumbered = stats.totalWeight > stats.maxCapacity;
+  const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
   const overencumberedText = gmCustomizations?.overencumberedText || '-3 to all DEX & STR rolls, -10 movement per 10 units over';
   
   // Get active conditions
@@ -800,6 +799,7 @@ const TwoColumnDashboard = ({
             {showTradeButton && onOpenTradePartnerModal && (
               <button
                 onClick={onOpenTradePartnerModal}
+                aria-label="Trade with nearby tokens"
                 style={{
                   background: 'rgba(240, 225, 48, 0.15)',
                   border: '1px solid rgba(240, 225, 48, 0.4)',
@@ -1258,10 +1258,6 @@ export function HomeTab({
     });
   };
   
-  // Check if character is overencumbered
-  const isOverencumbered = stats.totalWeight > stats.maxCapacity;
-  const overencumberedAmount = isOverencumbered ? stats.totalWeight - stats.maxCapacity : 0;
-  
   // Helper to check if trade button should be shown
   const showTradeButton = !activeTrade && tokenId && 
     (characterData.claimedBy || characterData.tokenType === 'party') && 
@@ -1478,7 +1474,6 @@ export function HomeTab({
               canEditToken={canEditToken}
               hasClaimedToken={hasClaimedToken}
               gmCustomizations={gmCustomizations}
-              overencumberedAmount={overencumberedAmount}
             />
             {/* Pinned Skills Bar - shown below combat stats */}
             <PinnedSkillsBar

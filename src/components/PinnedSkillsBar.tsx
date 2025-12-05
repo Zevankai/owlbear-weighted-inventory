@@ -1,6 +1,9 @@
 import type { CharacterSheet, SkillProficiencyLevel } from '../types';
 import { calculateModifier, getProficiencyContribution, migrateSkillProficiency, calculateProficiencyBonus, SKILL_DEFINITIONS, ABILITY_ABBREV } from '../utils/characterSheet';
 
+// Maximum number of pinned skills to display in a single line
+const MAX_PINNED_SKILLS = 5;
+
 interface PinnedSkillsBarProps {
   sheet: CharacterSheet;
   onSkillClick?: () => void;
@@ -46,7 +49,7 @@ export const PinnedSkillsBar = ({
     }}>
       {/* Pinned Skills - single line, no wrapping */}
       <span style={{ fontSize: '9px', color: 'var(--text-muted)', flexShrink: 0 }}>📌</span>
-      {pinnedSkills.slice(0, 5).map((skillKey) => {
+      {pinnedSkills.slice(0, MAX_PINNED_SKILLS).map((skillKey) => {
         const skillDef = SKILL_DEFINITIONS.find(s => s.key === skillKey);
         if (!skillDef) return null;
 

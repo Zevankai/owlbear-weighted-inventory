@@ -14,7 +14,7 @@ import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCh
 import { createDefaultConditions, CONDITION_LABELS } from '../../data/conditions';
 
 // Token image sizing constants
-const TOKEN_SIZE_SIDEBAR = '70px'; // Circular token in sidebar - reduced for compact layout
+const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
 const TOKEN_SIZE_EDITABLE = '140px';
 const TOKEN_SIZE_READONLY = '140px';
 
@@ -479,7 +479,7 @@ const TwoColumnDashboard = ({
       }}>
         {/* LEFT SIDEBAR COLUMN */}
         <div style={{
-          width: '95px',
+          width: '100px',
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
@@ -680,7 +680,7 @@ const TwoColumnDashboard = ({
           {/* Status Boxes Row */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(85px, 1fr))',
             gap: '4px',
           }}>
             {/* Defenses Box - Green */}

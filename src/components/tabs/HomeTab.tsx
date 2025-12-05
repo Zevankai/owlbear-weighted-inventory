@@ -14,9 +14,9 @@ import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCh
 import { createDefaultConditions, CONDITION_LABELS } from '../../data/conditions';
 
 // Token image sizing constants
-const TOKEN_SIZE_SIDEBAR = '90px'; // Circular token in sidebar
-const TOKEN_SIZE_EDITABLE = '160px';
-const TOKEN_SIZE_READONLY = '160px';
+const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
+const TOKEN_SIZE_EDITABLE = '140px';
+const TOKEN_SIZE_READONLY = '140px';
 
 // Description box width constants
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
@@ -37,7 +37,7 @@ const PurpleCollapsibleSection = ({
   const [isHovered, setIsHovered] = useState(false);
 
   return (
-    <div style={{ marginTop: '12px' }}>
+    <div style={{ marginTop: '8px' }}>
       <div
         onClick={() => setIsExpanded(!isExpanded)}
         onMouseEnter={() => setIsHovered(true)}
@@ -57,29 +57,29 @@ const PurpleCollapsibleSection = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           cursor: 'pointer',
-          padding: '10px 14px',
+          padding: '8px 10px',
           background: isHovered 
             ? 'linear-gradient(135deg, rgba(138, 43, 226, 0.35), rgba(75, 0, 130, 0.35))' 
             : 'linear-gradient(135deg, rgba(138, 43, 226, 0.25), rgba(75, 0, 130, 0.25))',
-          borderRadius: '8px',
+          borderRadius: '6px',
           border: `1px solid ${isHovered ? 'rgba(186, 85, 211, 0.5)' : 'rgba(138, 43, 226, 0.3)'}`,
-          marginBottom: isExpanded ? '12px' : '0',
+          marginBottom: isExpanded ? '8px' : '0',
           transition: 'all 0.2s ease',
         }}
       >
         <span style={{
-          fontSize: '12px',
+          fontSize: '11px',
           fontWeight: 'bold',
           color: '#fff',
           textTransform: 'uppercase',
-          letterSpacing: '1px',
+          letterSpacing: '0.5px',
         }}>
           {title}
         </span>
         <span 
           style={{ 
             color: '#e0b0ff', 
-            fontSize: '12px',
+            fontSize: '11px',
             transition: 'transform 0.2s ease',
             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
           }}
@@ -91,8 +91,8 @@ const PurpleCollapsibleSection = ({
       {isExpanded && (
         <div style={{
           background: 'rgba(75, 0, 130, 0.1)',
-          borderRadius: '8px',
-          padding: '12px',
+          borderRadius: '6px',
+          padding: '10px',
           border: '1px solid rgba(138, 43, 226, 0.2)',
         }}>
           {children}
@@ -134,21 +134,21 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      gap: '4px',
+      gap: '2px',
     }}>
       <span style={{
-        fontSize: '9px',
+        fontSize: '8px',
         color: 'var(--text-muted)',
         textTransform: 'uppercase',
-        letterSpacing: '0.5px',
+        letterSpacing: '0.3px',
       }}>
         {ABILITY_ABBREV[ability]}
       </span>
       <div
         onClick={handleClick}
         style={{
-          width: '48px',
-          height: '48px',
+          width: '42px',
+          height: '42px',
           borderRadius: '50%',
           background: 'linear-gradient(135deg, rgba(0, 188, 212, 0.3), rgba(0, 150, 170, 0.3))',
           border: '2px solid rgba(0, 188, 212, 0.6)',
@@ -158,7 +158,7 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
           justifyContent: 'center',
           cursor: canEdit ? 'pointer' : 'default',
           transition: 'all 0.2s ease',
-          boxShadow: '0 2px 8px rgba(0, 188, 212, 0.2)',
+          boxShadow: '0 2px 6px rgba(0, 188, 212, 0.2)',
         }}
         title={canEdit ? 'Click to edit' : undefined}
       >
@@ -173,11 +173,11 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
             onKeyDown={(e) => e.key === 'Enter' && handleSave()}
             autoFocus
             style={{
-              width: '32px',
+              width: '28px',
               background: 'transparent',
               border: 'none',
               color: '#00bcd4',
-              fontSize: '14px',
+              fontSize: '12px',
               fontWeight: 'bold',
               textAlign: 'center',
               outline: 'none',
@@ -186,7 +186,7 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
         ) : (
           <>
             <span style={{
-              fontSize: '16px',
+              fontSize: '14px',
               fontWeight: 'bold',
               color: '#00bcd4',
               lineHeight: 1,
@@ -194,7 +194,7 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
               {modifier >= 0 ? `+${modifier}` : modifier}
             </span>
             <span style={{
-              fontSize: '10px',
+              fontSize: '9px',
               color: 'rgba(0, 188, 212, 0.8)',
             }}>
               {score}
@@ -366,20 +366,20 @@ const TwoColumnDashboard = ({
     <div style={{
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
-      marginBottom: '8px',
+      gap: '6px',
+      marginBottom: '6px',
     }}>
       {/* === HEADER AREA === */}
       <div style={{
         position: 'relative',
-        padding: '16px',
-        borderRadius: '8px',
+        padding: '10px 12px',
+        borderRadius: '6px',
         overflow: 'hidden',
         background: characterData.coverPhotoUrl 
           ? 'transparent' 
           : 'linear-gradient(135deg, rgba(30, 30, 50, 0.9), rgba(20, 20, 40, 0.95))',
         border: '1px solid var(--glass-border)',
-        minHeight: '80px',
+        minHeight: '60px',
       }}>
         {/* Cover photo background */}
         {characterData.coverPhotoUrl && (
@@ -412,7 +412,7 @@ const TwoColumnDashboard = ({
           zIndex: 1,
           display: 'flex',
           flexDirection: 'column',
-          gap: '4px',
+          gap: '2px',
         }}>
           {/* Top row: Token Type + Level */}
           <div style={{
@@ -421,26 +421,26 @@ const TwoColumnDashboard = ({
             alignItems: 'center',
           }}>
             <div style={{
-              fontSize: '9px',
+              fontSize: '8px',
               color: characterData.tokenType === 'npc' ? '#ff9800' : 
                      characterData.tokenType === 'party' ? '#4caf50' : 
                      characterData.tokenType === 'lore' ? '#9c27b0' : 'var(--accent-gold)',
               textTransform: 'uppercase',
-              letterSpacing: '1px',
+              letterSpacing: '0.5px',
               fontWeight: 'bold',
               background: 'rgba(0,0,0,0.4)',
-              padding: '2px 8px',
-              borderRadius: '4px',
+              padding: '2px 6px',
+              borderRadius: '3px',
             }}>
               {characterData.tokenType || 'Player'} Token
             </div>
             <div style={{
-              fontSize: '12px',
+              fontSize: '11px',
               color: 'var(--accent-gold)',
               fontWeight: 'bold',
               background: 'rgba(0,0,0,0.4)',
-              padding: '2px 8px',
-              borderRadius: '4px',
+              padding: '2px 6px',
+              borderRadius: '3px',
             }}>
               lvl {characterStats?.level || sheet.level || 1}
             </div>
@@ -448,12 +448,12 @@ const TwoColumnDashboard = ({
           
           {/* Token Name - Large and prominent */}
           <div style={{
-            fontSize: '22px',
+            fontSize: '18px',
             fontWeight: 'bold',
             color: 'var(--text-main)',
             textShadow: '0 2px 4px rgba(0,0,0,0.7)',
             textAlign: 'center',
-            padding: '8px 0',
+            padding: '4px 0',
           }}>
             {characterData.name || tokenName || 'Unknown'}
           </div>
@@ -461,7 +461,7 @@ const TwoColumnDashboard = ({
           {/* Race + Class subtitle */}
           {characterStats && (
             <div style={{
-              fontSize: '12px',
+              fontSize: '11px',
               color: 'var(--text-muted)',
               textAlign: 'center',
               textShadow: '0 1px 2px rgba(0,0,0,0.5)',
@@ -475,15 +475,15 @@ const TwoColumnDashboard = ({
       {/* === TWO COLUMN LAYOUT === */}
       <div style={{
         display: 'flex',
-        gap: '12px',
+        gap: '8px',
       }}>
         {/* LEFT SIDEBAR COLUMN */}
         <div style={{
-          width: '110px',
+          width: '100px',
           flexShrink: 0,
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '5px',
         }}>
           {/* Circular Token Portrait */}
           {tokenImage && (
@@ -501,10 +501,10 @@ const TwoColumnDashboard = ({
               {characterStats?.heroicInspiration && (
                 <div style={{
                   position: 'absolute',
-                  top: '-4px',
-                  left: '-4px',
-                  right: '-4px',
-                  bottom: '-4px',
+                  top: '-3px',
+                  left: '-3px',
+                  right: '-3px',
+                  bottom: '-3px',
                   borderRadius: '50%',
                   background: 'radial-gradient(circle, rgba(255, 215, 0, 0.5) 0%, rgba(255, 215, 0, 0) 70%)',
                   animation: 'pulse 2s infinite',
@@ -516,27 +516,27 @@ const TwoColumnDashboard = ({
                 borderRadius: '50%',
                 overflow: 'hidden',
                 border: characterStats?.heroicInspiration
-                  ? '3px solid gold'
+                  ? '2px solid gold'
                   : '2px solid var(--accent-gold)',
                 boxShadow: characterStats?.heroicInspiration
-                  ? '0 0 15px rgba(255, 215, 0, 0.5)'
-                  : '0 2px 8px rgba(0,0,0,0.3)',
+                  ? '0 0 12px rgba(255, 215, 0, 0.5)'
+                  : '0 2px 6px rgba(0,0,0,0.3)',
               }}>
                 <img src={tokenImage} alt="Token" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               </div>
               {characterStats?.heroicInspiration && (
                 <div style={{
                   position: 'absolute',
-                  bottom: '0',
-                  right: '0',
+                  bottom: '-2px',
+                  right: '-2px',
                   background: 'gold',
                   borderRadius: '50%',
-                  width: '20px',
-                  height: '20px',
+                  width: '16px',
+                  height: '16px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: '10px',
+                  fontSize: '9px',
                 }}>
                   ✨
                 </div>
@@ -549,8 +549,8 @@ const TwoColumnDashboard = ({
             display: 'flex',
             justifyContent: 'center',
             background: 'rgba(0, 0, 0, 0.3)',
-            borderRadius: '6px',
-            padding: '4px',
+            borderRadius: '4px',
+            padding: '3px',
           }}>
             {onUpdateDeathSaves && (
               <DeathSavesDisplay
@@ -569,34 +569,34 @@ const TwoColumnDashboard = ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: '8px',
+              padding: '5px',
               background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.3), rgba(56, 142, 60, 0.3))',
-              borderRadius: '6px',
+              borderRadius: '5px',
               border: '1px solid rgba(76, 175, 80, 0.5)',
               cursor: canEdit ? 'pointer' : 'default',
             }}
             title={canEdit ? 'Click to edit HP' : undefined}
           >
-            <span style={{ fontSize: '9px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold' }}>HP</span>
-            <span style={{ fontSize: '14px', fontWeight: 'bold' }} className={hpColorClass}>
+            <span style={{ fontSize: '8px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold' }}>HP</span>
+            <span style={{ fontSize: '13px', fontWeight: 'bold' }} className={hpColorClass}>
               {sheet.hitPoints.current}/{sheet.hitPoints.max}
             </span>
             {sheet.hitPoints.temp > 0 && (
-              <span style={{ fontSize: '10px', color: '#4dabf7', fontWeight: 'bold' }}>+{sheet.hitPoints.temp}</span>
+              <span style={{ fontSize: '9px', color: '#4dabf7', fontWeight: 'bold' }}>+{sheet.hitPoints.temp}</span>
             )}
           </div>
 
           {/* Passive Traits Section */}
           <div style={{
             background: 'rgba(0, 0, 0, 0.25)',
-            borderRadius: '6px',
-            padding: '6px',
+            borderRadius: '5px',
+            padding: '4px',
             border: '1px solid var(--glass-border)',
           }}>
-            <div style={{ fontSize: '8px', color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center', marginBottom: '4px' }}>
+            <div style={{ fontSize: '7px', color: 'var(--text-muted)', textTransform: 'uppercase', textAlign: 'center', marginBottom: '2px' }}>
               Passive Traits
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', fontSize: '9px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1px', fontSize: '9px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Per</span>
                 <span style={{ color: 'var(--text-main)', fontWeight: 'bold' }}>{sheet.passivePerception}</span>
@@ -615,7 +615,7 @@ const TwoColumnDashboard = ({
           {/* Bottom Row: AC, INIT, PROF */}
           <div style={{
             display: 'flex',
-            gap: '4px',
+            gap: '3px',
           }}>
             <div
               ref={acRef}
@@ -625,15 +625,15 @@ const TwoColumnDashboard = ({
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '4px',
+                padding: '3px 2px',
                 background: 'rgba(0, 0, 0, 0.4)',
                 borderRadius: '4px',
                 cursor: canEdit ? 'pointer' : 'default',
               }}
               title={canEdit ? 'Click to edit AC' : undefined}
             >
-              <span style={{ fontSize: '7px', color: 'var(--text-muted)' }}>AC</span>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>{sheet.armorClass}</span>
+              <span style={{ fontSize: '6px', color: 'var(--text-muted)' }}>AC</span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-main)' }}>{sheet.armorClass}</span>
             </div>
             <div
               ref={initRef}
@@ -643,15 +643,15 @@ const TwoColumnDashboard = ({
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '4px',
+                padding: '3px 2px',
                 background: 'rgba(0, 0, 0, 0.4)',
                 borderRadius: '4px',
                 cursor: canEdit ? 'pointer' : 'default',
               }}
               title={canEdit ? 'Click to edit Initiative' : undefined}
             >
-              <span style={{ fontSize: '7px', color: 'var(--text-muted)' }}>INIT</span>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>
+              <span style={{ fontSize: '6px', color: 'var(--text-muted)' }}>INIT</span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--text-main)' }}>
                 {sheet.initiative >= 0 ? `+${sheet.initiative}` : sheet.initiative}
               </span>
             </div>
@@ -660,12 +660,12 @@ const TwoColumnDashboard = ({
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
-              padding: '4px',
+              padding: '3px 2px',
               background: 'rgba(0, 0, 0, 0.4)',
               borderRadius: '4px',
             }}>
-              <span style={{ fontSize: '7px', color: 'var(--text-muted)' }}>PROF</span>
-              <span style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--accent-gold)' }}>+{sheet.proficiencyBonus || 2}</span>
+              <span style={{ fontSize: '6px', color: 'var(--text-muted)' }}>PROF</span>
+              <span style={{ fontSize: '11px', fontWeight: 'bold', color: 'var(--accent-gold)' }}>+{sheet.proficiencyBonus || 2}</span>
             </div>
           </div>
         </div>
@@ -675,25 +675,25 @@ const TwoColumnDashboard = ({
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '6px',
         }}>
           {/* Status Boxes Row */}
           <div style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))',
-            gap: '6px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(85px, 1fr))',
+            gap: '4px',
           }}>
             {/* Defenses Box - Green */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(56, 142, 60, 0.2))',
               border: '1px solid rgba(76, 175, 80, 0.4)',
-              borderRadius: '6px',
-              padding: '6px',
+              borderRadius: '5px',
+              padding: '5px',
             }}>
-              <div style={{ fontSize: '8px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '2px' }}>
+              <div style={{ fontSize: '7px', color: '#81c784', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
                 🛡️ Defenses
               </div>
-              <div style={{ fontSize: '9px', color: 'var(--text-main)' }}>
+              <div style={{ fontSize: '8px', color: 'var(--text-main)' }}>
                 {sheet.defenses || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>None</span>}
               </div>
             </div>
@@ -702,13 +702,13 @@ const TwoColumnDashboard = ({
             <div style={{
               background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(25, 118, 210, 0.2))',
               border: '1px solid rgba(33, 150, 243, 0.4)',
-              borderRadius: '6px',
-              padding: '6px',
+              borderRadius: '5px',
+              padding: '5px',
             }}>
-              <div style={{ fontSize: '8px', color: '#64b5f6', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '2px' }}>
+              <div style={{ fontSize: '7px', color: '#64b5f6', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
                 ⚖️ Weight
               </div>
-              <div style={{ fontSize: '11px', fontWeight: 'bold', color: isOverencumbered ? '#ff5722' : 'var(--text-main)' }}>
+              <div style={{ fontSize: '10px', fontWeight: 'bold', color: isOverencumbered ? '#ff5722' : 'var(--text-main)' }}>
                 {stats.totalWeight} / {stats.maxCapacity}
               </div>
             </div>
@@ -717,22 +717,22 @@ const TwoColumnDashboard = ({
             <div style={{
               background: 'linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(194, 24, 91, 0.2))',
               border: '1px solid rgba(233, 30, 99, 0.4)',
-              borderRadius: '6px',
-              padding: '6px',
+              borderRadius: '5px',
+              padding: '5px',
             }}>
-              <div style={{ fontSize: '8px', color: '#f06292', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '2px' }}>
+              <div style={{ fontSize: '7px', color: '#f06292', textTransform: 'uppercase', fontWeight: 'bold', marginBottom: '1px' }}>
                 ❗ Conditions
               </div>
               {activeConditions.length > 0 ? (
-                <div style={{ fontSize: '9px', color: '#ff5722' }}>
+                <div style={{ fontSize: '8px', color: '#ff5722' }}>
                   {activeConditions.slice(0, 2).join(', ')}
                   {activeConditions.length > 2 && ` +${activeConditions.length - 2}`}
                 </div>
               ) : (
-                <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic' }}>None</div>
+                <div style={{ fontSize: '8px', color: 'var(--text-muted)', fontStyle: 'italic' }}>None</div>
               )}
               {characterStats?.exhaustion && characterStats.exhaustion.currentLevel > 0 && (
-                <div style={{ fontSize: '9px', color: '#ff9632', marginTop: '2px' }}>
+                <div style={{ fontSize: '8px', color: '#ff9632', marginTop: '1px' }}>
                   💤 Exhaustion Lv{characterStats.exhaustion.currentLevel}
                 </div>
               )}
@@ -744,10 +744,10 @@ const TwoColumnDashboard = ({
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            gap: '8px',
-            padding: '6px 10px',
+            gap: '6px',
+            padding: '4px 8px',
             background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '6px',
+            borderRadius: '5px',
             border: '1px solid var(--glass-border)',
           }}>
             {/* Trade Icon */}
@@ -757,10 +757,10 @@ const TwoColumnDashboard = ({
                 style={{
                   background: 'rgba(240, 225, 48, 0.1)',
                   border: '1px solid rgba(240, 225, 48, 0.3)',
-                  borderRadius: '6px',
+                  borderRadius: '5px',
                   cursor: 'pointer',
-                  fontSize: '16px',
-                  padding: '6px 8px',
+                  fontSize: '14px',
+                  padding: '4px 6px',
                   color: 'var(--accent-gold)',
                 }}
                 title="Trade with nearby tokens"
@@ -776,10 +776,10 @@ const TwoColumnDashboard = ({
                 style={{
                   background: 'rgba(255, 152, 0, 0.1)',
                   border: '1px solid rgba(255, 152, 0, 0.3)',
-                  borderRadius: '6px',
+                  borderRadius: '5px',
                   cursor: 'pointer',
-                  fontSize: '16px',
-                  padding: '6px 8px',
+                  fontSize: '14px',
+                  padding: '4px 6px',
                   color: '#ff9800',
                 }}
                 title="Take a rest"
@@ -795,10 +795,10 @@ const TwoColumnDashboard = ({
                 background: isFavorited ? 'rgba(240, 225, 48, 0.15)' : 'transparent',
                 color: isFavorited ? 'var(--accent-gold)' : '#666',
                 border: '1px solid ' + (isFavorited ? 'rgba(240, 225, 48, 0.3)' : '#333'),
-                padding: '6px 8px',
-                borderRadius: '6px',
+                padding: '4px 6px',
+                borderRadius: '5px',
                 cursor: 'pointer',
-                fontSize: '16px',
+                fontSize: '14px',
               }}
               title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
             >
@@ -813,10 +813,10 @@ const TwoColumnDashboard = ({
                   background: 'transparent',
                   color: 'var(--accent-gold)',
                   border: '1px solid #333',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  borderRadius: '5px',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '13px',
                 }}
                 title="View all favorite tokens"
               >
@@ -832,10 +832,10 @@ const TwoColumnDashboard = ({
                   background: 'transparent',
                   color: '#666',
                   border: '1px solid #333',
-                  padding: '6px 8px',
-                  borderRadius: '6px',
+                  padding: '4px 6px',
+                  borderRadius: '5px',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '13px',
                 }}
                 title="Settings"
               >
@@ -848,9 +848,9 @@ const TwoColumnDashboard = ({
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
-            padding: '8px',
+            padding: '6px 4px',
             background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
+            borderRadius: '6px',
             border: '1px solid var(--glass-border)',
           }}>
             {(Object.keys(sheet.abilityScores) as Array<keyof AbilityScores>).map((ability) => (
@@ -1130,9 +1130,9 @@ export function HomeTab({
     onOpenTradePartnerModal;
 
   return (
-    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', paddingRight: '8px'}}>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-        <h2>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
+    <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '8px 6px'}}>
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px'}}>
+        <h2 style={{margin: 0, marginBottom: '4px'}}>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
         {/* Action buttons are now shown only for storage view or handled in the TwoColumnDashboard */}
         {viewingStorageId && canEditToken() && (
           <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>

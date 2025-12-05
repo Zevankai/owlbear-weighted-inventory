@@ -1443,30 +1443,33 @@ export function HomeTab({
 
   return (
     <div className="section" style={{flex: 1, display: 'flex', flexDirection: 'column', width: '100%', padding: '8px 6px'}}>
-      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px'}}>
-        <h2 style={{margin: 0, marginBottom: '4px'}}>{viewingStorageId ? 'Storage Stats' : 'Dashboard'}</h2>
-        {/* Action buttons are now shown only for storage view or handled in the TwoColumnDashboard */}
-        {viewingStorageId && canEditToken() && (
-          <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>
-            <button
-              onClick={() => { setShowSettings(true); loadDebugInfo(); }}
-              style={{
-                background: 'transparent',
-                color: '#666',
-                border: '1px solid #333',
-                padding: '2px 6px',
-                borderRadius: '3px',
-                cursor: 'pointer',
-                fontSize: '9px',
-                fontWeight: 'normal'
-              }}
-              title="Settings"
-            >
-              ⚙
-            </button>
-          </div>
-        )}
-      </div>
+      {/* Only show header when viewing storage */}
+      {viewingStorageId && (
+        <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px'}}>
+          <h2 style={{margin: 0, marginBottom: '4px'}}>Storage Stats</h2>
+          {/* Action buttons are now shown only for storage view or handled in the TwoColumnDashboard */}
+          {canEditToken() && (
+            <div style={{display: 'flex', gap: '4px', alignItems: 'center'}}>
+              <button
+                onClick={() => { setShowSettings(true); loadDebugInfo(); }}
+                style={{
+                  background: 'transparent',
+                  color: '#666',
+                  border: '1px solid #333',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '9px',
+                  fontWeight: 'normal'
+                }}
+                title="Settings"
+              >
+                ⚙
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* --- TOKEN PROFILE WITH COVER PHOTO --- */}
       {/* Only show for lore tokens - non-lore tokens use TwoColumnDashboard which has its own cover photo */}

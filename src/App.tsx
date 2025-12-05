@@ -26,6 +26,7 @@ import { ReputationTab } from './components/tabs/ReputationTab';
 import { LoreTab } from './components/tabs/LoreTab';
 import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
 import { SpellsTab } from './components/tabs/SpellsTab';
+import { CalendarTab } from './components/tabs/CalendarTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { ToggleButtons } from './components/ToggleButtons';
@@ -1315,6 +1316,7 @@ function App() {
     { id: 'Create', label: 'CREATE' },
     { id: 'Search', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg> },
     { id: 'External', label: 'STORAGE' }, { id: 'Coin', label: 'COIN' },
+    { id: 'Calendar', icon: <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> },
   ];
 
   // Add Spells tab for player/party tokens, and NPC tokens (GM only)
@@ -1337,7 +1339,7 @@ function App() {
   let visibleTabs = baseTabs;
 
   if (viewingStorageId) {
-      visibleTabs = visibleTabs.filter(t => t.id !== 'External');
+      visibleTabs = visibleTabs.filter(t => t.id !== 'External' && t.id !== 'Calendar');
       const activeStorageType = characterData.externalStorages.find(s => s.id === viewingStorageId)?.type;
       const typesWithEquip = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
       if (!activeStorageType || !typesWithEquip.includes(activeStorageType)) {
@@ -2290,6 +2292,11 @@ function App() {
             canEdit={playerRole === 'GM' || characterData?.claimedBy === playerId || characterData?.tokenType === 'party'}
             updateData={updateData}
           />
+        )}
+
+        {/* === CALENDAR TAB === */}
+        {activeTab === 'Calendar' && (
+          <CalendarTab playerRole={playerRole} />
         )}
 
         {/* === LORE TABS (non-overview) === */}

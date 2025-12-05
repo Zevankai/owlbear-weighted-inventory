@@ -292,7 +292,7 @@ export interface CharacterSheet {
 
 // Race and Class types
 export type CharacterRace = 'Human' | 'Elf' | 'Dragonborn' | 'Orc' | 'Halfling' | 'Dwarf' | 'Tiefling' | 'Goblin' | 'Fairy' | 'Mixed' | string;
-export type CharacterClass = 'Fighter' | 'Ranger' | 'Bard' | 'Wizard' | 'Warlock' | 'Rogue' | 'Barbarian' | 'Druid' | 'Cleric' | 'Paladin' | 'Monk' | 'Multiclass' | string;
+export type CharacterClass = 'Fighter' | 'Ranger' | 'Bard' | 'Wizard' | 'Warlock' | 'Rogue' | 'Barbarian' | 'Druid' | 'Cleric' | 'Paladin' | 'Monk' | 'Sorcerer' | 'Multiclass' | string;
 
 // Condition types
 export type ConditionType = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 'grappled' | 'incapacitated' | 'invisible' | 'paralyzed' | 'petrified' | 'poisoned' | 'prone' | 'restrained' | 'stunned' | 'unconscious' | 'minorInjury' | 'seriousInjury' | 'criticalInjury' | 'infection';
@@ -340,9 +340,26 @@ export interface CharacterInjuryData {
 // Exhaustion state
 export interface ExhaustionState {
   currentLevel: number;
-  maxLevels: number; // Default 6, GM customizable
+  maxLevels: number; // Default 10, GM customizable
   customEffects: string[]; // GM-defined effects per level
 }
+
+// Hit Dice state
+export interface HitDice {
+  current: number;
+  max: number;
+  dieType: string; // e.g., "d8", "d10" - based on class
+}
+
+// Superiority Dice state
+export interface SuperiorityDice {
+  current: number;
+  max: number;
+}
+
+// Rest Location type for long rest
+export type RestLocationType = 'wilderness' | 'settlement';
+export type SettlementRoomType = 'free' | 'basic' | 'quality' | 'luxury';
 
 // Rest System types
 export type RestType = 'short' | 'long';
@@ -373,8 +390,12 @@ export interface RestHistory {
   lastLongRest: {
     timestamp: number;
     chosenOptionIds: string[];
+    location?: RestLocationType;
+    roomType?: SettlementRoomType;
   } | null;
   heroicInspirationGainedToday: boolean;
+  consecutiveWildernessRests: number; // Track wilderness rest streak
+  wildernessExhaustionBlocked: boolean; // Prevents exhaustion reduction on long rests until settlement rest
 }
 
 // GM Customizations (stored in Room Metadata)
@@ -412,6 +433,8 @@ export interface CharacterStats {
   exhaustion: ExhaustionState;
   restHistory: RestHistory;
   deathSaves?: DeathSaves; // Death saving throws tracking
+  hitDice?: HitDice; // Hit dice for rest healing
+  superiorityDice?: SuperiorityDice; // Superiority dice for combat
 }
 
 export interface CharacterData {

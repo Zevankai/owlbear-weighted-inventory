@@ -1,7 +1,8 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect } from '../types';
+import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency } from '../types';
 import { getStandardRestOptions, getNonStandardRestOptions, getRestOptionById } from '../data/restOptions';
 import { getTotalRations } from '../utils/inventory';
+import { getTotalCopperPieces } from '../utils/currency';
 
 // LocalStorage keys for persisting last rest choices
 const LAST_SHORT_REST_CHOICES_KEY = 'owlbear-weighted-inventory-last-short-rest-choices';
@@ -14,6 +15,19 @@ const getMaxBenefitSelections = (restType: RestType): number => {
   return restType === 'short' ? 1 : 2;
 };
 
+// Settlement room costs in GP and exhaustion reduction
+// Progression: More expensive rooms provide greater exhaustion recovery
+// Free: Basic shelter, 1 level recovery
+// Basic (1 GP): Simple inn room, 2 levels
+// Quality (3 GP): Comfortable lodging, 3 levels
+// Luxury (6 GP): Premium accommodations, 5 levels (skips 4 as a significant upgrade)
+const SETTLEMENT_ROOMS: Record<SettlementRoomType, { name: string; costGp: number; exhaustionReduction: number; description: string }> = {
+  free: { name: 'Free Room', costGp: 0, exhaustionReduction: 1, description: 'Basic accommodations, removes 1 level of exhaustion' },
+  basic: { name: 'Basic Room', costGp: 1, exhaustionReduction: 2, description: 'Simple room with bed, removes 2 levels of exhaustion' },
+  quality: { name: 'Quality Room', costGp: 3, exhaustionReduction: 3, description: 'Comfortable room with amenities, removes 3 levels of exhaustion' },
+  luxury: { name: 'Luxury Suite', costGp: 6, exhaustionReduction: 5, description: 'Lavish accommodations, removes 5 levels of exhaustion' },
+};
+
 // Rest result effects to apply
 export interface RestEffectsToApply {
   tempHp?: number;
@@ -21,6 +35,11 @@ export interface RestEffectsToApply {
   healInjuryLevels?: number;
   reduceExhaustion?: number;
   rationsToDeduct?: number;
+  restLocation?: RestLocationType;
+  roomType?: SettlementRoomType;
+  gpCost?: number;
+  hitDiceRecovered?: number;
+  recoverSuperiorityDice?: boolean;
 }
 
 interface RestModalProps {
@@ -38,6 +57,10 @@ interface RestModalProps {
   disabledRestOptionIds?: string[];
   inventory?: Item[];
   tokenId?: string; // Used for per-token localStorage key
+  hitDice?: HitDice; // Current hit dice state
+  superiorityDice?: SuperiorityDice; // Current superiority dice state
+  currency?: Currency; // Current currency for settlement costs
+  onSpendHitDie?: (hpRecovered: number) => void; // Callback when spending hit dice
 }
 
 export const RestModal: React.FC<RestModalProps> = ({
@@ -55,6 +78,10 @@ export const RestModal: React.FC<RestModalProps> = ({
   disabledRestOptionIds = [],
   inventory = [],
   tokenId = 'default',
+  hitDice,
+  superiorityDice,
+  currency,
+  onSpendHitDie,
 }) => {
   const [selectedRestType, setSelectedRestType] = useState<RestType>('short');
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
@@ -66,10 +93,24 @@ export const RestModal: React.FC<RestModalProps> = ({
     currentRationCount: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Long rest location state
+  const [restLocation, setRestLocation] = useState<RestLocationType | null>(null);
+  const [selectedRoomType, setSelectedRoomType] = useState<SettlementRoomType | null>(null);
+  
+  // Hit dice spending state
+  const [hitDieSpendPrompt, setHitDieSpendPrompt] = useState<{ isOpen: boolean; hpRecovered: string }>({ isOpen: false, hpRecovered: '' });
 
   // Build localStorage keys per token
   const shortRestStorageKey = `${LAST_SHORT_REST_CHOICES_KEY}-${tokenId}`;
   const longRestStorageKey = `${LAST_LONG_REST_CHOICES_KEY}-${tokenId}`;
+  
+  // Calculate available GP for settlement costs
+  const availableGp = useMemo(() => {
+    if (!currency) return 0;
+    const totalCp = getTotalCopperPieces(currency);
+    return Math.floor(totalCp / 100); // Convert to GP
+  }, [currency]);
 
   // Get all available options (standard + race/class + custom)
   const allAvailableOptions = useMemo(() => {
@@ -212,9 +253,38 @@ export const RestModal: React.FC<RestModalProps> = ({
   const calculateEffects = useCallback((): RestEffectsToApply => {
     const effects: RestEffectsToApply = {};
     
-    // Long rest automatically reduces exhaustion by 1
+    // Short rest and long rest both recover superiority dice
+    effects.recoverSuperiorityDice = true;
+    
+    // Long rest specific effects
     if (selectedRestType === 'long') {
-      effects.reduceExhaustion = 1;
+      // Location-based exhaustion reduction
+      if (restLocation === 'wilderness') {
+        // Check if wilderness exhaustion is blocked
+        if (!restHistory.wildernessExhaustionBlocked) {
+          effects.reduceExhaustion = 1;
+        }
+        effects.restLocation = 'wilderness';
+      } else if (restLocation === 'settlement' && selectedRoomType) {
+        // Settlement room reduces exhaustion based on room type
+        const room = SETTLEMENT_ROOMS[selectedRoomType];
+        effects.reduceExhaustion = room.exhaustionReduction;
+        effects.gpCost = room.costGp;
+        effects.restLocation = 'settlement';
+        effects.roomType = selectedRoomType;
+      } else {
+        // Default to 1 exhaustion reduction if no location selected yet
+        effects.reduceExhaustion = 1;
+      }
+      
+      // Calculate hit dice recovery on long rest
+      // Recover half of used hit dice, rounded up
+      if (hitDice) {
+        const usedHitDice = hitDice.max - hitDice.current;
+        if (usedHitDice > 0) {
+          effects.hitDiceRecovered = Math.ceil(usedHitDice / 2);
+        }
+      }
     }
     
     // Calculate effects from selected options
@@ -244,16 +314,34 @@ export const RestModal: React.FC<RestModalProps> = ({
     });
     
     return effects;
-  }, [selectedOptionIds, selectedRestType, allAvailableOptions]);
+  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked]);
 
   // Handle rest completion
   const handleRest = () => {
+    // For long rest, validate that location is selected
+    if (selectedRestType === 'long' && !restLocation) {
+      setError('Please select a rest location (Wilderness or Settlement)');
+      return;
+    }
+    
+    // For settlement, validate room selection
+    if (selectedRestType === 'long' && restLocation === 'settlement' && !selectedRoomType) {
+      setError('Please select a room type');
+      return;
+    }
+    
     // Calculate effects
     const effects = calculateEffects();
     
     // Validate rations if any are required
     if (effects.rationsToDeduct && effects.rationsToDeduct > availableRations) {
       setError(`Not enough rations! You need ${effects.rationsToDeduct} but only have ${availableRations}.`);
+      return;
+    }
+    
+    // Validate GP for settlement room
+    if (effects.gpCost && effects.gpCost > availableGp) {
+      setError(`Not enough gold! Room costs ${effects.gpCost} GP but you only have ${availableGp} GP.`);
       return;
     }
     
@@ -270,6 +358,8 @@ export const RestModal: React.FC<RestModalProps> = ({
     
     // Reset state
     setSelectedOptionIds(new Set());
+    setRestLocation(null);
+    setSelectedRoomType(null);
     setError(null);
     onClose();
   };
@@ -277,8 +367,23 @@ export const RestModal: React.FC<RestModalProps> = ({
   // Handle rest type change
   const handleRestTypeChange = (newType: RestType) => {
     setSelectedRestType(newType);
+    setRestLocation(null);
+    setSelectedRoomType(null);
     setError(null);
     // Selection restoration happens in useEffect
+  };
+  
+  // Handle spending a hit die
+  const handleSpendHitDie = () => {
+    if (!hitDice || hitDice.current <= 0 || !onSpendHitDie) return;
+    const hpRecovered = parseInt(hitDieSpendPrompt.hpRecovered, 10);
+    if (isNaN(hpRecovered) || hpRecovered < 0) {
+      setError('Please enter a valid HP amount');
+      return;
+    }
+    onSpendHitDie(hpRecovered);
+    setHitDieSpendPrompt({ isOpen: false, hpRecovered: '' });
+    setError(null);
   };
 
   if (!isOpen) return null;
@@ -497,18 +602,253 @@ export const RestModal: React.FC<RestModalProps> = ({
             )}
           </div>
 
-          {/* Long Rest Exhaustion Recovery Notice */}
+          {/* Long Rest Location Selection */}
           {selectedRestType === 'long' && (
             <div style={{
-              padding: '10px 12px',
+              marginBottom: '16px',
+              padding: '12px',
               background: 'rgba(192, 132, 252, 0.1)',
               border: '1px solid rgba(192, 132, 252, 0.3)',
+              borderRadius: '8px',
+            }}>
+              <div style={{ fontSize: '11px', color: '#c084fc', fontWeight: 'bold', marginBottom: '10px' }}>
+                🏕️ Rest Location
+              </div>
+              
+              {/* Wilderness warning if blocked */}
+              {restHistory.wildernessExhaustionBlocked && (
+                <div style={{
+                  padding: '8px',
+                  background: 'rgba(255, 107, 107, 0.15)',
+                  border: '1px solid rgba(255, 107, 107, 0.4)',
+                  borderRadius: '6px',
+                  marginBottom: '10px',
+                  fontSize: '10px',
+                  color: '#ff6b6b',
+                }}>
+                  ⚠️ You've had 7+ consecutive wilderness rests. Exhaustion won't reduce until you rest in a settlement!
+                </div>
+              )}
+              
+              {/* Wilderness count warning */}
+              {restHistory.consecutiveWildernessRests >= 5 && restHistory.consecutiveWildernessRests < 7 && (
+                <div style={{
+                  padding: '8px',
+                  background: 'rgba(255, 152, 0, 0.15)',
+                  border: '1px solid rgba(255, 152, 0, 0.4)',
+                  borderRadius: '6px',
+                  marginBottom: '10px',
+                  fontSize: '10px',
+                  color: '#ff9800',
+                }}>
+                  ⚠️ {7 - restHistory.consecutiveWildernessRests} more wilderness rest{7 - restHistory.consecutiveWildernessRests !== 1 ? 's' : ''} before exhaustion penalty!
+                </div>
+              )}
+              
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '10px' }}>
+                <button
+                  onClick={() => { setRestLocation('wilderness'); setSelectedRoomType(null); }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: restLocation === 'wilderness' ? 'rgba(81, 207, 102, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                    border: `2px solid ${restLocation === 'wilderness' ? '#51cf66' : '#444'}`,
+                    borderRadius: '6px',
+                    color: restLocation === 'wilderness' ? '#51cf66' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: restLocation === 'wilderness' ? 'bold' : 'normal',
+                  }}
+                >
+                  <div style={{ fontSize: '16px', marginBottom: '4px' }}>🌲</div>
+                  Wilderness
+                  <div style={{ fontSize: '9px', marginTop: '2px', opacity: 0.8 }}>Free, standard benefits</div>
+                </button>
+                <button
+                  onClick={() => setRestLocation('settlement')}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: restLocation === 'settlement' ? 'rgba(252, 196, 25, 0.2)' : 'rgba(0, 0, 0, 0.2)',
+                    border: `2px solid ${restLocation === 'settlement' ? '#fcc419' : '#444'}`,
+                    borderRadius: '6px',
+                    color: restLocation === 'settlement' ? '#fcc419' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: restLocation === 'settlement' ? 'bold' : 'normal',
+                  }}
+                >
+                  <div style={{ fontSize: '16px', marginBottom: '4px' }}>🏨</div>
+                  Settlement
+                  <div style={{ fontSize: '9px', marginTop: '2px', opacity: 0.8 }}>Pay GP for better recovery</div>
+                </button>
+              </div>
+              
+              {/* Settlement Room Options */}
+              {restLocation === 'settlement' && (
+                <div style={{ marginTop: '10px' }}>
+                  <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    💰 Available: <strong style={{ color: '#fcc419' }}>{availableGp} GP</strong>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {(Object.entries(SETTLEMENT_ROOMS) as [SettlementRoomType, typeof SETTLEMENT_ROOMS[SettlementRoomType]][]).map(([roomType, room]) => {
+                      const canAfford = availableGp >= room.costGp;
+                      const isSelected = selectedRoomType === roomType;
+                      
+                      return (
+                        <button
+                          key={roomType}
+                          onClick={() => canAfford && setSelectedRoomType(roomType)}
+                          disabled={!canAfford}
+                          style={{
+                            padding: '8px 12px',
+                            background: isSelected 
+                              ? 'rgba(81, 207, 102, 0.2)' 
+                              : !canAfford 
+                                ? 'rgba(128, 128, 128, 0.1)' 
+                                : 'rgba(0, 0, 0, 0.2)',
+                            border: `1px solid ${isSelected ? '#51cf66' : !canAfford ? '#555' : '#666'}`,
+                            borderRadius: '6px',
+                            cursor: canAfford ? 'pointer' : 'not-allowed',
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            opacity: canAfford ? 1 : 0.5,
+                          }}
+                        >
+                          <div style={{ textAlign: 'left' }}>
+                            <div style={{ 
+                              fontSize: '11px', 
+                              fontWeight: isSelected ? 'bold' : 'normal',
+                              color: isSelected ? '#51cf66' : 'var(--text-main)',
+                            }}>
+                              {room.name} {room.costGp > 0 && `(${room.costGp} GP)`}
+                            </div>
+                            <div style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                              {room.description}
+                            </div>
+                          </div>
+                          <div style={{ 
+                            fontSize: '10px', 
+                            color: '#51cf66',
+                            fontWeight: 'bold',
+                          }}>
+                            -{room.exhaustionReduction} Exh
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              
+              {/* Exhaustion reduction summary */}
+              {restLocation && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '8px',
+                  background: 'rgba(0, 0, 0, 0.2)',
+                  borderRadius: '6px',
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                }}>
+                  💤 <strong>Exhaustion Recovery:</strong>{' '}
+                  {restLocation === 'wilderness' ? (
+                    restHistory.wildernessExhaustionBlocked ? (
+                      <span style={{ color: '#ff6b6b' }}>Blocked (need settlement rest)</span>
+                    ) : (
+                      <span style={{ color: '#51cf66' }}>-1 level</span>
+                    )
+                  ) : selectedRoomType ? (
+                    <span style={{ color: '#51cf66' }}>-{SETTLEMENT_ROOMS[selectedRoomType].exhaustionReduction} levels</span>
+                  ) : (
+                    <span>Select a room</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Hit Dice Section */}
+          {hitDice && hitDice.max > 0 && (
+            <div style={{
+              marginBottom: '16px',
+              padding: '12px',
+              background: 'rgba(77, 171, 247, 0.1)',
+              border: '1px solid rgba(77, 171, 247, 0.3)',
+              borderRadius: '8px',
+            }}>
+              <div style={{ 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                marginBottom: '8px',
+              }}>
+                <div style={{ fontSize: '11px', color: '#4dabf7', fontWeight: 'bold' }}>
+                  🎲 Hit Dice ({hitDice.dieType})
+                </div>
+                <div style={{ 
+                  fontSize: '12px', 
+                  fontWeight: 'bold',
+                  color: hitDice.current > 0 ? '#4dabf7' : '#ff6b6b',
+                }}>
+                  {hitDice.current}/{hitDice.max}
+                </div>
+              </div>
+              
+              {/* Spend hit die button */}
+              {onSpendHitDie && hitDice.current > 0 && (
+                <button
+                  onClick={() => setHitDieSpendPrompt({ isOpen: true, hpRecovered: '' })}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(77, 171, 247, 0.2)',
+                    border: '1px solid #4dabf7',
+                    borderRadius: '6px',
+                    color: '#4dabf7',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                  }}
+                >
+                  🎲 Spend a Hit Die to Heal
+                </button>
+              )}
+              
+              {hitDice.current === 0 && (
+                <div style={{ fontSize: '10px', color: '#ff6b6b', fontStyle: 'italic' }}>
+                  No hit dice remaining
+                </div>
+              )}
+              
+              {/* Long rest hit dice recovery info */}
+              {selectedRestType === 'long' && hitDice.current < hitDice.max && (
+                <div style={{ 
+                  marginTop: '8px', 
+                  fontSize: '10px', 
+                  color: 'var(--text-muted)',
+                }}>
+                  💤 Long rest will recover <strong style={{ color: '#51cf66' }}>
+                    {Math.ceil((hitDice.max - hitDice.current) / 2)}
+                  </strong> hit dice
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Superiority Dice Recovery Info */}
+          {superiorityDice && superiorityDice.max > 0 && superiorityDice.current < superiorityDice.max && (
+            <div style={{
+              padding: '10px 12px',
+              background: 'rgba(255, 152, 0, 0.1)',
+              border: '1px solid rgba(255, 152, 0, 0.3)',
               borderRadius: '6px',
               marginBottom: '16px',
               fontSize: '11px',
-              color: '#c084fc',
+              color: '#ff9800',
             }}>
-              💤 <strong>Exhaustion Recovery:</strong> Long rest automatically reduces your exhaustion level by 1
+              ⚔️ <strong>Superiority Dice:</strong> Will fully recover ({superiorityDice.current} → {superiorityDice.max})
             </div>
           )}
 
@@ -598,7 +938,9 @@ export const RestModal: React.FC<RestModalProps> = ({
             color: 'var(--text-muted)',
           }}>
             {selectedOptionIds.size}/{maxSelections} benefits selected
-            {selectedRestType === 'long' && ' • -1 exhaustion'}
+            {selectedRestType === 'long' && restLocation === 'wilderness' && !restHistory.wildernessExhaustionBlocked && ' • -1 exhaustion'}
+            {selectedRestType === 'long' && restLocation === 'settlement' && selectedRoomType && ` • -${SETTLEMENT_ROOMS[selectedRoomType].exhaustionReduction} exhaustion`}
+            {selectedRestType === 'long' && restLocation === 'settlement' && selectedRoomType && SETTLEMENT_ROOMS[selectedRoomType].costGp > 0 && ` • ${SETTLEMENT_ROOMS[selectedRoomType].costGp} GP`}
           </div>
           <button
             onClick={handleRest}
@@ -620,6 +962,92 @@ export const RestModal: React.FC<RestModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Hit Die Spend Prompt Modal */}
+      {hitDieSpendPrompt.isOpen && (
+        <>
+          <div
+            onClick={() => setHitDieSpendPrompt({ isOpen: false, hpRecovered: '' })}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '300px',
+          }}>
+            <h4 style={{ margin: '0 0 12px', color: '#4dabf7' }}>🎲 Spend Hit Die</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+              Roll your hit die ({hitDice?.dieType}) + CON modifier, then enter the HP recovered below.
+            </p>
+            <p style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              Hit Dice Remaining: <strong style={{ color: '#4dabf7' }}>{hitDice?.current}/{hitDice?.max}</strong>
+            </p>
+            <input
+              type="number"
+              min="0"
+              value={hitDieSpendPrompt.hpRecovered}
+              onChange={(e) => setHitDieSpendPrompt({ ...hitDieSpendPrompt, hpRecovered: e.target.value })}
+              placeholder="Enter HP recovered..."
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid #4dabf7',
+                borderRadius: '6px',
+                color: 'var(--text-main)',
+                marginBottom: '12px',
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setHitDieSpendPrompt({ isOpen: false, hpRecovered: '' })}
+                style={{
+                  padding: '8px 16px',
+                  background: '#444',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSpendHitDie}
+                style={{
+                  padding: '8px 16px',
+                  background: '#4dabf7',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                }}
+              >
+                Spend & Heal
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Ration Prompt Modal */}
       {rationPrompt && (

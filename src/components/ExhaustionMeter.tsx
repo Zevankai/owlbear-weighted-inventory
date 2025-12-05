@@ -8,15 +8,19 @@ interface ExhaustionMeterProps {
   customEffects?: string[]; // GM-defined effects per level
 }
 
-// Default D&D 5e exhaustion effects
+// Default 10-level exhaustion effects
 const DEFAULT_EXHAUSTION_EFFECTS: string[] = [
-  'No effect',
-  'Disadvantage on ability checks',
-  'Speed halved',
-  'Disadvantage on attack rolls and saving throws',
-  'Hit point maximum halved',
-  'Speed reduced to 0',
-  'Death',
+  'No effect',                                                    // Level 0
+  'Weary - DIS on ability checks',                                // Level 1
+  'Fatigued - Speed reduced by 10 feet',                          // Level 2
+  'Sluggish - Speed halved',                                      // Level 3
+  'Shaken - DIS on attack rolls',                                 // Level 4
+  'Vulnerable - DIS on saving throws',                            // Level 5
+  'Weak - HP maximum reduced by 25%',                             // Level 6
+  'Frail - HP maximum reduced by 50%',                            // Level 7
+  'Collapsed - Speed reduced to 0. Incapacitated.',               // Level 8
+  'Comatose - Unconscious until stabilized (magic/hospitalized)', // Level 9
+  'Death - Character dies',                                       // Level 10
 ];
 
 export const ExhaustionMeter: React.FC<ExhaustionMeterProps> = ({

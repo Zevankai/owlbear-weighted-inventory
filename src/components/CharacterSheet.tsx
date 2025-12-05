@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { CharacterSheet, CharacterData, AbilityScores, Skills, HitPoints, SkillProficiency } from '../types';
-import { DebouncedInput, DebouncedTextarea } from './DebouncedInput';
-import { createDefaultCharacterSheet, calculateModifier, DND_CONDITIONS, migrateSkillProficiency, getProficiencyContribution, calculateProficiencyBonus, SKILL_DEFINITIONS, ABILITY_ABBREV } from '../utils/characterSheet';
+import { DebouncedTextarea } from './DebouncedInput';
+import { createDefaultCharacterSheet, calculateModifier, migrateSkillProficiency, getProficiencyContribution, calculateProficiencyBonus, SKILL_DEFINITIONS, ABILITY_ABBREV } from '../utils/characterSheet';
 import { CollapsibleSection } from './CollapsibleSection';
 import { SkillProficiencyIndicator } from './SkillProficiencyIndicator';
 
@@ -19,8 +19,6 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
   canEdit,
   updateData,
 }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  
   const sheet = characterData.characterSheet || createDefaultCharacterSheet();
 
   const updateSheet = (updates: Partial<CharacterSheet>) => {
@@ -86,68 +84,8 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
   };
 
   return (
-    <div style={{ marginTop: '16px' }}>
-      {/* Collapsible Header */}
-      <div
-        onClick={() => setIsExpanded(!isExpanded)}
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          cursor: 'pointer',
-          padding: '8px 12px',
-          background: 'rgba(240, 225, 48, 0.08)',
-          borderRadius: '6px',
-          border: '1px solid var(--border-bright)',
-          marginBottom: isExpanded ? '12px' : '0',
-        }}
-      >
-        <span style={{
-          fontSize: '12px',
-          fontWeight: 'bold',
-          color: 'var(--accent-gold)',
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-        }}>
-          📜 Character Sheet
-        </span>
-        <span style={{ color: 'var(--accent-gold)', fontSize: '14px' }}>
-          {isExpanded ? '▼' : '▶'}
-        </span>
-      </div>
-
-      {isExpanded && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* Character Info Section - Only gender remains (Race, Class, Level are in banner/settings) */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <h3 style={{
-              margin: '0 0 10px 0',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}>
-              Character Info
-            </h3>
-            <div>
-              <label style={labelStyle}>Gender</label>
-              <DebouncedInput
-                value={sheet.gender}
-                onChange={(val) => canEdit && updateSheet({ gender: val })}
-                className="search-input"
-                disabled={!canEdit}
-                placeholder="Gender..."
-                style={inputStyle}
-              />
-            </div>
-          </div>
-
-          {/* Ability Scores Section - Collapsible */}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* Ability Scores Section - Collapsible */}
           <CollapsibleSection title="Ability Scores" defaultExpanded={false}>
             <div style={{
               background: 'rgba(0, 0, 0, 0.2)',
@@ -519,81 +457,9 @@ export const CharacterSheetSection: React.FC<CharacterSheetSectionProps> = ({
               }}
             />
           </div>
-
-          {/* Conditions Section */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <h3 style={{
-              margin: '0 0 10px 0',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}>
-              Active Conditions
-            </h3>
-            <DebouncedTextarea
-              value={sheet.conditions}
-              onChange={(val) => canEdit && updateSheet({ conditions: val })}
-              className="search-input"
-              disabled={!canEdit}
-              placeholder="e.g., Poisoned, Exhaustion (1), Frightened..."
-              rows={2}
-              style={{
-                width: '100%',
-                resize: 'vertical',
-                fontSize: '11px',
-              }}
-            />
-            <div style={{
-              marginTop: '6px',
-              fontSize: '9px',
-              color: 'var(--text-muted)',
-              fontStyle: 'italic',
-            }}>
-              Common: {DND_CONDITIONS.join(', ')}
-            </div>
-          </div>
-
-          {/* Languages Section */}
-          <div style={{
-            background: 'rgba(0, 0, 0, 0.2)',
-            borderRadius: '8px',
-            padding: '12px',
-            border: '1px solid var(--glass-border)',
-          }}>
-            <h3 style={{
-              margin: '0 0 10px 0',
-              fontSize: '11px',
-              color: 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-            }}>
-              Known Languages
-            </h3>
-            <DebouncedTextarea
-              value={sheet.languages}
-              onChange={(val) => canEdit && updateSheet({ languages: val })}
-              className="search-input"
-              disabled={!canEdit}
-              placeholder="e.g., Common, Elvish, Dwarvish..."
-              rows={2}
-              style={{
-                width: '100%',
-                resize: 'vertical',
-                fontSize: '11px',
-              }}
-            />
-          </div>
         </div>
-      )}
-    </div>
-  );
-};
+      );
+    };
 
 // Shared styles
 const labelStyle: React.CSSProperties = {

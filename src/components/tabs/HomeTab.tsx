@@ -21,6 +21,10 @@ const TOKEN_SIZE_READONLY = '140px';
 // Description box width constants
 const DESCRIPTION_WIDTH_EDITABLE = '100%';
 
+// Level bounds constants
+const MIN_LEVEL = 1;
+const MAX_LEVEL = 20;
+
 // Purple Collapsible Section Component
 interface PurpleCollapsibleSectionProps {
   title: string;
@@ -294,6 +298,11 @@ interface TwoColumnDashboardProps {
   canEditToken: () => boolean;
   hasClaimedToken?: boolean;
   gmCustomizations?: GMCustomizations;
+  // Additional props for stats row
+  packDefinitions: Record<string, { capacity: number; utilitySlots: number }>;
+  onPackTypeChange: (packType: PackType) => void;
+  inventoryCount: number;
+  onPinnedSkillClick?: () => void;
 }
 
 const TwoColumnDashboard = ({
@@ -318,19 +327,26 @@ const TwoColumnDashboard = ({
   loadDebugInfo,
   canEditToken,
   hasClaimedToken,
-  gmCustomizations
+  gmCustomizations,
+  packDefinitions,
+  onPackTypeChange,
+  inventoryCount,
+  onPinnedSkillClick
 }: TwoColumnDashboardProps) => {
   const [editPopup, setEditPopup] = useState<{
-    type: 'hp' | 'ac' | 'init' | 'level' | 'passive' | null;
+    type: 'hp' | 'ac' | 'init' | 'passive' | null;
     position: { top: number; left: number };
   }>({ type: null, position: { top: 0, left: 0 } });
+  
+  // State for inline level editing
+  const [isEditingLevel, setIsEditingLevel] = useState(false);
+  const [levelEditValue, setLevelEditValue] = useState('');
   
   const [showOverencumberedPopup, setShowOverencumberedPopup] = useState(false);
   
   const hpRef = useRef<HTMLDivElement>(null);
   const acRef = useRef<HTMLDivElement>(null);
   const initRef = useRef<HTMLDivElement>(null);
-  const levelRef = useRef<HTMLDivElement>(null);
   const passiveRef = useRef<HTMLDivElement>(null);
   const weightRef = useRef<HTMLDivElement>(null);
   
@@ -347,13 +363,28 @@ const TwoColumnDashboard = ({
   
   const hpColorClass = getHpColorClass(sheet.hitPoints.current, sheet.hitPoints.max);
 
-  const handleStatClick = (type: 'hp' | 'ac' | 'init' | 'level' | 'passive', ref: RefObject<HTMLDivElement | null>) => {
+  const handleStatClick = (type: 'hp' | 'ac' | 'init' | 'passive', ref: RefObject<HTMLDivElement | null>) => {
     if (!canEdit || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
     setEditPopup({
       type,
       position: { top: rect.bottom + 8, left: rect.left }
     });
+  };
+
+  // Inline level editing handlers
+  const handleLevelClick = () => {
+    if (!canEdit) return;
+    const currentLevel = characterStats?.level || sheet.level || MIN_LEVEL;
+    setLevelEditValue(currentLevel.toString());
+    setIsEditingLevel(true);
+  };
+
+  const handleLevelSave = () => {
+    const parsed = parseInt(levelEditValue, 10);
+    const newLevel = isNaN(parsed) ? MIN_LEVEL : Math.max(MIN_LEVEL, Math.min(MAX_LEVEL, parsed));
+    onUpdateSheet({ level: newLevel });
+    setIsEditingLevel(false);
   };
 
   const handleWeightClick = () => {
@@ -449,25 +480,50 @@ const TwoColumnDashboard = ({
             }}>
               {characterData.tokenType || 'Player'} Token
             </div>
-            <div
-              ref={levelRef}
-              onClick={() => handleStatClick('level', levelRef)}
-              style={{
-                fontSize: '18px',
-                color: 'var(--accent-gold)',
-                fontWeight: 'bold',
-                background: 'rgba(0,0,0,0.4)',
-                padding: '4px 10px',
-                borderRadius: '4px',
-                cursor: canEdit ? 'pointer' : 'default',
-                textShadow: '0 0 10px rgba(240, 225, 48, 0.5)',
-                minWidth: '28px',
-                textAlign: 'center',
-              }}
-              title={canEdit ? 'Click to edit level' : undefined}
-            >
-              {characterStats?.level || sheet.level || 1}
-            </div>
+            {/* Inline editable level */}
+            {isEditingLevel ? (
+              <input
+                type="number"
+                value={levelEditValue}
+                min={MIN_LEVEL}
+                max={MAX_LEVEL}
+                onChange={(e) => setLevelEditValue(e.target.value)}
+                onBlur={handleLevelSave}
+                onKeyDown={(e) => e.key === 'Enter' && handleLevelSave()}
+                autoFocus
+                style={{
+                  width: '40px',
+                  fontSize: '16px',
+                  color: 'var(--accent-gold)',
+                  fontWeight: 'bold',
+                  background: 'rgba(0,0,0,0.6)',
+                  border: '1px solid var(--accent-gold)',
+                  borderRadius: '4px',
+                  padding: '2px 6px',
+                  textAlign: 'center',
+                  outline: 'none',
+                }}
+              />
+            ) : (
+              <div
+                onClick={handleLevelClick}
+                style={{
+                  fontSize: '18px',
+                  color: 'var(--accent-gold)',
+                  fontWeight: 'bold',
+                  background: 'rgba(0,0,0,0.4)',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  cursor: canEdit ? 'pointer' : 'default',
+                  textShadow: '0 0 10px rgba(240, 225, 48, 0.5)',
+                  minWidth: '28px',
+                  textAlign: 'center',
+                }}
+                title={canEdit ? 'Click to edit level' : undefined}
+              >
+                {characterStats?.level || sheet.level || MIN_LEVEL}
+              </div>
+            )}
           </div>
           
           {/* Token Name - Large and prominent */}
@@ -918,6 +974,84 @@ const TwoColumnDashboard = ({
           </div>
         </div>
       </div>
+
+      {/* === STATS ROW - Between Attributes and Pinned Skills === */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '6px 10px',
+        background: 'rgba(0, 0, 0, 0.25)',
+        borderRadius: '6px',
+        border: '1px solid var(--glass-border)',
+        flexWrap: 'wrap',
+      }}>
+        {/* Pack Type Selector */}
+        {canEdit && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Pack:</span>
+            <select 
+              value={characterData.packType} 
+              onChange={(e) => onPackTypeChange(e.target.value as PackType)} 
+              style={{
+                background: 'rgba(0, 0, 0, 0.4)',
+                border: '1px solid var(--glass-border)',
+                borderRadius: '4px',
+                color: 'var(--accent-gold)',
+                fontSize: '10px',
+                fontWeight: 'bold',
+                padding: '2px 4px',
+                cursor: 'pointer',
+              }}
+            >
+              {Object.keys(packDefinitions).map(pack => <option key={pack} value={pack}>{pack}</option>)}
+            </select>
+          </div>
+        )}
+        
+        {/* Total Weight */}
+        <div 
+          ref={weightRef}
+          onClick={handleWeightClick}
+          style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '3px',
+            padding: '2px 6px',
+            background: isOverencumbered ? 'rgba(255, 87, 34, 0.2)' : 'rgba(0, 0, 0, 0.3)',
+            borderRadius: '4px',
+            border: isOverencumbered ? '1px solid rgba(255, 87, 34, 0.5)' : '1px solid transparent',
+            cursor: isOverencumbered ? 'pointer' : 'default',
+          }}
+          title={isOverencumbered ? 'Click to see overencumbered effects' : 'Current weight / Max capacity'}
+        >
+          <span style={{ fontSize: '9px', color: isOverencumbered ? '#ff5722' : 'var(--text-muted)', textTransform: 'uppercase' }}>Wt:</span>
+          <span style={{ fontSize: '10px', fontWeight: 'bold', color: isOverencumbered ? '#ff5722' : 'var(--text-main)' }}>
+            {stats.totalWeight}/{stats.maxCapacity}
+          </span>
+        </div>
+
+        {/* Items Count */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 6px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '4px' }}>
+          <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Items:</span>
+          <span style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--text-main)' }}>{inventoryCount}</span>
+        </div>
+
+        {/* Coin Weight */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px', padding: '2px 6px', background: 'rgba(0, 0, 0, 0.3)', borderRadius: '4px' }}>
+          <span style={{ fontSize: '9px', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Coins:</span>
+          <span style={{ fontSize: '10px', fontWeight: 'bold', color: stats.coinWeight > 0 ? '#ffc107' : 'var(--text-main)' }}>
+            {stats.coinWeight}u
+          </span>
+        </div>
+      </div>
+
+      {/* === PINNED SKILLS BAR - Enlarged === */}
+      <PinnedSkillsBar
+        sheet={sheet}
+        onSkillClick={onPinnedSkillClick}
+        enlarged={true}
+      />
       
       {/* Edit Popups */}
       <EditPopup
@@ -947,15 +1081,6 @@ const TwoColumnDashboard = ({
         position={editPopup.position}
         fields={[
           { label: 'Initiative Modifier', value: sheet.initiative, onChange: (val) => onUpdateSheet({ initiative: val }) },
-        ]}
-      />
-      <EditPopup
-        isOpen={editPopup.type === 'level'}
-        onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
-        title="Edit Level"
-        position={editPopup.position}
-        fields={[
-          { label: 'Level', value: sheet.level || 1, onChange: (val) => onUpdateSheet({ level: val }), min: 1, max: 20 },
         ]}
       />
       <EditPopup
@@ -1450,37 +1575,34 @@ export function HomeTab({
         };
         
         return (
-          <>
-            <TwoColumnDashboard
-              sheet={sheet}
-              characterStats={characterStats}
-              tokenImage={tokenImage}
-              tokenName={tokenName}
-              characterData={characterData}
-              stats={stats}
-              canEdit={canUserEdit}
-              onUpdateSheet={handleUpdateSheet}
-              onToggleHeroicInspiration={toggleHeroicInspiration}
-              onOpenTradePartnerModal={onOpenTradePartnerModal}
-              onOpenRestModal={() => setShowRestModal(true)}
-              onUpdateDeathSaves={updateDeathSaves}
-              showTradeButton={!!showTradeButton}
-              toggleFavorite={toggleFavorite}
-              isFavorited={isFavorited}
-              favorites={favorites}
-              setViewingFavorites={setViewingFavorites}
-              setShowSettings={setShowSettings}
-              loadDebugInfo={loadDebugInfo}
-              canEditToken={canEditToken}
-              hasClaimedToken={hasClaimedToken}
-              gmCustomizations={gmCustomizations}
-            />
-            {/* Pinned Skills Bar - shown below combat stats */}
-            <PinnedSkillsBar
-              sheet={sheet}
-              onSkillClick={handlePinnedSkillClick}
-            />
-          </>
+          <TwoColumnDashboard
+            sheet={sheet}
+            characterStats={characterStats}
+            tokenImage={tokenImage}
+            tokenName={tokenName}
+            characterData={characterData}
+            stats={stats}
+            canEdit={canUserEdit}
+            onUpdateSheet={handleUpdateSheet}
+            onToggleHeroicInspiration={toggleHeroicInspiration}
+            onOpenTradePartnerModal={onOpenTradePartnerModal}
+            onOpenRestModal={() => setShowRestModal(true)}
+            onUpdateDeathSaves={updateDeathSaves}
+            showTradeButton={!!showTradeButton}
+            toggleFavorite={toggleFavorite}
+            isFavorited={isFavorited}
+            favorites={favorites}
+            setViewingFavorites={setViewingFavorites}
+            setShowSettings={setShowSettings}
+            loadDebugInfo={loadDebugInfo}
+            canEditToken={canEditToken}
+            hasClaimedToken={hasClaimedToken}
+            gmCustomizations={gmCustomizations}
+            packDefinitions={PACK_DEFINITIONS}
+            onPackTypeChange={(packType) => updateData({ packType })}
+            inventoryCount={currentDisplayData.inventory.length}
+            onPinnedSkillClick={handlePinnedSkillClick}
+          />
         );
       })()}
 
@@ -1606,21 +1728,7 @@ export function HomeTab({
       {/* === STANDARD TOKEN UI (non-lore tokens) === */}
       {characterData.tokenType !== 'lore' && (
         <>
-          {!viewingStorageId ? (
-        <>
-          {/* Only show edit controls if player is GM, owns this token, or it's a party token */}
-          {canUserEdit && (
-            <>
-              <div style={{marginBottom: '12px'}}>
-                <label style={{display:'block', fontSize:'10px', color:'var(--text-muted)', textTransform:'uppercase'}}>Current Pack</label>
-                <select value={characterData.packType} onChange={(e) => updateData({ packType: e.target.value as PackType })} className="search-input" style={{marginTop: '4px', fontWeight: 'bold', color: 'var(--accent-gold)'}}>
-                  {Object.keys(PACK_DEFINITIONS).map(pack => <option key={pack} value={pack}>{pack} Pack</option>)}
-                </select>
-              </div>
-            </>
-          )}
-        </>
-      ) : (
+          {viewingStorageId && (
         <div style={{marginBottom: '12px'}}>
           <div style={{color: '#888', fontSize: '12px'}}>Type: {characterData.externalStorages.find(s => s.id === viewingStorageId)?.type}</div>
           <div style={{marginTop:'8px'}}>
@@ -1634,16 +1742,19 @@ export function HomeTab({
         </div>
       )}
 
-      {/* Show stats - only show to GM, token owner, or for party tokens */}
-      {(viewingStorageId || canUserEdit) && (
+      {/* Show stats - only when viewing storage */}
+      {viewingStorageId && (
         <>
           <div className="totals-grid">
             <div className="stat-box"><div className="stat-label">TOTAL WEIGHT</div><div className={`stat-value ${stats.totalWeight > (activeStorageDef?.capacity || stats.maxCapacity) ? 'danger' : ''}`}>{stats.totalWeight} <span style={{fontSize:'10px', color:'#666'}}>/ {activeStorageDef ? activeStorageDef.capacity : stats.maxCapacity}</span></div></div>
             <div className="stat-box"><div className="stat-label">COIN WEIGHT</div><div className={`stat-value ${stats.coinWeight > 0 ? 'danger' : ''}`}>{stats.coinWeight}u</div></div>
             <div className="stat-box"><div className="stat-label">ITEMS</div><div className="stat-value">{currentDisplayData.inventory.length}</div></div>
           </div>
+        </>
+      )}
 
-          {!viewingStorageId && (
+      {/* Inventory & Coins - collapsible section for main view */}
+      {!viewingStorageId && canUserEdit && (
             <PurpleCollapsibleSection title="Inventory & Coins" defaultExpanded={false}>
               <div className="totals-grid">
                 <div className="stat-box" style={{borderColor: stats.usedSlots.weapon > stats.maxSlots.weapon ? 'var(--danger)' : 'transparent', borderStyle:'solid', borderWidth:'1px'}}>
@@ -1659,8 +1770,6 @@ export function HomeTab({
                 <div className="stat-box" style={{gridColumn: 'span 2', background: 'rgba(240, 225, 48, 0.05)'}}><div className="stat-label" style={{color: 'var(--accent-gold)'}}>UTILITY / QUICK</div><div className="stat-value">{stats.usedSlots.utility} <span style={{fontSize:'10px', color:'#666'}}>/ {stats.maxSlots.utility}</span></div></div>
               </div>
             </PurpleCollapsibleSection>
-          )}
-        </>
       )}
 
       {/* Show description - editable only if GM, owner, or party token */}

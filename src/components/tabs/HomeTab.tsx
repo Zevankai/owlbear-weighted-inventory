@@ -9,6 +9,7 @@ import { ConditionsPanel } from '../ConditionsPanel';
 import { ExhaustionMeter } from '../ExhaustionMeter';
 import { RestModal } from '../RestModal';
 import { EditPopup } from '../EditPopup';
+import { InjuryPromptModal } from '../InjuryPromptModal';
 import { createDefaultCharacterSheet, calculateModifier, ABILITY_ABBREV } from '../../utils/characterSheet';
 import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats, createDefaultDeathSaves } from '../../utils/characterStats';
 import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } from '../../data/conditions';
@@ -289,6 +290,7 @@ interface TwoColumnDashboardProps {
   onOpenTradePartnerModal?: () => void;
   onOpenRestModal?: () => void;
   onUpdateDeathSaves?: (updates: Partial<DeathSaves>) => void;
+  onApplyInjury?: (injuryType: ConditionType, location?: InjuryLocation) => void;
   showTradeButton: boolean;
   toggleFavorite: () => void;
   isFavorited: boolean;
@@ -320,6 +322,7 @@ const TwoColumnDashboard = ({
   onOpenTradePartnerModal,
   onOpenRestModal,
   onUpdateDeathSaves,
+  onApplyInjury,
   showTradeButton,
   toggleFavorite,
   isFavorited,
@@ -339,6 +342,15 @@ const TwoColumnDashboard = ({
     type: 'hp' | 'ac' | 'init' | 'passive' | null;
     position: { top: number; left: number };
   }>({ type: null, position: { top: 0, left: 0 } });
+  
+  // State for injury prompt modal
+  const [injuryPrompt, setInjuryPrompt] = useState<{
+    isOpen: boolean;
+    damageAmount: number;
+  }>({ isOpen: false, damageAmount: 0 });
+  
+  // Track the HP value when edit popup opens to calculate damage later
+  const hpBeforeEdit = useRef<number>(sheet.hitPoints.current);
   
   // State for inline level editing
   const [isEditingLevel, setIsEditingLevel] = useState(false);
@@ -368,10 +380,38 @@ const TwoColumnDashboard = ({
   const handleStatClick = (type: 'hp' | 'ac' | 'init' | 'passive', ref: RefObject<HTMLDivElement | null>) => {
     if (!canEdit || !ref.current) return;
     const rect = ref.current.getBoundingClientRect();
+    // Capture HP before editing so we can detect damage when popup closes
+    if (type === 'hp') {
+      hpBeforeEdit.current = sheet.hitPoints.current;
+    }
     setEditPopup({
       type,
       position: { top: rect.bottom + 8, left: rect.left }
     });
+  };
+  
+  // Handler for when HP edit popup closes - checks for damage and triggers injury prompt
+  const handleHpEditClose = () => {
+    const hpBefore = hpBeforeEdit.current;
+    const hpAfter = sheet.hitPoints.current;
+    const damage = hpBefore - hpAfter;
+    
+    // Close the edit popup first
+    setEditPopup({ type: null, position: { top: 0, left: 0 } });
+    
+    // Check if damage meets injury thresholds (only actual HP damage, not temp HP)
+    // Only show if onApplyInjury callback is provided, damage is positive (not healing), and >= 10
+    if (onApplyInjury && damage > 0 && damage >= 10) {
+      setInjuryPrompt({ isOpen: true, damageAmount: damage });
+    }
+  };
+  
+  // Handler for applying an injury from the injury prompt modal
+  const handleApplyInjuryFromPrompt = (injuryType: ConditionType, location?: InjuryLocation) => {
+    if (onApplyInjury) {
+      onApplyInjury(injuryType, location);
+    }
+    setInjuryPrompt({ isOpen: false, damageAmount: 0 });
   };
 
   // Inline level editing handlers
@@ -1109,7 +1149,7 @@ const TwoColumnDashboard = ({
       {/* Edit Popups */}
       <EditPopup
         isOpen={editPopup.type === 'hp'}
-        onClose={() => setEditPopup({ type: null, position: { top: 0, left: 0 } })}
+        onClose={handleHpEditClose}
         title="Edit Hit Points"
         position={editPopup.position}
         fields={[
@@ -1214,6 +1254,14 @@ const TwoColumnDashboard = ({
           </div>
         </>
       )}
+      
+      {/* Injury Prompt Modal - shown when HP damage exceeds thresholds */}
+      <InjuryPromptModal
+        isOpen={injuryPrompt.isOpen}
+        onClose={() => setInjuryPrompt({ isOpen: false, damageAmount: 0 })}
+        damageAmount={injuryPrompt.damageAmount}
+        onApplyInjury={handleApplyInjuryFromPrompt}
+      />
     </div>
   );
 };
@@ -1436,6 +1484,18 @@ export function HomeTab({
     });
   };
   
+  // Apply an injury from the automatic injury prompt
+  // This is a wrapper around updateCondition specifically for injury application
+  const applyInjury = (injuryType: ConditionType, location?: InjuryLocation) => {
+    // For minor injuries, no location is needed
+    if (injuryType === 'minorInjury') {
+      updateCondition('minorInjury', true);
+    } else {
+      // For serious and critical injuries, location is required
+      updateCondition(injuryType, true, location);
+    }
+  };
+  
   // Helper to check if trade button should be shown
   const showTradeButton = !activeTrade && tokenId && 
     (characterData.claimedBy || characterData.tokenType === 'party') && 
@@ -1645,6 +1705,7 @@ export function HomeTab({
             onOpenTradePartnerModal={onOpenTradePartnerModal}
             onOpenRestModal={() => setShowRestModal(true)}
             onUpdateDeathSaves={updateDeathSaves}
+            onApplyInjury={applyInjury}
             showTradeButton={!!showTradeButton}
             toggleFavorite={toggleFavorite}
             isFavorited={isFavorited}

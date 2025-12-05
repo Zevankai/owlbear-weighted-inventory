@@ -1,0 +1,155 @@
+.container {
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  margin: 8px;
+  user-select: none;
+  overflow: hidden;
+}
+
+/* --- BANNER STYLES --- */
+.bannerContainer {
+  position: relative;
+  width: calc(100% + 32px);
+  height: 130px;
+  margin: -16px -16px 16px -16px;
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+}
+
+.bannerImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.bannerOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+  pointer-events: none;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 1rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.grid {
+  display: grid;
+  gap: 4px;
+}
+
+.dayName {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  padding-bottom: 4px;
+}
+
+.cell {
+  aspect-ratio: 1;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(5px);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  padding-top: 4px;
+  font-size: 0.9rem;
+  color: #e0e0e0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.cell:hover {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.cell.empty {
+  background: transparent;
+  pointer-events: none;
+  border: none;
+}
+
+/* --- THE "CURRENT GAME DATE" HIGHLIGHT --- */
+.cell.today {
+  border: 2px solid var(--theme-accent-primary, #ff9800);
+  background: var(--theme-glass-base, rgba(255, 152, 0, 0.2));
+  backdrop-filter: blur(8px);
+  color: white;
+  font-weight: bold;
+  box-shadow: 0 0 20px var(--theme-glass-base, rgba(255, 152, 0, 0.5)), 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+}
+
+/* --- THE "USER CLICKED" HIGHLIGHT --- */
+.cell.selected {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(8px);
+}
+
+/* COMBINED: If today is ALSO selected */
+.cell.today.selected {
+  border-color: var(--theme-accent-primary, #ff9800);
+  background: var(--theme-glass-base, rgba(255, 152, 0, 0.25));
+  backdrop-filter: blur(8px);
+}
+
+.navButton {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e0e0e0;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 4px 10px;
+  transition: all 0.2s ease;
+}
+.navButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: white;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* DOTS CONTAINER */
+.dotContainer {
+  display: flex;
+  gap: 2px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 80%;
+}
+
+.dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  display: block;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.5); /* Tiny shadow for pop */
+}

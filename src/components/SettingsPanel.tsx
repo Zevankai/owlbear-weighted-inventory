@@ -30,7 +30,7 @@ interface SettingsPanelProps {
 
 // Default races and classes
 const DEFAULT_RACES: CharacterRace[] = ['Human', 'Elf', 'Dragonborn', 'Orc', 'Halfling', 'Dwarf', 'Tiefling', 'Goblin', 'Fairy', 'Mixed'];
-const DEFAULT_CLASSES: CharacterClass[] = ['Fighter', 'Ranger', 'Bard', 'Wizard', 'Warlock', 'Rogue', 'Barbarian', 'Druid', 'Cleric', 'Paladin', 'Monk', 'Multiclass'];
+const DEFAULT_CLASSES: CharacterClass[] = ['Fighter', 'Ranger', 'Bard', 'Wizard', 'Warlock', 'Rogue', 'Barbarian', 'Druid', 'Cleric', 'Paladin', 'Monk', 'Sorcerer', 'Multiclass'];
 
 type SettingsTab = 'style' | 'character';
 

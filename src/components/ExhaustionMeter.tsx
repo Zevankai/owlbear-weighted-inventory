@@ -81,8 +81,9 @@ export const ExhaustionMeter: React.FC<ExhaustionMeterProps> = ({
       {/* Visual meter - clickable segments */}
       <div style={{
         display: 'flex',
-        gap: '4px',
+        gap: '2px',
         marginBottom: '10px',
+        overflow: 'hidden',
       }}>
         {Array.from({ length: maxLevels }, (_, i) => {
           const level = i + 1;
@@ -105,6 +106,7 @@ export const ExhaustionMeter: React.FC<ExhaustionMeterProps> = ({
               title={`Level ${level}: ${effects[level] || 'Unknown effect'}`}
               style={{
                 flex: 1,
+                minWidth: 0,
                 height: '20px',
                 border: `1px solid ${isFilled ? segmentColor : '#444'}`,
                 borderRadius: '4px',

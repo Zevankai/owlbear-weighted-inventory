@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { CharacterData, Theme, TokenType, CharacterRace, CharacterClass, CharacterStats, GMCustomizations } from '../types';
-import { createDefaultCharacterStats } from '../utils/characterStats';
+import { createDefaultCharacterStats, createDefaultSuperiorityDice } from '../utils/characterStats';
 
 interface DebugInfo {
   roomKeys: string[];
@@ -568,6 +568,50 @@ export function SettingsPanel({
                     </select>
                   </div>
                 )}
+              </div>
+
+              {/* Superiority Dice Toggle */}
+              <div style={{
+                marginBottom: '16px',
+                padding: '12px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                borderRadius: '6px',
+                border: '1px solid var(--glass-border)',
+              }}>
+                <label style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  color: 'var(--text-main)',
+                }}>
+                  <input
+                    type="checkbox"
+                    checked={(characterStats?.superiorityDice?.max ?? 0) > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        updateCharacterStats({
+                          superiorityDice: createDefaultSuperiorityDice()
+                        });
+                      } else {
+                        updateCharacterStats({
+                          superiorityDice: { current: 0, max: 0 }
+                        });
+                      }
+                    }}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                  />
+                  ⚔️ Enable Superiority Dice
+                </label>
+                <p style={{
+                  margin: '8px 0 0 26px',
+                  fontSize: '10px',
+                  color: 'var(--text-muted)',
+                  fontStyle: 'italic',
+                }}>
+                  When enabled, superiority dice tracking will be shown on the character sheet.
+                </p>
               </div>
 
               {/* GM-Only Custom Races/Classes Section */}

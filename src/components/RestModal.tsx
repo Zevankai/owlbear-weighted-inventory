@@ -110,6 +110,11 @@ export const RestModal: React.FC<RestModalProps> = ({
   // Project modal state
   const [projectPrompt, setProjectPrompt] = useState<{ isOpen: boolean }>({ isOpen: false });
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [newProjectData, setNewProjectData] = useState<{
+    name: string;
+    description: string;
+    totalWorkUnits: number;
+  } | null>(null);
   const [newProjectName, setNewProjectName] = useState('');
   const [newProjectDescription, setNewProjectDescription] = useState('');
   const [newProjectWorkUnits, setNewProjectWorkUnits] = useState(5);
@@ -411,6 +416,7 @@ export const RestModal: React.FC<RestModalProps> = ({
   // Handle project selection - work on existing project
   const handleSelectProject = (projectId: string) => {
     setSelectedProjectId(projectId);
+    setNewProjectData(null); // Clear any new project data
     setProjectPrompt({ isOpen: false });
     setError(null);
   };
@@ -421,8 +427,13 @@ export const RestModal: React.FC<RestModalProps> = ({
       setError('Please enter a project name');
       return;
     }
-    // Set flag to create new project - actual creation happens in handleRest
-    setSelectedProjectId(`new:${newProjectName}:${newProjectDescription}:${newProjectWorkUnits}`);
+    // Store new project data in a proper object (not string parsing)
+    setNewProjectData({
+      name: newProjectName,
+      description: newProjectDescription,
+      totalWorkUnits: newProjectWorkUnits,
+    });
+    setSelectedProjectId(null); // Clear any existing project selection
     setProjectPrompt({ isOpen: false });
     setNewProjectName('');
     setNewProjectDescription('');
@@ -438,6 +449,7 @@ export const RestModal: React.FC<RestModalProps> = ({
     newSet.delete('long-standard-project');
     setSelectedOptionIds(newSet);
     setSelectedProjectId(null);
+    setNewProjectData(null);
     setProjectPrompt({ isOpen: false });
   };
 
@@ -453,25 +465,24 @@ export const RestModal: React.FC<RestModalProps> = ({
       effects.selectedInjuryToHeal = selectedInjuryToHeal;
     }
     
-    // Include project work if selected
-    if (selectedProjectId) {
-      const workUnits = selectedRestType === 'short' ? 1 : (race === 'Elf' ? 3 : 2);
+    // Include project work - either existing project or new project
+    const workUnits = selectedRestType === 'short' ? 1 : (race === 'Elf' ? 3 : 2);
+    
+    if (newProjectData) {
+      // Creating and working on a new project
       effects.workUnitsToAdd = workUnits;
-      
-      if (selectedProjectId.startsWith('new:')) {
-        // Parse new project info
-        const parts = selectedProjectId.split(':');
-        effects.newProject = {
-          id: `project-${Date.now()}`,
-          name: parts[1] || 'Untitled Project',
-          description: parts[2] || '',
-          totalWorkUnits: parseInt(parts[3], 10) || 5,
-          completedWorkUnits: workUnits,
-          isCompleted: false,
-        };
-      } else {
-        effects.projectToWorkOn = selectedProjectId;
-      }
+      effects.newProject = {
+        id: `project-${Date.now()}`,
+        name: newProjectData.name,
+        description: newProjectData.description,
+        totalWorkUnits: newProjectData.totalWorkUnits,
+        completedWorkUnits: workUnits,
+        isCompleted: false,
+      };
+    } else if (selectedProjectId) {
+      // Working on existing project
+      effects.workUnitsToAdd = workUnits;
+      effects.projectToWorkOn = selectedProjectId;
     }
     
     // Long rest specific effects
@@ -540,7 +551,7 @@ export const RestModal: React.FC<RestModalProps> = ({
     });
     
     return effects;
-  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal, selectedProjectId, race]);
+  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal, selectedProjectId, newProjectData, race]);
 
   // Handle rest completion
   const handleRest = () => {

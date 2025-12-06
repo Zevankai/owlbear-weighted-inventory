@@ -453,7 +453,7 @@ export interface Scar {
   size: 'small' | 'medium' | 'large';
   location: string;         // Body location
   injuryType: 'serious' | 'critical';
-  acquiredDate: { year: number; monthIndex: number; day: number };
+  acquiredDate?: { year: number; monthIndex: number; day: number }; // Optional for when calendar not available
 }
 
 // Character Stats (unified character stats for dashboard)

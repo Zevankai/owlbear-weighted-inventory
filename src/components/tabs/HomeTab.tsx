@@ -1401,7 +1401,7 @@ const ScarPromptModal: React.FC<ScarPromptModalProps> = ({
         year: calendarConfig.currentDate.year,
         monthIndex: calendarConfig.currentDate.monthIndex,
         day: calendarConfig.currentDate.day,
-      } : { year: 0, monthIndex: 0, day: 0 },
+      } : undefined,
     };
     onSave(scar);
   };
@@ -2722,7 +2722,7 @@ export function HomeTab({
                             }}>
                               {scar.injuryType === 'critical' ? '💀' : '🩸'} {scar.size} scar on {scar.location}
                             </span>
-                            {scar.acquiredDate && scar.acquiredDate.year > 0 && (
+                            {scar.acquiredDate && (
                               <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
                                 Day {scar.acquiredDate.day}, M{scar.acquiredDate.monthIndex + 1}, Y{scar.acquiredDate.year}
                               </span>

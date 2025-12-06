@@ -46,7 +46,7 @@ export const SHORT_REST_STANDARD_OPTIONS: RestOption[] = [
   {
     id: 'short-standard-snack',
     name: 'Prepare a Snack',
-    description: 'Enter rations to use; cooking tools required. The party gains +5 temporary HP per ration used.',
+    description: 'Cooking tools required. The party gains +5 temporary HP per ration used (prompt for ration count).',
     category: 'standard',
     restType: 'short',
     effect: { type: 'tempHp', value: 5, requiresRationPrompt: true },
@@ -375,7 +375,7 @@ export const LONG_REST_STANDARD_OPTIONS: RestOption[] = [
   {
     id: 'long-standard-meal',
     name: 'Prepare a Meal',
-    description: 'Enter rations to use; cooking tools required. Party gains +10 temporary HP per ration used.',
+    description: 'Cooking tools required. Party gains +10 temporary HP per ration used (prompt for ration count).',
     category: 'standard',
     restType: 'long',
     effect: { type: 'tempHp', value: 10, requiresRationPrompt: true },

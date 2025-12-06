@@ -1620,7 +1620,8 @@ export function HomeTab({
               injuryDaysSinceRest: newDays,
             };
             
-            // Auto-add Infection if 3 long rests without treatment
+            // Auto-add Infection if 3 long rests (days) pass without treatment
+            // Note: Each long rest counts as 1 day without treatment
             if (newDays >= 3 && !conditions.infection) {
               conditions.infection = true;
               injuryData.infection = {

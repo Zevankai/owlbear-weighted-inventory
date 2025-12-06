@@ -139,6 +139,11 @@ export function applyTheme(colors: ThemeColors, container?: HTMLElement | null):
 export function clearTheme(container?: HTMLElement | null): void {
   const target = container || document.documentElement;
 
+  // Check if element is still connected to the DOM before removing properties
+  if (!target.isConnected && target !== document.documentElement) {
+    return;
+  }
+
   target.style.removeProperty('--theme-bg-start');
   target.style.removeProperty('--theme-bg-mid');
   target.style.removeProperty('--theme-bg-end');

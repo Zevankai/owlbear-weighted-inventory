@@ -12,7 +12,7 @@
   min-height: 0; /* Allow shrinking in flex context */
 }
 
-/* Scrollable area within calendar tab */
+/* Scrollable area within calendar tab - top padding handled by CompactHeader */
 .calendar-scroll-area {
   flex: 1;
   overflow-y: auto;

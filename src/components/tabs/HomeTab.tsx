@@ -1557,40 +1557,78 @@ export function HomeTab({
       };
     }
     
-    // Apply injury healing
-    if (effects.healInjuryLevels && effects.healInjuryLevels > 0) {
+    // Check if "Patch Wounds" was selected
+    const patchWoundsSelected = selectedOptionIds.some(id => 
+      id === 'short-standard-patch-wounds' || id === 'long-standard-patch-wounds'
+    );
+    
+    // Apply injury healing using the new HP system
+    if (effects.healInjuryLevels && effects.healInjuryLevels > 0 && patchWoundsSelected) {
       const conditions = { ...currentStats.conditions };
       const injuryData = { ...(currentStats.injuryData || {}) };
-      let healingRemaining = effects.healInjuryLevels;
+      const healAmount = effects.healInjuryLevels; // 1 for short rest, 2 for long rest
       
-      // Heal injuries from most severe to least (Critical -> Serious -> Minor)
-      if (healingRemaining > 0 && conditions.criticalInjury) {
-        // Critical -> Serious
-        conditions.criticalInjury = false;
-        conditions.seriousInjury = true;
-        // Transfer injury data if present
-        if (injuryData.criticalInjury) {
-          injuryData.seriousInjury = injuryData.criticalInjury;
-          delete injuryData.criticalInjury;
+      // Find the first active injury and reduce its HP
+      // Priority: Critical -> Serious -> Minor
+      const injuryPriority: ('criticalInjury' | 'seriousInjury' | 'minorInjury')[] = ['criticalInjury', 'seriousInjury', 'minorInjury'];
+      
+      for (const injuryType of injuryPriority) {
+        if (conditions[injuryType] && injuryData[injuryType]) {
+          const currentHP = injuryData[injuryType]?.injuryHP || INJURY_HP_VALUES[injuryType];
+          const newHP = Math.max(0, currentHP - healAmount);
+          
+          if (newHP <= 0) {
+            // Injury is fully healed - remove the condition
+            conditions[injuryType] = false;
+            delete injuryData[injuryType];
+            
+            // TODO: Future enhancement - prompt for scar description for serious/critical injuries
+          } else {
+            // Update injury HP and reset days since rest (injury was treated)
+            injuryData[injuryType] = {
+              ...injuryData[injuryType],
+              injuryHP: newHP,
+              injuryDaysSinceRest: 0,
+            };
+          }
+          break; // Only heal one injury per rest
         }
-        healingRemaining--;
       }
-      if (healingRemaining > 0 && conditions.seriousInjury) {
-        // Serious -> Minor
-        conditions.seriousInjury = false;
-        conditions.minorInjury = true;
-        // Transfer injury data if present
-        if (injuryData.seriousInjury) {
-          injuryData.minorInjury = injuryData.seriousInjury;
-          delete injuryData.seriousInjury;
+      
+      statsUpdates.conditions = conditions;
+      statsUpdates.injuryData = Object.keys(injuryData).length > 0 ? injuryData : undefined;
+    }
+    
+    // For long rests, track days without treatment for injuries not patched
+    // and auto-add infection if 3 long rests pass without treatment
+    if (restType === 'long') {
+      const conditions = statsUpdates.conditions ? { ...statsUpdates.conditions } : { ...currentStats.conditions };
+      const injuryData = statsUpdates.injuryData ? { ...statsUpdates.injuryData } : { ...(currentStats.injuryData || {}) };
+      
+      const injuryTypes: ('minorInjury' | 'seriousInjury' | 'criticalInjury')[] = ['minorInjury', 'seriousInjury', 'criticalInjury'];
+      
+      for (const injuryType of injuryTypes) {
+        if (conditions[injuryType] && injuryData[injuryType]) {
+          // Only increment if this injury wasn't treated this rest
+          const wasJustTreated = patchWoundsSelected && effects.healInjuryLevels && effects.healInjuryLevels > 0;
+          if (!wasJustTreated) {
+            const currentDays = injuryData[injuryType]?.injuryDaysSinceRest || 0;
+            const newDays = currentDays + 1;
+            
+            injuryData[injuryType] = {
+              ...injuryData[injuryType],
+              injuryDaysSinceRest: newDays,
+            };
+            
+            // Auto-add Infection if 3 long rests without treatment
+            if (newDays >= 3 && !conditions.infection) {
+              conditions.infection = true;
+              injuryData.infection = {
+                infectionDeathSavesFailed: 0,
+              };
+            }
+          }
         }
-        healingRemaining--;
-      }
-      if (healingRemaining > 0 && conditions.minorInjury) {
-        // Minor -> Healed (removed)
-        conditions.minorInjury = false;
-        delete injuryData.minorInjury;
-        healingRemaining--;
       }
       
       statsUpdates.conditions = conditions;

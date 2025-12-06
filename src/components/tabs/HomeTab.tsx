@@ -16,6 +16,7 @@ import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCh
 import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } from '../../data/conditions';
 import { deductRationsFromInventory } from '../../utils/inventory';
 import { deductCopperPieces } from '../../utils/currency';
+import { useCalendar } from '../../hooks/useCalendar';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -364,6 +365,9 @@ const TwoColumnDashboard = ({
   
   const [showOverencumberedPopup, setShowOverencumberedPopup] = useState(false);
   
+  // Get calendar data for time/weather display
+  const { config: calendarConfig } = useCalendar();
+  
   const hpRef = useRef<HTMLDivElement>(null);
   const acRef = useRef<HTMLDivElement>(null);
   const initRef = useRef<HTMLDivElement>(null);
@@ -526,26 +530,49 @@ const TwoColumnDashboard = ({
           flexDirection: 'column',
           gap: '2px',
         }}>
-          {/* Top row: Token Type + Level */}
+          {/* Top row: Time/Weather + Level */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}>
-            <div style={{
-              fontSize: '8px',
-              color: characterData.tokenType === 'npc' ? '#ff9800' : 
-                     characterData.tokenType === 'party' ? '#4caf50' : 
-                     characterData.tokenType === 'lore' ? '#9c27b0' : 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              fontWeight: 'bold',
-              background: 'rgba(0,0,0,0.4)',
-              padding: '2px 6px',
-              borderRadius: '3px',
-            }}>
-              {characterData.tokenType || 'Player'} Token
-            </div>
+            {/* Time and Weather Display - replaces token type */}
+            {calendarConfig ? (
+              <div style={{
+                fontSize: '8px',
+                color: 'var(--text-muted)',
+                letterSpacing: '0.3px',
+                background: 'rgba(0,0,0,0.4)',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <span style={{ color: 'var(--text-main)' }}>
+                  {calendarConfig.currentDate.hour.toString().padStart(2, '0')}:{calendarConfig.currentDate.minute.toString().padStart(2, '0')}
+                </span>
+                <span style={{ opacity: 0.6 }}>|</span>
+                <span style={{ color: 'var(--text-main)' }}>
+                  {calendarConfig.currentWeather.currentCondition} {calendarConfig.currentWeather.temperature}°
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                fontSize: '8px',
+                color: characterData.tokenType === 'npc' ? '#ff9800' : 
+                       characterData.tokenType === 'party' ? '#4caf50' : 
+                       characterData.tokenType === 'lore' ? '#9c27b0' : 'var(--accent-gold)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                fontWeight: 'bold',
+                background: 'rgba(0,0,0,0.4)',
+                padding: '2px 6px',
+                borderRadius: '3px',
+              }}>
+                {characterData.tokenType || 'Player'} Token
+              </div>
+            )}
             {/* Inline editable level */}
             {isEditingLevel ? (
               <input
@@ -973,21 +1000,6 @@ const TwoColumnDashboard = ({
               background: 'var(--glass-border)',
               margin: '0 2px',
             }} />
-
-            {/* Speed Display */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2px',
-              padding: '2px 4px',
-              background: 'rgba(0, 188, 212, 0.1)',
-              border: '1px solid rgba(0, 188, 212, 0.3)',
-              borderRadius: '3px',
-              fontSize: '9px',
-            }} title="Movement Speed (ft)">
-              <span style={{ color: '#00bcd4' }}>🏃</span>
-              <span style={{ color: '#00bcd4', fontWeight: 'bold' }}>{sheet.speed}ft</span>
-            </div>
 
             {/* Death Save Skulls */}
             {onUpdateDeathSaves && (
@@ -1999,6 +2011,53 @@ export function HomeTab({
             canEdit={canUserEdit}
             updateData={updateData}
           />
+        </PurpleCollapsibleSection>
+      )}
+
+      {/* === FEATURES & TRAITS - Purple Collapsible section - Beneath Skills & Proficiencies === */}
+      {!viewingStorageId && 
+       characterData.tokenType !== 'lore' &&
+       (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
+        <PurpleCollapsibleSection title="Features & Traits" defaultExpanded={false}>
+          {(() => {
+            const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+            const handleUpdateSheet = (updates: Partial<CharacterSheet>) => {
+              updateData({
+                characterSheet: {
+                  ...sheet,
+                  ...updates,
+                },
+              });
+            };
+            
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <DebouncedTextarea
+                  value={sheet.featuresAndTraits || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ featuresAndTraits: val })}
+                  className="search-input"
+                  rows={6}
+                  disabled={!canUserEdit}
+                  placeholder="Enter character features, traits, and special abilities..."
+                  style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    opacity: 1,
+                    cursor: canUserEdit ? 'text' : 'default',
+                    fontSize: '13px',
+                    lineHeight: '1.5'
+                  }}
+                />
+                {canUserEdit && (
+                  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
+                    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </PurpleCollapsibleSection>
       )}
 

@@ -285,6 +285,7 @@ export interface CharacterSheet {
   alignment?: string;       // Alignment (e.g., "Lawful Good", "Chaotic Neutral")
   birthplace?: string;      // Text field for birthplace
   majorLifeMoments?: string; // Text area for major life moments
+  featuresAndTraits?: string; // Text field for character features and traits
   
   // Spells
   spellManagement?: SpellManagement;
@@ -369,6 +370,7 @@ export interface RestOptionEffect {
   type: 'tempHp' | 'heroicInspiration' | 'healInjury';
   value?: number;              // For tempHp: amount of temp HP to add; For healInjury: levels to heal (default 1)
   requiresRations?: number;    // Number of rations required per party member
+  requiresRationPrompt?: boolean; // If true, prompt user to enter how many rations to use
 }
 
 export interface RestOption {

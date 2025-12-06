@@ -46,10 +46,10 @@ export const SHORT_REST_STANDARD_OPTIONS: RestOption[] = [
   {
     id: 'short-standard-snack',
     name: 'Prepare a Snack',
-    description: 'Costs 1 ration per member; cooking tools required. The party gains +10 temporary HP.',
+    description: 'Enter rations to use; cooking tools required. The party gains +5 temporary HP per ration used.',
     category: 'standard',
     restType: 'short',
-    effect: { type: 'tempHp', value: 10, requiresRations: 1 },
+    effect: { type: 'tempHp', value: 5, requiresRationPrompt: true },
   },
   {
     id: 'short-standard-patch-wounds',
@@ -320,7 +320,7 @@ export const SHORT_REST_CLASS_OPTIONS: RestOption[] = [
   {
     id: 'short-class-warlock-selfless',
     name: 'Selfless Act',
-    description: 'At the cost of 1d20 HP, grant Heroic Inspiration to a party member. (HP cannot drop below 1.)',
+    description: 'At the cost of 1d20 HP after this rest, grant Heroic Inspiration to a party member. (HP cannot drop below 1).',
     category: 'class',
     classRestriction: 'Warlock',
     restType: 'short',
@@ -375,10 +375,10 @@ export const LONG_REST_STANDARD_OPTIONS: RestOption[] = [
   {
     id: 'long-standard-meal',
     name: 'Prepare a Meal',
-    description: 'Costs 1 ration per member; cooking tools required. Party gains +15 temporary HP.',
+    description: 'Enter rations to use; cooking tools required. Party gains +10 temporary HP per ration used.',
     category: 'standard',
     restType: 'long',
-    effect: { type: 'tempHp', value: 15, requiresRations: 1 },
+    effect: { type: 'tempHp', value: 10, requiresRationPrompt: true },
   },
   {
     id: 'long-standard-patch-wounds',
@@ -648,7 +648,7 @@ export const LONG_REST_CLASS_OPTIONS: RestOption[] = [
   {
     id: 'long-class-warlock-selfless',
     name: 'Selfless Act',
-    description: 'At the cost of 1d20 HP, grant Heroic Inspiration to yourself and one party member. (HP cannot drop below 1.)',
+    description: 'At the cost of 1d20+5 HP after this rest, grant Heroic Inspiration to two party members (HP cannot drop below 1).',
     category: 'class',
     classRestriction: 'Warlock',
     restType: 'long',

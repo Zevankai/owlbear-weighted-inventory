@@ -94,6 +94,17 @@ export const RestModal: React.FC<RestModalProps> = ({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Ration input prompt for "Prepare a Meal" / "Prepare a Snack" options
+  const [rationInputPrompt, setRationInputPrompt] = useState<{
+    isOpen: boolean;
+    optionId: string;
+    rationCount: string;
+    tempHpPerRation: number;
+  } | null>(null);
+  
+  // Track custom ration counts for options that require input
+  const [customRationCounts, setCustomRationCounts] = useState<Record<string, number>>({});
+  
   // Long rest location state
   const [restLocation, setRestLocation] = useState<RestLocationType | null>(null);
   const [selectedRoomType, setSelectedRoomType] = useState<SettlementRoomType | null>(null);
@@ -210,12 +221,17 @@ export const RestModal: React.FC<RestModalProps> = ({
   const lastLongRest = restHistory.lastLongRest;
 
   // Check if an option requires rations and if we have enough
-  const checkRationRequirement = useCallback((option: RestOption): { required: number; hasEnough: boolean } => {
+  const checkRationRequirement = useCallback((option: RestOption): { required: number; hasEnough: boolean; requiresPrompt: boolean } => {
+    // Check if this option requires a ration prompt (variable ration input)
+    if (option.effect?.requiresRationPrompt) {
+      // For ration prompt options, we need at least 1 ration
+      return { required: 1, hasEnough: availableRations >= 1, requiresPrompt: true };
+    }
     if (!option.effect?.requiresRations) {
-      return { required: 0, hasEnough: true };
+      return { required: 0, hasEnough: true, requiresPrompt: false };
     }
     const required = option.effect.requiresRations;
-    return { required, hasEnough: availableRations >= required };
+    return { required, hasEnough: availableRations >= required, requiresPrompt: false };
   }, [availableRations]);
 
   // Toggle option selection
@@ -226,8 +242,13 @@ export const RestModal: React.FC<RestModalProps> = ({
     const newSet = new Set(selectedOptionIds);
     
     if (newSet.has(optionId)) {
-      // Deselecting
+      // Deselecting - also clear custom ration count if any
       newSet.delete(optionId);
+      if (customRationCounts[optionId]) {
+        const newCounts = { ...customRationCounts };
+        delete newCounts[optionId];
+        setCustomRationCounts(newCounts);
+      }
       setError(null);
     } else {
       // Only add if not at max
@@ -236,7 +257,24 @@ export const RestModal: React.FC<RestModalProps> = ({
       }
       
       // Check ration requirement
-      const { required, hasEnough } = checkRationRequirement(option);
+      const { required, hasEnough, requiresPrompt } = checkRationRequirement(option);
+      
+      // If option requires ration prompt, show the ration input modal
+      if (requiresPrompt) {
+        if (availableRations < 1) {
+          setError(`Not enough rations! "${option.name}" requires at least 1 ration but you have none.`);
+          return;
+        }
+        // Show ration input prompt
+        setRationInputPrompt({
+          isOpen: true,
+          optionId: optionId,
+          rationCount: '1',
+          tempHpPerRation: option.effect?.value || 5,
+        });
+        return;
+      }
+      
       if (required > 0 && !hasEnough) {
         setError(`Not enough rations! "${option.name}" requires ${required} ration(s) but you only have ${availableRations}. Choose a different benefit.`);
         return;
@@ -247,6 +285,32 @@ export const RestModal: React.FC<RestModalProps> = ({
     }
     
     setSelectedOptionIds(newSet);
+  };
+  
+  // Handle ration input confirmation
+  const handleRationInputConfirm = () => {
+    if (!rationInputPrompt) return;
+    
+    const rationCount = parseInt(rationInputPrompt.rationCount, 10);
+    if (isNaN(rationCount) || rationCount < 1) {
+      setError('Please enter a valid number of rations (at least 1)');
+      return;
+    }
+    if (rationCount > availableRations) {
+      setError(`Not enough rations! You have ${availableRations} but entered ${rationCount}.`);
+      return;
+    }
+    
+    // Add the option and store the custom ration count
+    const newSet = new Set(selectedOptionIds);
+    newSet.add(rationInputPrompt.optionId);
+    setSelectedOptionIds(newSet);
+    setCustomRationCounts({
+      ...customRationCounts,
+      [rationInputPrompt.optionId]: rationCount,
+    });
+    setRationInputPrompt(null);
+    setError(null);
   };
 
   // Calculate effects to apply from selected options
@@ -296,7 +360,15 @@ export const RestModal: React.FC<RestModalProps> = ({
       
       switch (effect.type) {
         case 'tempHp':
-          effects.tempHp = (effects.tempHp || 0) + (effect.value || 0);
+          // Check if this option uses custom ration count (for Prepare a Meal/Snack)
+          if (effect.requiresRationPrompt && customRationCounts[optionId]) {
+            // Scale temp HP based on rations used
+            const rationCount = customRationCounts[optionId];
+            effects.tempHp = (effects.tempHp || 0) + (effect.value || 0) * rationCount;
+            effects.rationsToDeduct = (effects.rationsToDeduct || 0) + rationCount;
+          } else {
+            effects.tempHp = (effects.tempHp || 0) + (effect.value || 0);
+          }
           break;
         case 'heroicInspiration':
           effects.heroicInspiration = true;
@@ -307,14 +379,14 @@ export const RestModal: React.FC<RestModalProps> = ({
           break;
       }
       
-      // Track rations to deduct
-      if (effect.requiresRations) {
+      // Track rations to deduct (for non-prompt options)
+      if (effect.requiresRations && !effect.requiresRationPrompt) {
         effects.rationsToDeduct = (effects.rationsToDeduct || 0) + effect.requiresRations;
       }
     });
     
     return effects;
-  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked]);
+  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts]);
 
   // Handle rest completion
   const handleRest = () => {
@@ -864,6 +936,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#51cf66"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
             />
           )}
 
@@ -879,6 +952,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#fcc419"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
             />
           )}
 
@@ -894,6 +968,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#4dabf7"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
             />
           )}
 
@@ -909,6 +984,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#c084fc"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
             />
           )}
 
@@ -1122,6 +1198,96 @@ export const RestModal: React.FC<RestModalProps> = ({
           </div>
         </>
       )}
+
+      {/* Ration Input Prompt Modal (for Prepare a Meal / Prepare a Snack) */}
+      {rationInputPrompt && rationInputPrompt.isOpen && (
+        <>
+          <div
+            onClick={() => setRationInputPrompt(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '300px',
+          }}>
+            <h4 style={{ margin: '0 0 12px', color: '#fcc419' }}>🍖 How Many Rations?</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+              Enter how many rations you want to use. Each ration provides <strong style={{ color: '#4dabf7' }}>+{rationInputPrompt.tempHpPerRation} temp HP</strong>.
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', marginBottom: '12px' }}>
+              Available rations: <strong style={{ color: '#fcc419' }}>{availableRations}</strong>
+            </p>
+            <input
+              type="number"
+              min="1"
+              max={availableRations}
+              value={rationInputPrompt.rationCount}
+              onChange={(e) => setRationInputPrompt({ ...rationInputPrompt, rationCount: e.target.value })}
+              placeholder="Enter ration count..."
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid #fcc419',
+                borderRadius: '6px',
+                color: 'var(--text-main)',
+                marginBottom: '8px',
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+            <p style={{ fontSize: '11px', color: '#51cf66', marginBottom: '12px' }}>
+              Total temp HP: <strong>+{(parseInt(rationInputPrompt.rationCount, 10) || 0) * rationInputPrompt.tempHpPerRation}</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setRationInputPrompt(null)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#444',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRationInputConfirm}
+                style={{
+                  padding: '8px 16px',
+                  background: '#51cf66',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                }}
+              >
+                Use Rations
+              </button>
+            </div>
+          </div>
+        </>
+      )}
     </>
   );
 };
@@ -1136,7 +1302,8 @@ interface OptionSectionProps {
   onExpand: (id: string | null) => void;
   color: string;
   isAtMax: boolean;
-  checkRationRequirement: (option: RestOption) => { required: number; hasEnough: boolean };
+  checkRationRequirement: (option: RestOption) => { required: number; hasEnough: boolean; requiresPrompt: boolean };
+  customRationCounts?: Record<string, number>;
 }
 
 const OptionSection: React.FC<OptionSectionProps> = ({
@@ -1149,6 +1316,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
   color,
   isAtMax,
   checkRationRequirement,
+  customRationCounts = {},
 }) => (
   <div style={{ marginBottom: '16px' }}>
     <h4 style={{
@@ -1213,7 +1381,26 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                 fontWeight: isSelected ? 'bold' : 'normal',
               }}>
                 {option.name}
-                {rationRequired > 0 && (
+                {/* Show ration info - either custom count (for prompt options) or fixed requirement */}
+                {option.effect?.requiresRationPrompt && isSelected && customRationCounts[option.id] ? (
+                  <span style={{ 
+                    marginLeft: '6px', 
+                    fontSize: '9px', 
+                    color: '#fcc419',
+                    fontWeight: 'normal',
+                  }}>
+                    🍖 ×{customRationCounts[option.id]}
+                  </span>
+                ) : option.effect?.requiresRationPrompt && !isSelected ? (
+                  <span style={{ 
+                    marginLeft: '6px', 
+                    fontSize: '9px', 
+                    color: hasEnoughRations ? '#fcc419' : '#ff6b6b',
+                    fontWeight: 'normal',
+                  }}>
+                    🍖 (choose count)
+                  </span>
+                ) : rationRequired > 0 && (
                   <span style={{ 
                     marginLeft: '6px', 
                     fontSize: '9px', 
@@ -1223,6 +1410,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                     🍖 {rationRequired}
                   </span>
                 )}
+                {/* Show temp HP - scaled if using custom ration count */}
                 {option.effect?.type === 'tempHp' && option.effect.value && (
                   <span style={{ 
                     marginLeft: '6px', 
@@ -1230,7 +1418,10 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                     color: '#4dabf7',
                     fontWeight: 'normal',
                   }}>
-                    💚 +{option.effect.value} temp HP
+                    💚 +{option.effect.requiresRationPrompt && customRationCounts[option.id] 
+                      ? option.effect.value * customRationCounts[option.id] 
+                      : option.effect.value} temp HP
+                    {option.effect.requiresRationPrompt && !isSelected && '/ration'}
                   </span>
                 )}
                 {option.effect?.type === 'heroicInspiration' && (

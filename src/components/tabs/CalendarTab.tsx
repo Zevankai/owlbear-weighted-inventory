@@ -46,9 +46,12 @@ export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
   }, [viewDate?.year, viewDate?.monthIndex, config]);
 
   // Apply seasonal/biome theme to the calendar container (scoped, not global)
+  // This effect runs on mount and whenever the biome or season changes
   useEffect(() => {
     const container = containerRef.current;
-    if (config && container) {
+    if (!container) return;
+    
+    if (config) {
       const season = config.months[config.currentDate.monthIndex]?.season || 'Spring';
       const biome = config.activeBiome || 'Temperate';
       const themeColors = getThemeColors(biome, season);
@@ -62,7 +65,8 @@ export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
       }
     };
     // Re-apply theme when activeBiome or current month's season changes
-  }, [config, config?.activeBiome, config?.currentDate?.monthIndex]);
+    // Also re-apply when months array changes (in case season definitions change)
+  }, [config?.activeBiome, config?.currentDate?.monthIndex, config?.months]);
 
   // --- HANDLERS ---
   const handleAdvanceTime = (minutes: number) => {

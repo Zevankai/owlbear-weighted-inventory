@@ -1661,6 +1661,7 @@ export function HomeTab({
         lastShortRest: {
           timestamp: now,
           chosenOptionIds: selectedOptionIds,
+          selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
         }
       };
     } else {
@@ -1698,6 +1699,7 @@ export function HomeTab({
           chosenOptionIds: selectedOptionIds,
           location: effects.restLocation,
           roomType: effects.roomType,
+          selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
         },
         heroicInspirationGainedToday: effects.heroicInspiration || false,
         consecutiveWildernessRests: newConsecutiveWildernessRests,

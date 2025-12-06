@@ -219,6 +219,15 @@ export const RestModal: React.FC<RestModalProps> = ({
   // Get last rest info
   const lastShortRest = restHistory.lastShortRest;
   const lastLongRest = restHistory.lastLongRest;
+  
+  // Get previous selected benefits for current rest type (to prevent same benefit twice in a row)
+  const previousSelectedBenefits = useMemo(() => {
+    if (selectedRestType === 'short') {
+      return lastShortRest?.selectedBenefits || lastShortRest?.chosenOptionIds || [];
+    } else {
+      return lastLongRest?.selectedBenefits || lastLongRest?.chosenOptionIds || [];
+    }
+  }, [selectedRestType, lastShortRest, lastLongRest]);
 
   // Check if an option requires rations and if we have enough
   const checkRationRequirement = useCallback((option: RestOption): { required: number; hasEnough: boolean; requiresPrompt: boolean } => {
@@ -937,6 +946,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
               customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -953,6 +963,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
               customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -969,6 +980,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
               customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -985,6 +997,7 @@ export const RestModal: React.FC<RestModalProps> = ({
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
               customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -1304,6 +1317,7 @@ interface OptionSectionProps {
   isAtMax: boolean;
   checkRationRequirement: (option: RestOption) => { required: number; hasEnough: boolean; requiresPrompt: boolean };
   customRationCounts?: Record<string, number>;
+  previousSelectedBenefits?: string[];
 }
 
 const OptionSection: React.FC<OptionSectionProps> = ({
@@ -1317,6 +1331,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
   isAtMax,
   checkRationRequirement,
   customRationCounts = {},
+  previousSelectedBenefits = [],
 }) => (
   <div style={{ marginBottom: '16px' }}>
     <h4 style={{
@@ -1337,7 +1352,8 @@ const OptionSection: React.FC<OptionSectionProps> = ({
         const isDisabled = isAtMax && !isSelected;
         const { required: rationRequired, hasEnough: hasEnoughRations } = checkRationRequirement(option);
         const hasRationIssue = rationRequired > 0 && !hasEnoughRations && !isSelected;
-        const isOptionUnavailable = isDisabled || hasRationIssue;
+        const wasPreviouslySelected = previousSelectedBenefits.includes(option.id);
+        const isOptionUnavailable = isDisabled || hasRationIssue || (wasPreviouslySelected && !isSelected);
         
         return (
           <div key={option.id}>
@@ -1347,20 +1363,21 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                 alignItems: 'center',
                 gap: '8px',
                 padding: '8px 10px',
-                background: isSelected ? `${color}15` : hasRationIssue ? 'rgba(255, 107, 107, 0.1)' : 'rgba(0, 0, 0, 0.2)',
-                border: `1px solid ${isSelected ? color : hasRationIssue ? 'rgba(255, 107, 107, 0.3)' : 'transparent'}`,
+                background: isSelected ? `${color}15` : wasPreviouslySelected ? 'rgba(128, 128, 128, 0.15)' : hasRationIssue ? 'rgba(255, 107, 107, 0.1)' : 'rgba(0, 0, 0, 0.2)',
+                border: `1px solid ${isSelected ? color : wasPreviouslySelected ? 'rgba(128, 128, 128, 0.3)' : hasRationIssue ? 'rgba(255, 107, 107, 0.3)' : 'transparent'}`,
                 borderRadius: isExpanded ? '6px 6px 0 0' : '6px',
                 cursor: isOptionUnavailable ? 'not-allowed' : 'pointer',
                 opacity: isOptionUnavailable ? 0.6 : 1,
               }}
               onClick={() => !isOptionUnavailable && onToggle(option.id)}
+              title={wasPreviouslySelected && !isSelected ? 'You selected this benefit in your last rest' : undefined}
             >
               {/* Checkbox */}
               <div style={{
                 width: '18px',
                 height: '18px',
                 borderRadius: '4px',
-                border: `2px solid ${isSelected ? color : hasRationIssue ? '#ff6b6b' : '#555'}`,
+                border: `2px solid ${isSelected ? color : wasPreviouslySelected ? '#888' : hasRationIssue ? '#ff6b6b' : '#555'}`,
                 background: isSelected ? color : 'transparent',
                 display: 'flex',
                 alignItems: 'center',
@@ -1377,10 +1394,20 @@ const OptionSection: React.FC<OptionSectionProps> = ({
               <span style={{
                 flex: 1,
                 fontSize: '11px',
-                color: isSelected ? color : hasRationIssue ? '#ff6b6b' : 'var(--text-main)',
+                color: isSelected ? color : wasPreviouslySelected ? '#888' : hasRationIssue ? '#ff6b6b' : 'var(--text-main)',
                 fontWeight: isSelected ? 'bold' : 'normal',
               }}>
                 {option.name}
+                {wasPreviouslySelected && !isSelected && (
+                  <span style={{ 
+                    marginLeft: '6px', 
+                    fontSize: '9px', 
+                    color: '#888',
+                    fontStyle: 'italic',
+                  }}>
+                    (used last rest)
+                  </span>
+                )}
                 {/* Show ration info - either custom count (for prompt options) or fixed requirement */}
                 {option.effect?.requiresRationPrompt && isSelected && customRationCounts[option.id] ? (
                   <span style={{ 

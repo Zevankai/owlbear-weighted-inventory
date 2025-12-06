@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCalendar } from '../../hooks/useCalendar';
 import { MonthView } from '../calendar/MonthView';
 import { NoteList } from '../calendar/NoteList';
@@ -7,6 +7,7 @@ import { CalendarSettings } from '../calendar/CalendarSettings';
 import { CompactHeader } from '../calendar/CompactHeader';
 import type { DateTimeState, EventCategory } from '../../types/calendar';
 import { getMoonPhase } from '../../utils/calendar/calendarMath';
+import { getThemeColors, applyTheme, clearTheme } from '../../utils/calendar/theme';
 import '../../styles/calendar.css';
 
 interface CalendarTabProps {
@@ -23,6 +24,9 @@ export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
   const [viewDate, setViewDate] = useState<DateTimeState | null>(null);
   const [isCreatingNote, setIsCreatingNote] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  
+  // Ref to the calendar container for scoped theme application
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // Initialize viewDate when config loads (one-time initialization)
   useEffect(() => {
@@ -40,6 +44,24 @@ export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
     // to only year/monthIndex to prevent unnecessary re-fetches
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewDate?.year, viewDate?.monthIndex, config]);
+
+  // Apply seasonal/biome theme to the calendar container (scoped, not global)
+  useEffect(() => {
+    const container = containerRef.current;
+    if (config && container) {
+      const season = config.months[config.currentDate.monthIndex]?.season || 'Spring';
+      const biome = config.activeBiome || 'Temperate';
+      const themeColors = getThemeColors(biome, season);
+      applyTheme(themeColors, container);
+    }
+    
+    // Cleanup: remove theme variables when unmounting
+    return () => {
+      if (container) {
+        clearTheme(container);
+      }
+    };
+  }, [config]);
 
   // --- HANDLERS ---
   const handleAdvanceTime = (minutes: number) => {
@@ -103,32 +125,44 @@ export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
 
   // --- RENDER ---
   if (!ready) {
-    return <div className="loading">Loading Calendar...</div>;
+    return (
+      <div className="calendar-container calendar-loading">
+        <span className="calendar-loading-text">Loading Calendar...</span>
+      </div>
+    );
   }
 
   if (waitingForGM) {
     return (
-      <div className="app-container">
-        <div className="scroll-area" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: '16px', padding: '32px' }}>
-          <div style={{ fontSize: '48px', opacity: 0.5 }}>📅</div>
-          <div style={{ color: '#999', textAlign: 'center' }}>
-            <p style={{ marginBottom: '8px' }}>Waiting for GM to initialize the calendar...</p>
-            <p style={{ fontSize: '0.85rem', color: '#666' }}>The GM needs to open the calendar first to set it up.</p>
-          </div>
-        </div>
+      <div className="calendar-container calendar-loading" ref={containerRef}>
+        <span className="calendar-loading-icon">📅</span>
+        <span className="calendar-loading-text">Waiting for GM to initialize the calendar...</span>
+        <span className="calendar-loading-subtext">The GM needs to open the calendar first to set it up.</span>
       </div>
     );
   }
 
   if (!config || !viewDate) {
-    return <div className="loading">Loading Calendar...</div>;
+    return (
+      <div className="calendar-container calendar-loading">
+        <span className="calendar-loading-text">Loading Calendar...</span>
+      </div>
+    );
   }
 
   // Calculate moon phase
   const moonPhase = getMoonPhase(config, viewDate.year, viewDate.monthIndex, viewDate.day);
 
   return (
-    <div className="app-container">
+    <div 
+      className="calendar-container" 
+      ref={containerRef}
+      style={{
+        background: `linear-gradient(135deg, var(--theme-bg-start, transparent) 0%, var(--theme-bg-mid, transparent) 50%, var(--theme-bg-end, transparent) 100%)`,
+        borderRadius: '8px',
+        overflow: 'hidden',
+      }}
+    >
       {showSettings ? (
         <CalendarSettings
           config={config}
@@ -152,7 +186,7 @@ export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
             onConfigClick={() => setShowSettings(true)}
           />
 
-          <div className="scroll-area">
+          <div className="calendar-scroll-area">
             <MonthView
               config={config}
               viewDate={viewDate}

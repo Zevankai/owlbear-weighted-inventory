@@ -8,9 +8,9 @@ interface NoteEditorProps {
 }
 
 const CATEGORIES: { label: string; value: EventCategory; color: string }[] = [
-  { label: 'Session Start', value: 'Session', color: 'white' },
+  { label: 'Session Start', value: 'Session', color: 'var(--text-main, white)' },
   { label: 'Lore', value: 'Lore', color: '#bf80ff' }, // Purple
-  { label: 'Holiday', value: 'Holiday', color: '#ffd700' }, // Gold
+  { label: 'Holiday', value: 'Holiday', color: 'var(--accent-gold, #ffd700)' }, // Gold
   { label: 'Campaign', value: 'Campaign', color: '#ff5555' }, // Red
   { label: 'Other', value: 'Other', color: '#55aaff' }, // Blue
 ];
@@ -29,11 +29,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
 
   return (
     <form onSubmit={handleSubmit} style={{
-      background: 'rgba(255, 255, 255, 0.1)',
+      background: 'var(--bg-panel, rgba(255, 255, 255, 0.1))',
       backdropFilter: 'blur(10px)',
       padding: '14px',
       borderRadius: '12px',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
+      border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.2))',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
@@ -41,7 +41,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
     }}>
       <div style={{
         fontSize: '0.85rem',
-        color: '#fff',
+        color: 'var(--text-main, #fff)',
         fontWeight: '600',
         textShadow: '0 1px 2px rgba(0, 0, 0, 0.5)'
       }}>New Event: {selectedDate.day}/{selectedDate.monthIndex+1}</div>
@@ -53,8 +53,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
         onChange={e => setTitle(e.target.value)}
         style={{
           background: 'rgba(0, 0, 0, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          color: '#fff',
+          border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.25))',
+          color: 'var(--text-main, #fff)',
           padding: '10px',
           borderRadius: '8px',
           fontSize: '0.9rem',
@@ -62,11 +62,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
           transition: 'all 0.2s ease'
         }}
         onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(100, 108, 255, 0.2)';
+          e.currentTarget.style.borderColor = 'var(--accent-gold, rgba(255, 255, 255, 0.4))';
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(240, 225, 48, 0.2)';
         }}
         onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+          e.currentTarget.style.borderColor = 'var(--glass-border, rgba(255, 255, 255, 0.25))';
           e.currentTarget.style.boxShadow = 'none';
         }}
       />
@@ -76,8 +76,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
         onChange={e => setCategory(e.target.value as EventCategory)}
         style={{
           background: 'rgba(0, 0, 0, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          color: '#fff',
+          border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.25))',
+          color: 'var(--text-main, #fff)',
           padding: '10px',
           borderRadius: '8px',
           fontSize: '0.9rem',
@@ -99,8 +99,8 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
         onChange={e => setContent(e.target.value)}
         style={{
           background: 'rgba(0, 0, 0, 0.4)',
-          border: '1px solid rgba(255, 255, 255, 0.25)',
-          color: '#fff',
+          border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.25))',
+          color: 'var(--text-main, #fff)',
           padding: '10px',
           borderRadius: '8px',
           resize: 'vertical',
@@ -110,11 +110,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
           transition: 'all 0.2s ease'
         }}
         onFocus={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.4)';
-          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(100, 108, 255, 0.2)';
+          e.currentTarget.style.borderColor = 'var(--accent-gold, rgba(255, 255, 255, 0.4))';
+          e.currentTarget.style.boxShadow = '0 0 0 3px rgba(240, 225, 48, 0.2)';
         }}
         onBlur={(e) => {
-          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.25)';
+          e.currentTarget.style.borderColor = 'var(--glass-border, rgba(255, 255, 255, 0.25))';
           e.currentTarget.style.boxShadow = 'none';
         }}
       />
@@ -124,7 +124,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
         alignItems: 'center',
         gap: '8px',
         fontSize: '0.85rem',
-        color: '#ddd',
+        color: 'var(--text-muted, #ddd)',
         cursor: 'pointer',
         userSelect: 'none'
       }}>
@@ -141,7 +141,7 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
         <button type="submit" style={{
           flex: 1,
           background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
+          border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.2))',
           color: 'white',
           padding: '10px',
           borderRadius: '8px',
@@ -162,10 +162,10 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
           e.currentTarget.style.boxShadow = '0 4px 12px rgba(76, 175, 80, 0.3)';
         }}>Save</button>
         <button type="button" onClick={onCancel} style={{
-          background: 'rgba(255, 255, 255, 0.1)',
+          background: 'var(--bg-panel, rgba(255, 255, 255, 0.1))',
           backdropFilter: 'blur(5px)',
-          border: '1px solid rgba(255, 255, 255, 0.2)',
-          color: '#ddd',
+          border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.2))',
+          color: 'var(--text-muted, #ddd)',
           padding: '10px 16px',
           borderRadius: '8px',
           cursor: 'pointer',
@@ -174,11 +174,11 @@ export const NoteEditor: React.FC<NoteEditorProps> = ({ selectedDate, onSave, on
         }}
         onMouseEnter={(e) => {
           e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-          e.currentTarget.style.color = '#fff';
+          e.currentTarget.style.color = 'var(--text-main, #fff)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-          e.currentTarget.style.color = '#ddd';
+          e.currentTarget.style.background = 'var(--bg-panel, rgba(255, 255, 255, 0.1))';
+          e.currentTarget.style.color = 'var(--text-muted, #ddd)';
         }}>Cancel</button>
       </div>
     </form>

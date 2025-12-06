@@ -48,7 +48,8 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
   const sheet = characterData.characterSheet;
   if (!sheet) return null;
 
-  const level = sheet.level || 1;
+  // Use characterStats.level if available, fall back to sheet.level
+  const level = characterData.characterStats?.level || sheet.level || 1;
   const spellManagement = sheet.spellManagement || createDefaultSpellManagement(level);
 
   const updateSpellManagement = (updates: Partial<SpellManagement>) => {

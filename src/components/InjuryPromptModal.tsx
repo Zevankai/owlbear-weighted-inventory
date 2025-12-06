@@ -64,10 +64,6 @@ export const InjuryPromptModal: React.FC<InjuryPromptModalProps> = ({
     handleClose();
   };
   
-  const handleNoInjury = () => {
-    handleClose();
-  };
-  
   // Render moderate damage (10-19 HP) - Minor Injury notification
   if (isModerateDamage) {
     return (
@@ -228,7 +224,7 @@ export const InjuryPromptModal: React.FC<InjuryPromptModalProps> = ({
                 borderRadius: '6px',
               }}>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                  <span style={{ color: '#4caf50', fontWeight: 'bold' }}>1-3:</span> No additional injury
+                  <span style={{ color: '#ff9800', fontWeight: 'bold' }}>0-3:</span> Minor Injury (cosmetic damage)
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
                   <span style={{ color: '#ff9800', fontWeight: 'bold' }}>4-5:</span> Serious Injury (permanent scar + location effects)
@@ -245,19 +241,19 @@ export const InjuryPromptModal: React.FC<InjuryPromptModalProps> = ({
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               <button
-                onClick={handleNoInjury}
+                onClick={handleMinorInjuryAcknowledge}
                 style={{
                   padding: '10px',
-                  background: 'rgba(76, 175, 80, 0.2)',
-                  color: '#4caf50',
-                  border: '1px solid rgba(76, 175, 80, 0.4)',
+                  background: 'rgba(255, 152, 0, 0.2)',
+                  color: '#ff9800',
+                  border: '1px solid rgba(255, 152, 0, 0.4)',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '12px',
                   fontWeight: 'bold',
                 }}
               >
-                🎲 Rolled 1-3: No Injury
+                🩹 Rolled 0-3: Minor Injury
               </button>
               <button
                 onClick={() => handleSelectInjuryType('seriousInjury')}

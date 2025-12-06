@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice } from '../../types';
+import { INJURY_HP_VALUES } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
@@ -16,6 +17,7 @@ import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCh
 import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } from '../../data/conditions';
 import { deductRationsFromInventory } from '../../utils/inventory';
 import { deductCopperPieces } from '../../utils/currency';
+import { useCalendar } from '../../hooks/useCalendar';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -364,6 +366,9 @@ const TwoColumnDashboard = ({
   
   const [showOverencumberedPopup, setShowOverencumberedPopup] = useState(false);
   
+  // Get calendar data for time/weather display
+  const { config: calendarConfig } = useCalendar();
+  
   const hpRef = useRef<HTMLDivElement>(null);
   const acRef = useRef<HTMLDivElement>(null);
   const initRef = useRef<HTMLDivElement>(null);
@@ -526,26 +531,49 @@ const TwoColumnDashboard = ({
           flexDirection: 'column',
           gap: '2px',
         }}>
-          {/* Top row: Token Type + Level */}
+          {/* Top row: Time/Weather + Level */}
           <div style={{
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}>
-            <div style={{
-              fontSize: '8px',
-              color: characterData.tokenType === 'npc' ? '#ff9800' : 
-                     characterData.tokenType === 'party' ? '#4caf50' : 
-                     characterData.tokenType === 'lore' ? '#9c27b0' : 'var(--accent-gold)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.5px',
-              fontWeight: 'bold',
-              background: 'rgba(0,0,0,0.4)',
-              padding: '2px 6px',
-              borderRadius: '3px',
-            }}>
-              {characterData.tokenType || 'Player'} Token
-            </div>
+            {/* Time and Weather Display - replaces token type */}
+            {calendarConfig ? (
+              <div style={{
+                fontSize: '8px',
+                color: 'var(--text-muted)',
+                letterSpacing: '0.3px',
+                background: 'rgba(0,0,0,0.4)',
+                padding: '2px 6px',
+                borderRadius: '3px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}>
+                <span style={{ color: 'var(--text-main)' }}>
+                  {calendarConfig.currentDate.hour.toString().padStart(2, '0')}:{calendarConfig.currentDate.minute.toString().padStart(2, '0')}
+                </span>
+                <span style={{ opacity: 0.6 }}>|</span>
+                <span style={{ color: 'var(--text-main)' }}>
+                  {calendarConfig.currentWeather.currentCondition} {calendarConfig.currentWeather.temperature}°
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                fontSize: '8px',
+                color: characterData.tokenType === 'npc' ? '#ff9800' : 
+                       characterData.tokenType === 'party' ? '#4caf50' : 
+                       characterData.tokenType === 'lore' ? '#9c27b0' : 'var(--accent-gold)',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+                fontWeight: 'bold',
+                background: 'rgba(0,0,0,0.4)',
+                padding: '2px 6px',
+                borderRadius: '3px',
+              }}>
+                {characterData.tokenType || 'Player'} Token
+              </div>
+            )}
             {/* Inline editable level */}
             {isEditingLevel ? (
               <input
@@ -973,21 +1001,6 @@ const TwoColumnDashboard = ({
               background: 'var(--glass-border)',
               margin: '0 2px',
             }} />
-
-            {/* Speed Display */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '2px',
-              padding: '2px 4px',
-              background: 'rgba(0, 188, 212, 0.1)',
-              border: '1px solid rgba(0, 188, 212, 0.3)',
-              borderRadius: '3px',
-              fontSize: '9px',
-            }} title="Movement Speed (ft)">
-              <span style={{ color: '#00bcd4' }}>🏃</span>
-              <span style={{ color: '#00bcd4', fontWeight: 'bold' }}>{sheet.speed}ft</span>
-            </div>
 
             {/* Death Save Skulls */}
             {onUpdateDeathSaves && (
@@ -1442,18 +1455,36 @@ export function HomeTab({
   };
   
   // Update condition
+  // Injury types that track HP for healing
+  const INJURY_TYPES_WITH_HP: ConditionType[] = ['minorInjury', 'seriousInjury', 'criticalInjury'];
+  
   const updateCondition = (conditionType: ConditionType, value: boolean, location?: InjuryLocation) => {
     const currentStats = characterStats || defaultStats;
+    
+    // Check if we already have this injury type active (only 1 of each type allowed)
+    if (value && INJURY_TYPES_WITH_HP.includes(conditionType)) {
+      if (currentStats.conditions[conditionType as keyof typeof currentStats.conditions]) {
+        // Already have this injury type - don't add another
+        return;
+      }
+    }
+    
     const newConditions = {
       ...currentStats.conditions,
       [conditionType]: value,
     };
     
-    // If enabling an injury with location, also update injuryData
-    if (value && location) {
+    // If enabling an injury, set up injury HP and date acquired
+    if (value && INJURY_TYPES_WITH_HP.includes(conditionType)) {
+      const injuryType = conditionType as 'minorInjury' | 'seriousInjury' | 'criticalInjury';
       const newInjuryData: CharacterInjuryData = {
         ...(currentStats.injuryData || {}),
-        [conditionType]: { injuryLocation: location },
+        [conditionType]: { 
+          injuryLocation: location,
+          injuryHP: INJURY_HP_VALUES[injuryType],
+          injuryDaysSinceRest: 0,
+          dateAcquired: new Date().toISOString(),
+        },
       };
       updateCharacterStats({
         conditions: newConditions,
@@ -1526,40 +1557,79 @@ export function HomeTab({
       };
     }
     
-    // Apply injury healing
-    if (effects.healInjuryLevels && effects.healInjuryLevels > 0) {
+    // Check if "Patch Wounds" was selected
+    const patchWoundsSelected = selectedOptionIds.some(id => 
+      id === 'short-standard-patch-wounds' || id === 'long-standard-patch-wounds'
+    );
+    
+    // Apply injury healing using the new HP system
+    if (effects.healInjuryLevels && effects.healInjuryLevels > 0 && patchWoundsSelected) {
       const conditions = { ...currentStats.conditions };
       const injuryData = { ...(currentStats.injuryData || {}) };
-      let healingRemaining = effects.healInjuryLevels;
+      const healAmount = effects.healInjuryLevels; // 1 for short rest, 2 for long rest
       
-      // Heal injuries from most severe to least (Critical -> Serious -> Minor)
-      if (healingRemaining > 0 && conditions.criticalInjury) {
-        // Critical -> Serious
-        conditions.criticalInjury = false;
-        conditions.seriousInjury = true;
-        // Transfer injury data if present
-        if (injuryData.criticalInjury) {
-          injuryData.seriousInjury = injuryData.criticalInjury;
-          delete injuryData.criticalInjury;
+      // Find the first active injury and reduce its HP
+      // Priority: Critical -> Serious -> Minor
+      const injuryPriority: ('criticalInjury' | 'seriousInjury' | 'minorInjury')[] = ['criticalInjury', 'seriousInjury', 'minorInjury'];
+      
+      for (const injuryType of injuryPriority) {
+        if (conditions[injuryType] && injuryData[injuryType]) {
+          const currentHP = injuryData[injuryType]?.injuryHP || INJURY_HP_VALUES[injuryType];
+          const newHP = Math.max(0, currentHP - healAmount);
+          
+          if (newHP <= 0) {
+            // Injury is fully healed - remove the condition
+            conditions[injuryType] = false;
+            delete injuryData[injuryType];
+            
+            // TODO: Future enhancement - prompt for scar description for serious/critical injuries
+          } else {
+            // Update injury HP and reset days since rest (injury was treated)
+            injuryData[injuryType] = {
+              ...injuryData[injuryType],
+              injuryHP: newHP,
+              injuryDaysSinceRest: 0,
+            };
+          }
+          break; // Only heal one injury per rest
         }
-        healingRemaining--;
       }
-      if (healingRemaining > 0 && conditions.seriousInjury) {
-        // Serious -> Minor
-        conditions.seriousInjury = false;
-        conditions.minorInjury = true;
-        // Transfer injury data if present
-        if (injuryData.seriousInjury) {
-          injuryData.minorInjury = injuryData.seriousInjury;
-          delete injuryData.seriousInjury;
+      
+      statsUpdates.conditions = conditions;
+      statsUpdates.injuryData = Object.keys(injuryData).length > 0 ? injuryData : undefined;
+    }
+    
+    // For long rests, track days without treatment for injuries not patched
+    // and auto-add infection if 3 long rests pass without treatment
+    if (restType === 'long') {
+      const conditions = statsUpdates.conditions ? { ...statsUpdates.conditions } : { ...currentStats.conditions };
+      const injuryData = statsUpdates.injuryData ? { ...statsUpdates.injuryData } : { ...(currentStats.injuryData || {}) };
+      
+      const injuryTypes: ('minorInjury' | 'seriousInjury' | 'criticalInjury')[] = ['minorInjury', 'seriousInjury', 'criticalInjury'];
+      
+      for (const injuryType of injuryTypes) {
+        if (conditions[injuryType] && injuryData[injuryType]) {
+          // Only increment if this injury wasn't treated this rest
+          const wasJustTreated = patchWoundsSelected && effects.healInjuryLevels && effects.healInjuryLevels > 0;
+          if (!wasJustTreated) {
+            const currentDays = injuryData[injuryType]?.injuryDaysSinceRest || 0;
+            const newDays = currentDays + 1;
+            
+            injuryData[injuryType] = {
+              ...injuryData[injuryType],
+              injuryDaysSinceRest: newDays,
+            };
+            
+            // Auto-add Infection if 3 long rests (days) pass without treatment
+            // Note: Each long rest counts as 1 day without treatment
+            if (newDays >= 3 && !conditions.infection) {
+              conditions.infection = true;
+              injuryData.infection = {
+                infectionDeathSavesFailed: 0,
+              };
+            }
+          }
         }
-        healingRemaining--;
-      }
-      if (healingRemaining > 0 && conditions.minorInjury) {
-        // Minor -> Healed (removed)
-        conditions.minorInjury = false;
-        delete injuryData.minorInjury;
-        healingRemaining--;
       }
       
       statsUpdates.conditions = conditions;
@@ -1999,6 +2069,53 @@ export function HomeTab({
             canEdit={canUserEdit}
             updateData={updateData}
           />
+        </PurpleCollapsibleSection>
+      )}
+
+      {/* === FEATURES & TRAITS - Purple Collapsible section - Beneath Skills & Proficiencies === */}
+      {!viewingStorageId && 
+       characterData.tokenType !== 'lore' &&
+       (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
+        <PurpleCollapsibleSection title="Features & Traits" defaultExpanded={false}>
+          {(() => {
+            const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+            const handleUpdateSheet = (updates: Partial<CharacterSheet>) => {
+              updateData({
+                characterSheet: {
+                  ...sheet,
+                  ...updates,
+                },
+              });
+            };
+            
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <DebouncedTextarea
+                  value={sheet.featuresAndTraits || ''}
+                  onChange={(val) => canUserEdit && handleUpdateSheet({ featuresAndTraits: val })}
+                  className="search-input"
+                  rows={6}
+                  disabled={!canUserEdit}
+                  placeholder="Enter character features, traits, and special abilities..."
+                  style={{
+                    width: '100%',
+                    minHeight: '120px',
+                    resize: 'vertical',
+                    boxSizing: 'border-box',
+                    opacity: 1,
+                    cursor: canUserEdit ? 'text' : 'default',
+                    fontSize: '13px',
+                    lineHeight: '1.5'
+                  }}
+                />
+                {canUserEdit && (
+                  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
+                    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
+                  </span>
+                )}
+              </div>
+            );
+          })()}
         </PurpleCollapsibleSection>
       )}
 

@@ -61,7 +61,8 @@ export function CalendarTab({ playerRole: _playerRole }: CalendarTabProps) {
         clearTheme(container);
       }
     };
-  }, [config]);
+    // Re-apply theme when activeBiome or current month's season changes
+  }, [config, config?.activeBiome, config?.currentDate?.monthIndex]);
 
   // --- HANDLERS ---
   const handleAdvanceTime = (minutes: number) => {

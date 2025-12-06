@@ -132,7 +132,7 @@ export const CONDITIONS: ConditionDefinition[] = [
   {
     id: 'infection',
     name: 'Infection',
-    description: 'If any injury goes 3+ days without rest treatment, add this condition. Each long rest with the injury, roll a Death Save. 3 failed saves = death. DC 15 Medicine check can override a failed save.',
+    description: 'If any injury goes 3 days without rest treatment, add this condition. Each long rest with the injury, roll a Death Save. 3 failed saves = death. DC 15 Medicine check can override a failed save. Infections are cured via any of the following: 3 DC 15 Medicine checks, 3 passed Death Saves, or professional medical treatment.',
     icon: '🦠',
     isInjury: true,
   },

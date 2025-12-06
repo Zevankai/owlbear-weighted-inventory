@@ -301,11 +301,20 @@ export type ConditionType = 'blinded' | 'charmed' | 'deafened' | 'frightened' | 
 // Injury location types for injury conditions
 export type InjuryLocation = 'limb' | 'torso' | 'head';
 
+// Injury HP values - how many rests/treatments needed to heal each injury type
+export const INJURY_HP_VALUES = {
+  minorInjury: 1,
+  seriousInjury: 3,
+  criticalInjury: 4,
+} as const;
+
 // Extended condition data for injury conditions
 export interface InjuryConditionData {
   injuryLocation?: InjuryLocation;
-  injuryDaysSinceRest?: number; // For infection tracking
+  injuryDaysSinceRest?: number; // For infection tracking (long rests without treatment)
   infectionDeathSavesFailed?: number; // For infection death saves
+  injuryHP?: number; // HP remaining - must be depleted to heal (default based on injury type)
+  dateAcquired?: string; // ISO date string for when the injury was acquired (for scar logging)
 }
 
 export interface CharacterConditions {

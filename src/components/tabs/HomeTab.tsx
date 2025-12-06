@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice } from '../../types';
+import { INJURY_HP_VALUES } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
@@ -1454,18 +1455,36 @@ export function HomeTab({
   };
   
   // Update condition
+  // Injury types that track HP for healing
+  const INJURY_TYPES_WITH_HP: ConditionType[] = ['minorInjury', 'seriousInjury', 'criticalInjury'];
+  
   const updateCondition = (conditionType: ConditionType, value: boolean, location?: InjuryLocation) => {
     const currentStats = characterStats || defaultStats;
+    
+    // Check if we already have this injury type active (only 1 of each type allowed)
+    if (value && INJURY_TYPES_WITH_HP.includes(conditionType)) {
+      if (currentStats.conditions[conditionType as keyof typeof currentStats.conditions]) {
+        // Already have this injury type - don't add another
+        return;
+      }
+    }
+    
     const newConditions = {
       ...currentStats.conditions,
       [conditionType]: value,
     };
     
-    // If enabling an injury with location, also update injuryData
-    if (value && location) {
+    // If enabling an injury, set up injury HP and date acquired
+    if (value && INJURY_TYPES_WITH_HP.includes(conditionType)) {
+      const injuryType = conditionType as 'minorInjury' | 'seriousInjury' | 'criticalInjury';
       const newInjuryData: CharacterInjuryData = {
         ...(currentStats.injuryData || {}),
-        [conditionType]: { injuryLocation: location },
+        [conditionType]: { 
+          injuryLocation: location,
+          injuryHP: INJURY_HP_VALUES[injuryType],
+          injuryDaysSinceRest: 0,
+          dateAcquired: new Date().toISOString(),
+        },
       };
       updateCharacterStats({
         conditions: newConditions,

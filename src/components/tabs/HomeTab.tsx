@@ -1568,30 +1568,40 @@ export function HomeTab({
       const injuryData = { ...(currentStats.injuryData || {}) };
       const healAmount = effects.healInjuryLevels; // 1 for short rest, 2 for long rest
       
-      // Find the first active injury and reduce its HP
-      // Priority: Critical -> Serious -> Minor
-      const injuryPriority: ('criticalInjury' | 'seriousInjury' | 'minorInjury')[] = ['criticalInjury', 'seriousInjury', 'minorInjury'];
+      // If a specific injury was selected from the prompt, heal that one
+      // Otherwise, use priority order: Critical -> Serious -> Minor
+      let injuryToHeal: 'criticalInjury' | 'seriousInjury' | 'minorInjury' | null = null;
       
-      for (const injuryType of injuryPriority) {
-        if (conditions[injuryType] && injuryData[injuryType]) {
-          const currentHP = injuryData[injuryType]?.injuryHP || INJURY_HP_VALUES[injuryType];
-          const newHP = Math.max(0, currentHP - healAmount);
-          
-          if (newHP <= 0) {
-            // Injury is fully healed - remove the condition
-            conditions[injuryType] = false;
-            delete injuryData[injuryType];
-            
-            // TODO: Future enhancement - prompt for scar description for serious/critical injuries
-          } else {
-            // Update injury HP and reset days since rest (injury was treated)
-            injuryData[injuryType] = {
-              ...injuryData[injuryType],
-              injuryHP: newHP,
-              injuryDaysSinceRest: 0,
-            };
+      if (effects.selectedInjuryToHeal && conditions[effects.selectedInjuryToHeal] && injuryData[effects.selectedInjuryToHeal]) {
+        injuryToHeal = effects.selectedInjuryToHeal;
+      } else {
+        // Find the first active injury with priority order
+        const injuryPriority: ('criticalInjury' | 'seriousInjury' | 'minorInjury')[] = ['criticalInjury', 'seriousInjury', 'minorInjury'];
+        for (const injuryType of injuryPriority) {
+          if (conditions[injuryType] && injuryData[injuryType]) {
+            injuryToHeal = injuryType;
+            break;
           }
-          break; // Only heal one injury per rest
+        }
+      }
+      
+      if (injuryToHeal) {
+        const currentHP = injuryData[injuryToHeal]?.injuryHP || INJURY_HP_VALUES[injuryToHeal];
+        const newHP = Math.max(0, currentHP - healAmount);
+        
+        if (newHP <= 0) {
+          // Injury is fully healed - remove the condition
+          conditions[injuryToHeal] = false;
+          delete injuryData[injuryToHeal];
+          
+          // TODO: Future enhancement - prompt for scar description for serious/critical injuries
+        } else {
+          // Update injury HP and reset days since rest (injury was treated)
+          injuryData[injuryToHeal] = {
+            ...injuryData[injuryToHeal],
+            injuryHP: newHP,
+            injuryDaysSinceRest: 0,
+          };
         }
       }
       
@@ -2141,6 +2151,11 @@ export function HomeTab({
         superiorityDice={characterStats?.superiorityDice}
         currency={characterData.currency}
         onSpendHitDie={handleSpendHitDie}
+        activeInjuries={{
+          minorInjury: characterStats?.conditions?.minorInjury ? characterStats.injuryData?.minorInjury : undefined,
+          seriousInjury: characterStats?.conditions?.seriousInjury ? characterStats.injuryData?.seriousInjury : undefined,
+          criticalInjury: characterStats?.conditions?.criticalInjury ? characterStats.injuryData?.criticalInjury : undefined,
+        }}
       />
 
       {/* === LORE TOKEN SPECIFIC UI === */}

@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency } from '../types';
+import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency, InjuryConditionData } from '../types';
+import { INJURY_HP_VALUES } from '../types';
 import { getStandardRestOptions, getNonStandardRestOptions, getRestOptionById } from '../data/restOptions';
 import { getTotalRations } from '../utils/inventory';
 import { getTotalCopperPieces } from '../utils/currency';
@@ -33,6 +34,7 @@ export interface RestEffectsToApply {
   tempHp?: number;
   heroicInspiration?: boolean;
   healInjuryLevels?: number;
+  selectedInjuryToHeal?: 'minorInjury' | 'seriousInjury' | 'criticalInjury'; // Specific injury to heal if selected
   reduceExhaustion?: number;
   rationsToDeduct?: number;
   restLocation?: RestLocationType;
@@ -61,6 +63,11 @@ interface RestModalProps {
   superiorityDice?: SuperiorityDice; // Current superiority dice state
   currency?: Currency; // Current currency for settlement costs
   onSpendHitDie?: (hpRecovered: number) => void; // Callback when spending hit dice
+  activeInjuries?: {
+    minorInjury?: InjuryConditionData;
+    seriousInjury?: InjuryConditionData;
+    criticalInjury?: InjuryConditionData;
+  }; // Active injuries for the injury selection prompt
 }
 
 export const RestModal: React.FC<RestModalProps> = ({
@@ -82,6 +89,7 @@ export const RestModal: React.FC<RestModalProps> = ({
   superiorityDice,
   currency,
   onSpendHitDie,
+  activeInjuries,
 }) => {
   const [selectedRestType, setSelectedRestType] = useState<RestType>('short');
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
@@ -105,12 +113,31 @@ export const RestModal: React.FC<RestModalProps> = ({
   // Track custom ration counts for options that require input
   const [customRationCounts, setCustomRationCounts] = useState<Record<string, number>>({});
   
+  // Injury selection state - for when player has multiple injuries and selects Patch Wounds
+  const [selectedInjuryToHeal, setSelectedInjuryToHeal] = useState<'minorInjury' | 'seriousInjury' | 'criticalInjury' | null>(null);
+  const [injurySelectionPrompt, setInjurySelectionPrompt] = useState<{ isOpen: boolean }>({ isOpen: false });
+  
   // Long rest location state
   const [restLocation, setRestLocation] = useState<RestLocationType | null>(null);
   const [selectedRoomType, setSelectedRoomType] = useState<SettlementRoomType | null>(null);
   
   // Hit dice spending state
   const [hitDieSpendPrompt, setHitDieSpendPrompt] = useState<{ isOpen: boolean; hpRecovered: string }>({ isOpen: false, hpRecovered: '' });
+  
+  // Calculate active injury count for determining if we need selection prompt
+  const activeInjuryList = useMemo(() => {
+    const injuries: { type: 'minorInjury' | 'seriousInjury' | 'criticalInjury'; data: InjuryConditionData; label: string }[] = [];
+    if (activeInjuries?.criticalInjury) {
+      injuries.push({ type: 'criticalInjury', data: activeInjuries.criticalInjury, label: 'Critical Injury' });
+    }
+    if (activeInjuries?.seriousInjury) {
+      injuries.push({ type: 'seriousInjury', data: activeInjuries.seriousInjury, label: 'Serious Injury' });
+    }
+    if (activeInjuries?.minorInjury) {
+      injuries.push({ type: 'minorInjury', data: activeInjuries.minorInjury, label: 'Minor Injury' });
+    }
+    return injuries;
+  }, [activeInjuries]);
 
   // Build localStorage keys per token
   const shortRestStorageKey = `${LAST_SHORT_REST_CHOICES_KEY}-${tokenId}`;
@@ -251,12 +278,16 @@ export const RestModal: React.FC<RestModalProps> = ({
     const newSet = new Set(selectedOptionIds);
     
     if (newSet.has(optionId)) {
-      // Deselecting - also clear custom ration count if any
+      // Deselecting - also clear custom ration count and selected injury if any
       newSet.delete(optionId);
       if (customRationCounts[optionId]) {
         const newCounts = { ...customRationCounts };
         delete newCounts[optionId];
         setCustomRationCounts(newCounts);
+      }
+      // Clear selected injury if deselecting Patch Wounds
+      if (optionId === 'short-standard-patch-wounds' || optionId === 'long-standard-patch-wounds') {
+        setSelectedInjuryToHeal(null);
       }
       setError(null);
     } else {
@@ -287,6 +318,20 @@ export const RestModal: React.FC<RestModalProps> = ({
       if (required > 0 && !hasEnough) {
         setError(`Not enough rations! "${option.name}" requires ${required} ration(s) but you only have ${availableRations}. Choose a different benefit.`);
         return;
+      }
+      
+      // Check if this is Patch Wounds and there are multiple injuries - show injury selection
+      const isPatchWounds = optionId === 'short-standard-patch-wounds' || optionId === 'long-standard-patch-wounds';
+      if (isPatchWounds && activeInjuryList.length > 1) {
+        // Show injury selection prompt
+        setInjurySelectionPrompt({ isOpen: true });
+        // Temporarily add to selection to track that this option is being configured
+        newSet.add(optionId);
+        setSelectedOptionIds(newSet);
+        return;
+      } else if (isPatchWounds && activeInjuryList.length === 1) {
+        // Auto-select the only injury
+        setSelectedInjuryToHeal(activeInjuryList[0].type);
       }
       
       newSet.add(optionId);
@@ -321,6 +366,24 @@ export const RestModal: React.FC<RestModalProps> = ({
     setRationInputPrompt(null);
     setError(null);
   };
+  
+  // Handle injury selection confirmation
+  const handleInjurySelectionConfirm = (injuryType: 'minorInjury' | 'seriousInjury' | 'criticalInjury') => {
+    setSelectedInjuryToHeal(injuryType);
+    setInjurySelectionPrompt({ isOpen: false });
+    setError(null);
+  };
+  
+  // Cancel injury selection
+  const handleInjurySelectionCancel = () => {
+    // Remove Patch Wounds from selection
+    const newSet = new Set(selectedOptionIds);
+    newSet.delete('short-standard-patch-wounds');
+    newSet.delete('long-standard-patch-wounds');
+    setSelectedOptionIds(newSet);
+    setSelectedInjuryToHeal(null);
+    setInjurySelectionPrompt({ isOpen: false });
+  };
 
   // Calculate effects to apply from selected options
   const calculateEffects = useCallback((): RestEffectsToApply => {
@@ -328,6 +391,11 @@ export const RestModal: React.FC<RestModalProps> = ({
     
     // Short rest and long rest both recover superiority dice
     effects.recoverSuperiorityDice = true;
+    
+    // Include selected injury to heal if any
+    if (selectedInjuryToHeal) {
+      effects.selectedInjuryToHeal = selectedInjuryToHeal;
+    }
     
     // Long rest specific effects
     if (selectedRestType === 'long') {
@@ -395,7 +463,7 @@ export const RestModal: React.FC<RestModalProps> = ({
     });
     
     return effects;
-  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts]);
+  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal]);
 
   // Handle rest completion
   const handleRest = () => {
@@ -1298,6 +1366,135 @@ export const RestModal: React.FC<RestModalProps> = ({
                 Use Rations
               </button>
             </div>
+          </div>
+        </>
+      )}
+
+      {/* Injury Selection Prompt Modal (for Patch Wounds with multiple injuries) */}
+      {injurySelectionPrompt.isOpen && (
+        <>
+          <div
+            onClick={handleInjurySelectionCancel}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '320px',
+            maxWidth: '400px',
+          }}>
+            <h4 style={{ margin: '0 0 12px', color: '#ff9800' }}>🩹 Which Injury to Treat?</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              You have multiple active injuries. Select which one to treat during this rest.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {activeInjuryList.map((injury) => {
+                const currentHP = injury.data.injuryHP || INJURY_HP_VALUES[injury.type];
+                const maxHP = INJURY_HP_VALUES[injury.type];
+                const hpPercentage = (currentHP / maxHP) * 100;
+                const location = injury.data.injuryLocation || 'Unknown';
+                const healAmount = selectedRestType === 'short' ? 1 : 2;
+                
+                return (
+                  <button
+                    key={injury.type}
+                    onClick={() => handleInjurySelectionConfirm(injury.type)}
+                    style={{
+                      padding: '12px',
+                      background: injury.type === 'criticalInjury' 
+                        ? 'rgba(229, 57, 53, 0.15)' 
+                        : injury.type === 'seriousInjury'
+                          ? 'rgba(255, 152, 0, 0.15)'
+                          : 'rgba(255, 193, 7, 0.15)',
+                      border: `1px solid ${
+                        injury.type === 'criticalInjury' 
+                          ? 'rgba(229, 57, 53, 0.4)' 
+                          : injury.type === 'seriousInjury'
+                            ? 'rgba(255, 152, 0, 0.4)'
+                            : 'rgba(255, 193, 7, 0.4)'
+                      }`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: 'var(--text-main)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ 
+                        fontWeight: 'bold', 
+                        color: injury.type === 'criticalInjury' 
+                          ? '#e53935' 
+                          : injury.type === 'seriousInjury'
+                            ? '#ff9800'
+                            : '#ffc107',
+                      }}>
+                        {injury.type === 'criticalInjury' ? '💀' : injury.type === 'seriousInjury' ? '🩸' : '🩹'} {injury.label}
+                      </span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                        {location}
+                      </span>
+                    </div>
+                    {/* HP Bar */}
+                    <div style={{
+                      width: '100%',
+                      height: '8px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      marginBottom: '4px',
+                    }}>
+                      <div style={{
+                        width: `${hpPercentage}%`,
+                        height: '100%',
+                        background: injury.type === 'criticalInjury' 
+                          ? '#e53935' 
+                          : injury.type === 'seriousInjury'
+                            ? '#ff9800'
+                            : '#ffc107',
+                        transition: 'width 0.3s ease',
+                      }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        HP: {currentHP}/{maxHP}
+                      </span>
+                      <span style={{ color: '#51cf66' }}>
+                        -{healAmount} HP on rest
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={handleInjurySelectionCancel}
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                background: '#444',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
           </div>
         </>
       )}

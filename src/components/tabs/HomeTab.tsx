@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar } from '../../types';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
@@ -1638,6 +1638,9 @@ export function HomeTab({
   // Helper to check if user can edit this token (GM, owner, or party token)
   const canUserEdit = playerRole === 'GM' || characterData.claimedBy === playerId || characterData.tokenType === 'party';
   
+  // Get calendar config for date tracking (projects, scars, etc.)
+  const { config: calendarConfig } = useCalendar();
+  
   // Get character stats with defaults - memoize to avoid recreating on every render
   const characterStats = characterData.characterStats;
   const defaultStats = useMemo(() => createDefaultCharacterStats(), []);
@@ -1960,6 +1963,85 @@ export function HomeTab({
       const gpInCopper = effects.gpCost * 100;
       deductCopperPieces(updatedCurrency, gpInCopper);
       updateData({ currency: updatedCurrency });
+    }
+    
+    // Handle project work
+    if (effects.newProject) {
+      // Create a new project and add initial work
+      const existingProjects = characterData.projects || [];
+      const newProject: Project = {
+        ...effects.newProject,
+        createdDate: calendarConfig ? {
+          year: calendarConfig.currentDate.year,
+          monthIndex: calendarConfig.currentDate.monthIndex,
+          day: calendarConfig.currentDate.day,
+        } : undefined,
+      };
+      
+      // Check if project is completed immediately
+      if (newProject.completedWorkUnits >= newProject.totalWorkUnits) {
+        newProject.isCompleted = true;
+        newProject.completedDate = calendarConfig ? {
+          year: calendarConfig.currentDate.year,
+          monthIndex: calendarConfig.currentDate.monthIndex,
+          day: calendarConfig.currentDate.day,
+        } : undefined;
+        
+        // Add to completed projects
+        const completedProjects = characterData.completedProjects || [];
+        updateData({
+          completedProjects: [...completedProjects, newProject],
+        });
+      } else {
+        updateData({
+          projects: [...existingProjects, newProject],
+        });
+      }
+    } else if (effects.projectToWorkOn && effects.workUnitsToAdd) {
+      // Work on existing project
+      const existingProjects = characterData.projects || [];
+      const projectIndex = existingProjects.findIndex(p => p.id === effects.projectToWorkOn);
+      
+      if (projectIndex !== -1) {
+        const project = existingProjects[projectIndex];
+        const newCompletedUnits = project.completedWorkUnits + effects.workUnitsToAdd;
+        
+        if (newCompletedUnits >= project.totalWorkUnits) {
+          // Project is completed
+          const completedProject: Project = {
+            ...project,
+            completedWorkUnits: project.totalWorkUnits,
+            isCompleted: true,
+            completedDate: calendarConfig ? {
+              year: calendarConfig.currentDate.year,
+              monthIndex: calendarConfig.currentDate.monthIndex,
+              day: calendarConfig.currentDate.day,
+            } : undefined,
+          };
+          
+          // Remove from active projects and add to completed
+          const updatedProjects = existingProjects.filter((_, i) => i !== projectIndex);
+          const completedProjects = characterData.completedProjects || [];
+          
+          updateData({
+            projects: updatedProjects,
+            completedProjects: [...completedProjects, completedProject],
+          });
+        } else {
+          // Update project progress
+          const updatedProject: Project = {
+            ...project,
+            completedWorkUnits: newCompletedUnits,
+          };
+          
+          const updatedProjects = [...existingProjects];
+          updatedProjects[projectIndex] = updatedProject;
+          
+          updateData({
+            projects: updatedProjects,
+          });
+        }
+      }
     }
   };
   
@@ -2370,6 +2452,7 @@ export function HomeTab({
           seriousInjury: characterStats?.conditions?.seriousInjury ? characterStats.injuryData?.seriousInjury : undefined,
           criticalInjury: characterStats?.conditions?.criticalInjury ? characterStats.injuryData?.criticalInjury : undefined,
         }}
+        projects={characterData.projects || []}
       />
 
       {/* Scar Prompt Modal - shown when a serious/critical injury fully heals */}
@@ -2747,6 +2830,48 @@ export function HomeTab({
                   }}
                 />
               </div>
+              
+              {/* Completed Projects - Display projects completed through the project system */}
+              {characterData.completedProjects && characterData.completedProjects.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#51cf66', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 'bold' }}>
+                    📋 Completed Projects
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {characterData.completedProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        style={{
+                          padding: '10px',
+                          background: 'rgba(81, 207, 102, 0.1)',
+                          border: '1px solid rgba(81, 207, 102, 0.3)',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                          <span style={{ 
+                            fontSize: '12px', 
+                            fontWeight: 'bold',
+                            color: '#51cf66',
+                          }}>
+                            ✓ {project.name}
+                          </span>
+                          {project.completedDate && project.completedDate.year > 0 && (
+                            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                              Completed: Day {project.completedDate.day}, M{project.completedDate.monthIndex + 1}, Y{project.completedDate.year}
+                            </span>
+                          )}
+                        </div>
+                        {project.description && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-main)' }}>
+                            {project.description}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {canUserEdit && <MarkdownHint />}
             </div>

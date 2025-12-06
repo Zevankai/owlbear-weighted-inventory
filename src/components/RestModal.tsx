@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency, InjuryConditionData } from '../types';
+import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency, InjuryConditionData, Project } from '../types';
 import { INJURY_HP_VALUES } from '../types';
 import { getStandardRestOptions, getNonStandardRestOptions, getRestOptionById } from '../data/restOptions';
 import { getTotalRations } from '../utils/inventory';
@@ -42,6 +42,9 @@ export interface RestEffectsToApply {
   gpCost?: number;
   hitDiceRecovered?: number;
   recoverSuperiorityDice?: boolean;
+  projectToWorkOn?: string; // ID of project to add work to
+  newProject?: Project; // New project to create and work on
+  workUnitsToAdd?: number; // Work units to add (1 for short, 2 for long)
 }
 
 interface RestModalProps {
@@ -68,6 +71,7 @@ interface RestModalProps {
     seriousInjury?: InjuryConditionData;
     criticalInjury?: InjuryConditionData;
   }; // Active injuries for the injury selection prompt
+  projects?: Project[]; // Current active projects
 }
 
 export const RestModal: React.FC<RestModalProps> = ({
@@ -90,6 +94,7 @@ export const RestModal: React.FC<RestModalProps> = ({
   currency,
   onSpendHitDie,
   activeInjuries,
+  projects = [],
 }) => {
   const [selectedRestType, setSelectedRestType] = useState<RestType>('short');
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
@@ -101,6 +106,13 @@ export const RestModal: React.FC<RestModalProps> = ({
     currentRationCount: number;
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // Project modal state
+  const [projectPrompt, setProjectPrompt] = useState<{ isOpen: boolean }>({ isOpen: false });
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [newProjectWorkUnits, setNewProjectWorkUnits] = useState(5);
   
   // Ration input prompt for "Prepare a Meal" / "Prepare a Snack" options
   const [rationInputPrompt, setRationInputPrompt] = useState<{
@@ -334,6 +346,17 @@ export const RestModal: React.FC<RestModalProps> = ({
         setSelectedInjuryToHeal(activeInjuryList[0].type);
       }
       
+      // Check if this is Work on Project - show project modal
+      const isWorkOnProject = optionId === 'short-standard-project' || optionId === 'long-standard-project';
+      if (isWorkOnProject) {
+        // Show project prompt
+        setProjectPrompt({ isOpen: true });
+        // Temporarily add to selection
+        newSet.add(optionId);
+        setSelectedOptionIds(newSet);
+        return;
+      }
+      
       newSet.add(optionId);
       setError(null);
     }
@@ -384,6 +407,39 @@ export const RestModal: React.FC<RestModalProps> = ({
     setSelectedInjuryToHeal(null);
     setInjurySelectionPrompt({ isOpen: false });
   };
+  
+  // Handle project selection - work on existing project
+  const handleSelectProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setProjectPrompt({ isOpen: false });
+    setError(null);
+  };
+  
+  // Handle creating and working on a new project
+  const handleCreateProject = () => {
+    if (!newProjectName.trim()) {
+      setError('Please enter a project name');
+      return;
+    }
+    // Set flag to create new project - actual creation happens in handleRest
+    setSelectedProjectId(`new:${newProjectName}:${newProjectDescription}:${newProjectWorkUnits}`);
+    setProjectPrompt({ isOpen: false });
+    setNewProjectName('');
+    setNewProjectDescription('');
+    setNewProjectWorkUnits(5);
+    setError(null);
+  };
+  
+  // Cancel project selection
+  const handleProjectCancel = () => {
+    // Remove Work on Project from selection
+    const newSet = new Set(selectedOptionIds);
+    newSet.delete('short-standard-project');
+    newSet.delete('long-standard-project');
+    setSelectedOptionIds(newSet);
+    setSelectedProjectId(null);
+    setProjectPrompt({ isOpen: false });
+  };
 
   // Calculate effects to apply from selected options
   const calculateEffects = useCallback((): RestEffectsToApply => {
@@ -395,6 +451,27 @@ export const RestModal: React.FC<RestModalProps> = ({
     // Include selected injury to heal if any
     if (selectedInjuryToHeal) {
       effects.selectedInjuryToHeal = selectedInjuryToHeal;
+    }
+    
+    // Include project work if selected
+    if (selectedProjectId) {
+      const workUnits = selectedRestType === 'short' ? 1 : (race === 'Elf' ? 3 : 2);
+      effects.workUnitsToAdd = workUnits;
+      
+      if (selectedProjectId.startsWith('new:')) {
+        // Parse new project info
+        const parts = selectedProjectId.split(':');
+        effects.newProject = {
+          id: `project-${Date.now()}`,
+          name: parts[1] || 'Untitled Project',
+          description: parts[2] || '',
+          totalWorkUnits: parseInt(parts[3], 10) || 5,
+          completedWorkUnits: workUnits,
+          isCompleted: false,
+        };
+      } else {
+        effects.projectToWorkOn = selectedProjectId;
+      }
     }
     
     // Long rest specific effects
@@ -463,7 +540,7 @@ export const RestModal: React.FC<RestModalProps> = ({
     });
     
     return effects;
-  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal]);
+  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal, selectedProjectId, race]);
 
   // Handle rest completion
   const handleRest = () => {
@@ -1485,6 +1562,209 @@ export const RestModal: React.FC<RestModalProps> = ({
               onClick={handleInjurySelectionCancel}
               style={{
                 width: '100%',
+                padding: '8px 16px',
+                background: '#444',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Project Selection Prompt Modal (for Work on Project) */}
+      {projectPrompt.isOpen && (
+        <>
+          <div
+            onClick={handleProjectCancel}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid #51cf66',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '360px',
+            maxWidth: '450px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+          }}>
+            <h4 style={{ margin: '0 0 16px', color: '#51cf66' }}>📋 Work on Project</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              Progress a project by <strong style={{ color: '#51cf66' }}>{selectedRestType === 'short' ? 1 : (race === 'Elf' ? 3 : 2)} work unit(s)</strong> during this rest.
+            </p>
+
+            {/* Existing Projects Section */}
+            {projects.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '11px', color: '#51cf66', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 'bold' }}>
+                  Existing Projects
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {projects.filter(p => !p.isCompleted).map((project) => {
+                    const progressPercent = (project.completedWorkUnits / project.totalWorkUnits) * 100;
+                    return (
+                      <button
+                        key={project.id}
+                        onClick={() => handleSelectProject(project.id)}
+                        style={{
+                          padding: '12px',
+                          background: selectedProjectId === project.id ? 'rgba(81, 207, 102, 0.2)' : 'rgba(0, 0, 0, 0.3)',
+                          border: `1px solid ${selectedProjectId === project.id ? '#51cf66' : 'transparent'}`,
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          color: 'var(--text-main)',
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '4px', color: '#51cf66' }}>
+                          {project.name}
+                        </div>
+                        {project.description && (
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                            {project.description.length > 60 ? `${project.description.substring(0, 60)}...` : project.description}
+                          </div>
+                        )}
+                        {/* Progress bar */}
+                        <div style={{
+                          width: '100%',
+                          height: '6px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                          marginBottom: '4px',
+                        }}>
+                          <div style={{
+                            width: `${progressPercent}%`,
+                            height: '100%',
+                            background: '#51cf66',
+                            transition: 'width 0.3s ease',
+                          }} />
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                          Progress: {project.completedWorkUnits}/{project.totalWorkUnits} work units
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Create New Project Section */}
+            <div style={{ borderTop: projects.length > 0 ? '1px solid var(--glass-border)' : 'none', paddingTop: projects.length > 0 ? '16px' : '0' }}>
+              <div style={{ fontSize: '11px', color: '#fcc419', textTransform: 'uppercase', marginBottom: '12px', fontWeight: 'bold' }}>
+                Start New Project
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  Project Name *
+                </label>
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="e.g., Craft a magic sword..."
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '12px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  Description (optional)
+                </label>
+                <textarea
+                  value={newProjectDescription}
+                  onChange={(e) => setNewProjectDescription(e.target.value)}
+                  placeholder="Describe your project..."
+                  rows={2}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                    boxSizing: 'border-box',
+                    resize: 'none',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  Work Units Required
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[3, 5, 10, 15].map((units) => (
+                    <button
+                      key={units}
+                      onClick={() => setNewProjectWorkUnits(units)}
+                      style={{
+                        flex: 1,
+                        padding: '6px',
+                        background: newProjectWorkUnits === units ? 'rgba(252, 196, 25, 0.2)' : 'rgba(0, 0, 0, 0.3)',
+                        border: `1px solid ${newProjectWorkUnits === units ? '#fcc419' : 'transparent'}`,
+                        borderRadius: '4px',
+                        color: newProjectWorkUnits === units ? '#fcc419' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                      }}
+                    >
+                      {units}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleCreateProject}
+                disabled={!newProjectName.trim()}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: newProjectName.trim() ? '#fcc419' : '#666',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: newProjectName.trim() ? '#000' : '#999',
+                  cursor: newProjectName.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                }}
+              >
+                Create & Work on Project
+              </button>
+            </div>
+
+            <button
+              onClick={handleProjectCancel}
+              style={{
+                width: '100%',
+                marginTop: '12px',
                 padding: '8px 16px',
                 background: '#444',
                 border: 'none',

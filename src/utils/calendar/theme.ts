@@ -112,15 +112,42 @@ export function getThemeColors(biome: BiomeType, season: SeasonName): ThemeColor
 }
 
 /**
- * Apply theme colors to the document as CSS custom properties
+ * Apply theme colors scoped to a specific container element.
+ * This ensures calendar themes don't affect the main app's styling.
+ * Falls back to document root if no container provided (for backwards compatibility).
+ * 
+ * @param colors - The theme colors to apply
+ * @param container - Optional container element to scope the theme to
  */
-export function applyTheme(colors: ThemeColors): void {
-  const root = document.documentElement;
+export function applyTheme(colors: ThemeColors, container?: HTMLElement | null): void {
+  const target = container || document.documentElement;
 
-  root.style.setProperty('--theme-bg-start', colors.bgStart);
-  root.style.setProperty('--theme-bg-mid', colors.bgMid);
-  root.style.setProperty('--theme-bg-end', colors.bgEnd);
-  root.style.setProperty('--theme-accent-primary', colors.accentPrimary);
-  root.style.setProperty('--theme-accent-secondary', colors.accentSecondary);
-  root.style.setProperty('--theme-glass-base', colors.glassBase);
+  target.style.setProperty('--theme-bg-start', colors.bgStart);
+  target.style.setProperty('--theme-bg-mid', colors.bgMid);
+  target.style.setProperty('--theme-bg-end', colors.bgEnd);
+  target.style.setProperty('--theme-accent-primary', colors.accentPrimary);
+  target.style.setProperty('--theme-accent-secondary', colors.accentSecondary);
+  target.style.setProperty('--theme-glass-base', colors.glassBase);
+}
+
+/**
+ * Clear theme colors from a container element.
+ * Used when the calendar tab is unmounted to prevent lingering styles.
+ * 
+ * @param container - The container element to clear theme from
+ */
+export function clearTheme(container?: HTMLElement | null): void {
+  const target = container || document.documentElement;
+
+  // Check if element is still connected to the DOM before removing properties
+  if (!target.isConnected && target !== document.documentElement) {
+    return;
+  }
+
+  target.style.removeProperty('--theme-bg-start');
+  target.style.removeProperty('--theme-bg-mid');
+  target.style.removeProperty('--theme-bg-end');
+  target.style.removeProperty('--theme-accent-primary');
+  target.style.removeProperty('--theme-accent-secondary');
+  target.style.removeProperty('--theme-glass-base');
 }

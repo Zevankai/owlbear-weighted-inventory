@@ -19,8 +19,8 @@ const TimeBtn: React.FC<{ label: string, onClick: () => void }> = ({ label, onCl
     style={{
       background: 'rgba(255, 255, 255, 0.1)',
       backdropFilter: 'blur(5px)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      color: '#e0e0e0',
+      border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.2))',
+      color: 'var(--text-main, #e0e0e0)',
       fontFamily: 'monospace',
       fontSize: '0.8rem',
       cursor: 'pointer',
@@ -31,13 +31,13 @@ const TimeBtn: React.FC<{ label: string, onClick: () => void }> = ({ label, onCl
     }}
     onMouseEnter={(e) => {
       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-      e.currentTarget.style.color = 'white';
+      e.currentTarget.style.borderColor = 'var(--accent-gold, rgba(255, 255, 255, 0.3))';
+      e.currentTarget.style.color = 'var(--text-main, white)';
     }}
     onMouseLeave={(e) => {
       e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-      e.currentTarget.style.color = '#e0e0e0';
+      e.currentTarget.style.borderColor = 'var(--glass-border, rgba(255, 255, 255, 0.2))';
+      e.currentTarget.style.color = 'var(--text-main, #e0e0e0)';
     }}
     title="Advance Time"
   >
@@ -50,10 +50,10 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
 }) => {
   return (
     <div style={{
-      background: 'rgba(255, 255, 255, 0.05)',
+      background: 'var(--bg-panel, rgba(255, 255, 255, 0.05))',
       backdropFilter: 'blur(10px)',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-      borderRadius: '16px 16px 0 0',
+      borderBottom: '1px solid var(--glass-border, rgba(255, 255, 255, 0.1))',
+      borderRadius: '8px 8px 0 0',
       padding: '12px',
       margin: '8px 8px 0 8px',
       boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
@@ -68,7 +68,7 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
             fontSize: '1.4rem',
             fontWeight: 'bold',
             lineHeight: 1,
-            color: '#fff',
+            color: 'var(--text-main, #fff)',
             textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
           }}>
              {formatTime12Hour(date.hour, date.minute)}
@@ -77,13 +77,13 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
              onClick={onWeatherClick}
              style={{
                fontSize: '0.8rem',
-               color: '#ddd',
+               color: 'var(--text-muted, #ddd)',
                cursor: isGM ? 'pointer' : 'default',
                borderBottom: isGM ? '1px dashed rgba(255, 255, 255, 0.4)' : 'none',
                transition: 'color 0.2s ease'
              }}
-             onMouseEnter={(e) => isGM && (e.currentTarget.style.color = '#fff')}
-             onMouseLeave={(e) => isGM && (e.currentTarget.style.color = '#ddd')}
+             onMouseEnter={(e) => isGM && (e.currentTarget.style.color = 'var(--text-main, #fff)')}
+             onMouseLeave={(e) => isGM && (e.currentTarget.style.color = 'var(--text-muted, #ddd)')}
           >
              {weather.currentCondition}, {weather.temperature}°
           </div>
@@ -91,10 +91,10 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
 
         {/* DATE & MOON */}
         <div style={{ textAlign: 'right', lineHeight: 1.2 }}>
-           <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: '#fff', textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }}>
-              {date.day} / {date.monthIndex + 1} / {date.year} <span style={{fontSize:'0.75em', color:'#aaa'}}>{yearName}</span>
+           <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: 'var(--text-main, #fff)', textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)' }}>
+              {date.day} / {date.monthIndex + 1} / {date.year} <span style={{fontSize:'0.75em', color:'var(--text-muted, #aaa)'}}>{yearName}</span>
            </div>
-           <div style={{ fontSize: '0.7rem', color: '#aaa' }}>{moon}</div>
+           <div style={{ fontSize: '0.7rem', color: 'var(--text-muted, #aaa)' }}>{moon}</div>
         </div>
       </div>
 
@@ -116,9 +116,9 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
              style={{
                background: 'rgba(255, 255, 255, 0.1)',
                backdropFilter: 'blur(5px)',
-               border: '1px solid rgba(255, 255, 255, 0.2)',
+               border: '1px solid var(--glass-border, rgba(255, 255, 255, 0.2))',
                borderRadius: '6px',
-               color: '#aaa',
+               color: 'var(--text-muted, #aaa)',
                cursor: 'pointer',
                fontSize: '1.2rem',
                padding: '4px 8px',
@@ -126,11 +126,11 @@ export const CompactHeader: React.FC<CompactHeaderProps> = ({
              }}
              onMouseEnter={(e) => {
                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
-               e.currentTarget.style.color = '#fff';
+               e.currentTarget.style.color = 'var(--text-main, #fff)';
              }}
              onMouseLeave={(e) => {
                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-               e.currentTarget.style.color = '#aaa';
+               e.currentTarget.style.color = 'var(--text-muted, #aaa)';
              }}
              title="Settings"
            >

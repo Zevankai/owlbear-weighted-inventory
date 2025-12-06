@@ -267,14 +267,14 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ config, logs
       background: 'transparent',
       height: '100%',
       overflowY: 'auto',
-      color: '#eee',
+      color: 'var(--text-main, #eee)',
       fontSize: '0.9rem'
     }}>
       <h2 style={{
-        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+        borderBottom: '1px solid var(--glass-border, rgba(255, 255, 255, 0.2))',
         paddingBottom: '0.75rem',
         marginTop: 0,
-        color: '#fff',
+        color: 'var(--text-main, #fff)',
         textShadow: '0 2px 4px rgba(0, 0, 0, 0.3)'
       }}>Settings</h2>
 
@@ -718,8 +718,8 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ config, logs
       <style>{`
         .settings-input {
           background: rgba(0, 0, 0, 0.3);
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          color: white;
+          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
+          color: var(--text-main, white);
           padding: 8px;
           border-radius: 8px;
           width: 100%;
@@ -727,9 +727,9 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ config, logs
         }
         .settings-input:focus {
           outline: none;
-          border-color: rgba(255, 255, 255, 0.4);
+          border-color: var(--accent-gold, rgba(255, 255, 255, 0.4));
           background: rgba(0, 0, 0, 0.4);
-          box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2);
+          box-shadow: 0 0 0 3px rgba(240, 225, 48, 0.2);
         }
         .btn-danger {
           background: rgba(255, 85, 85, 0.1);
@@ -749,7 +749,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ config, logs
         .btn-primary {
           background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
           color: white;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
           padding: 12px;
           border-radius: 8px;
           font-weight: bold;
@@ -763,10 +763,10 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ config, logs
           box-shadow: 0 6px 16px rgba(76, 175, 80, 0.5);
         }
         .btn-secondary {
-          background: rgba(255, 255, 255, 0.1);
+          background: var(--bg-panel, rgba(255, 255, 255, 0.1));
           backdrop-filter: blur(5px);
-          color: white;
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          color: var(--text-main, white);
+          border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
           padding: 10px;
           border-radius: 8px;
           cursor: pointer;
@@ -774,7 +774,7 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ config, logs
         }
         .btn-secondary:hover {
           background: rgba(255, 255, 255, 0.2);
-          border-color: rgba(255, 255, 255, 0.3);
+          border-color: var(--accent-gold, rgba(255, 255, 255, 0.3));
           box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         }
       `}</style>

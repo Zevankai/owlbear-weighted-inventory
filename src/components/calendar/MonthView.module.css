@@ -1,9 +1,9 @@
 .container {
   padding: 16px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-panel, rgba(255, 255, 255, 0.05));
   backdrop-filter: blur(10px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   margin: 8px;
   user-select: none;
@@ -17,7 +17,7 @@
   height: 130px;
   margin: -16px -16px 16px -16px;
   overflow: hidden;
-  border-radius: 16px 16px 0 0;
+  border-radius: 12px 12px 0 0;
 }
 
 .bannerImage {
@@ -44,7 +44,7 @@
   font-size: 1rem;
   font-weight: bold;
   margin-bottom: 10px;
-  color: #fff;
+  color: var(--text-main, #fff);
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -56,7 +56,7 @@
 .dayName {
   text-align: center;
   font-size: 0.75rem;
-  color: #888;
+  color: var(--text-muted, #888);
   text-transform: uppercase;
   padding-bottom: 4px;
 }
@@ -66,7 +66,7 @@
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(5px);
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -76,14 +76,14 @@
   transition: all 0.3s ease;
   padding-top: 4px;
   font-size: 0.9rem;
-  color: #e0e0e0;
+  color: var(--text-main, #e0e0e0);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .cell:hover {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: white;
+  border-color: var(--accent-gold, rgba(255, 255, 255, 0.3));
+  color: var(--text-main, white);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
@@ -96,34 +96,34 @@
 
 /* --- THE "CURRENT GAME DATE" HIGHLIGHT --- */
 .cell.today {
-  border: 2px solid var(--theme-accent-primary, #ff9800);
-  background: var(--theme-glass-base, rgba(255, 152, 0, 0.2));
+  border: 2px solid var(--theme-accent-primary, var(--accent-gold, #ff9800));
+  background: var(--theme-glass-base, rgba(240, 225, 48, 0.2));
   backdrop-filter: blur(8px);
-  color: white;
+  color: var(--text-main, white);
   font-weight: bold;
-  box-shadow: 0 0 20px var(--theme-glass-base, rgba(255, 152, 0, 0.5)), 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 20px var(--theme-glass-base, rgba(240, 225, 48, 0.5)), 0 4px 12px rgba(0, 0, 0, 0.3);
   z-index: 2;
 }
 
 /* --- THE "USER CLICKED" HIGHLIGHT --- */
 .cell.selected {
   background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent-gold, rgba(255, 255, 255, 0.4));
   backdrop-filter: blur(8px);
 }
 
 /* COMBINED: If today is ALSO selected */
 .cell.today.selected {
-  border-color: var(--theme-accent-primary, #ff9800);
-  background: var(--theme-glass-base, rgba(255, 152, 0, 0.25));
+  border-color: var(--theme-accent-primary, var(--accent-gold, #ff9800));
+  background: var(--theme-glass-base, rgba(240, 225, 48, 0.25));
   backdrop-filter: blur(8px);
 }
 
 .navButton {
   background: rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #e0e0e0;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
+  color: var(--text-main, #e0e0e0);
   cursor: pointer;
   border-radius: 6px;
   padding: 4px 10px;
@@ -131,8 +131,8 @@
 }
 .navButton:hover {
   background: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-  color: white;
+  border-color: var(--accent-gold, rgba(255, 255, 255, 0.3));
+  color: var(--text-main, white);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 

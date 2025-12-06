@@ -1,8 +1,8 @@
 .container {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-panel, rgba(255, 255, 255, 0.05));
   backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
+  border-top: 1px solid var(--glass-border, rgba(255, 255, 255, 0.1));
+  border-radius: 12px;
   margin: 8px;
   padding: 1rem;
   display: flex;
@@ -18,15 +18,15 @@
   backdrop-filter: blur(8px);
   border-radius: 8px;
   padding: 0.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-left: 4px solid #646cff;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+  border-left: 4px solid var(--accent-gold, #646cff);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
   transition: all 0.2s ease;
 }
 
 .noteItem:hover {
   background: rgba(255, 255, 255, 0.15);
-  border-color: rgba(255, 255, 255, 0.25);
+  border-color: var(--glass-border, rgba(255, 255, 255, 0.25));
   transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
 }
@@ -46,12 +46,12 @@
 
 .noteContent {
   font-size: 0.85rem;
-  color: #ccc;
+  color: var(--text-muted, #ccc);
   white-space: pre-wrap;
 }
 
 .emptyState {
-  color: #777;
+  color: var(--text-muted, #777);
   text-align: center;
   font-style: italic;
   padding: 1rem;
@@ -62,9 +62,9 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-panel, rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
   padding: 1rem;
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -72,8 +72,8 @@
 
 .input, .textarea {
   background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: white;
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
+  color: var(--text-main, white);
   padding: 0.75rem;
   border-radius: 8px;
   font-family: inherit;
@@ -82,9 +82,9 @@
 
 .input:focus, .textarea:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.4);
+  border-color: var(--accent-gold, rgba(255, 255, 255, 0.4));
   background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2);
+  box-shadow: 0 0 0 3px rgba(240, 225, 48, 0.2);
 }
 
 .checkboxLabel {
@@ -92,25 +92,25 @@
   align-items: center;
   gap: 0.5rem;
   font-size: 0.8rem;
-  color: #aaa;
+  color: var(--text-muted, #aaa);
 }
 
 .saveButton {
-  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
+  background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.2));
   padding: 0.75rem;
   cursor: pointer;
   font-weight: bold;
   border-radius: 8px;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(100, 108, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
 }
 
 .saveButton:hover {
-  background: linear-gradient(135deg, #535bf2 0%, #646cff 100%);
+  background: linear-gradient(135deg, #45a049 0%, #4CAF50 100%);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(100, 108, 255, 0.5);
+  box-shadow: 0 6px 16px rgba(76, 175, 80, 0.5);
 }
 
 .deleteBtn {

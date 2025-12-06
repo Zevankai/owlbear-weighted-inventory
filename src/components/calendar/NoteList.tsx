@@ -9,9 +9,9 @@ interface NoteListProps {
 }
 
 const CAT_COLORS: Record<EventCategory, string> = {
-  Session: 'white',
+  Session: 'var(--text-main, white)',
   Lore: '#bf80ff',
-  Holiday: '#ffd700',
+  Holiday: 'var(--accent-gold, #ffd700)',
   Campaign: '#ff5555',
   Other: '#55aaff'
 };
@@ -27,7 +27,7 @@ export const NoteList: React.FC<NoteListProps> = ({ logs, selectedDate, isGM, on
 
   if (dailyLogs.length === 0) {
     return <div style={{
-      color: '#999',
+      color: 'var(--text-muted, #999)',
       textAlign: 'center',
       padding: '20px',
       fontStyle: 'italic',
@@ -40,12 +40,12 @@ export const NoteList: React.FC<NoteListProps> = ({ logs, selectedDate, isGM, on
     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
       {dailyLogs.map(log => (
         <div key={log.id} style={{
-           background: 'rgba(255, 255, 255, 0.12)',
+           background: 'var(--bg-panel, rgba(255, 255, 255, 0.12))',
            backdropFilter: 'blur(8px)',
            borderRadius: '10px',
            padding: '12px 14px',
-           borderLeft: `4px solid ${CAT_COLORS[log.category] || 'white'}`,
-           border: `1px solid rgba(255, 255, 255, 0.15)`,
+           borderLeft: `4px solid ${CAT_COLORS[log.category] || 'var(--text-main, white)'}`,
+           border: `1px solid var(--glass-border, rgba(255, 255, 255, 0.15))`,
            borderLeftWidth: '4px',
            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25)',
            transition: 'all 0.2s ease'
@@ -56,7 +56,7 @@ export const NoteList: React.FC<NoteListProps> = ({ logs, selectedDate, isGM, on
           e.currentTarget.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.35)';
         }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.12)';
+          e.currentTarget.style.background = 'var(--bg-panel, rgba(255, 255, 255, 0.12))';
           e.currentTarget.style.transform = 'translateY(0)';
           e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.25)';
         }}>
@@ -95,7 +95,7 @@ export const NoteList: React.FC<NoteListProps> = ({ logs, selectedDate, isGM, on
           </div>
           <div style={{
             fontSize: '0.85rem',
-            color: '#f0f0f0',
+            color: 'var(--text-main, #f0f0f0)',
             whiteSpace: 'pre-wrap',
             lineHeight: '1.5',
             textShadow: '0 1px 2px rgba(0, 0, 0, 0.6)'

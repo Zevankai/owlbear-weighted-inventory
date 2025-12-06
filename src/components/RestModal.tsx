@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency } from '../types';
+import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency, InjuryConditionData, Project } from '../types';
+import { INJURY_HP_VALUES } from '../types';
 import { getStandardRestOptions, getNonStandardRestOptions, getRestOptionById } from '../data/restOptions';
 import { getTotalRations } from '../utils/inventory';
 import { getTotalCopperPieces } from '../utils/currency';
@@ -33,6 +34,7 @@ export interface RestEffectsToApply {
   tempHp?: number;
   heroicInspiration?: boolean;
   healInjuryLevels?: number;
+  selectedInjuryToHeal?: 'minorInjury' | 'seriousInjury' | 'criticalInjury'; // Specific injury to heal if selected
   reduceExhaustion?: number;
   rationsToDeduct?: number;
   restLocation?: RestLocationType;
@@ -40,6 +42,9 @@ export interface RestEffectsToApply {
   gpCost?: number;
   hitDiceRecovered?: number;
   recoverSuperiorityDice?: boolean;
+  projectToWorkOn?: string; // ID of project to add work to
+  newProject?: Project; // New project to create and work on
+  workUnitsToAdd?: number; // Work units to add (1 for short, 2 for long)
 }
 
 interface RestModalProps {
@@ -61,6 +66,12 @@ interface RestModalProps {
   superiorityDice?: SuperiorityDice; // Current superiority dice state
   currency?: Currency; // Current currency for settlement costs
   onSpendHitDie?: (hpRecovered: number) => void; // Callback when spending hit dice
+  activeInjuries?: {
+    minorInjury?: InjuryConditionData;
+    seriousInjury?: InjuryConditionData;
+    criticalInjury?: InjuryConditionData;
+  }; // Active injuries for the injury selection prompt
+  projects?: Project[]; // Current active projects
 }
 
 export const RestModal: React.FC<RestModalProps> = ({
@@ -82,6 +93,8 @@ export const RestModal: React.FC<RestModalProps> = ({
   superiorityDice,
   currency,
   onSpendHitDie,
+  activeInjuries,
+  projects = [],
 }) => {
   const [selectedRestType, setSelectedRestType] = useState<RestType>('short');
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
@@ -94,12 +107,54 @@ export const RestModal: React.FC<RestModalProps> = ({
   } | null>(null);
   const [error, setError] = useState<string | null>(null);
   
+  // Project modal state
+  const [projectPrompt, setProjectPrompt] = useState<{ isOpen: boolean }>({ isOpen: false });
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [newProjectData, setNewProjectData] = useState<{
+    name: string;
+    description: string;
+    totalWorkUnits: number;
+  } | null>(null);
+  const [newProjectName, setNewProjectName] = useState('');
+  const [newProjectDescription, setNewProjectDescription] = useState('');
+  const [newProjectWorkUnits, setNewProjectWorkUnits] = useState(5);
+  
+  // Ration input prompt for "Prepare a Meal" / "Prepare a Snack" options
+  const [rationInputPrompt, setRationInputPrompt] = useState<{
+    isOpen: boolean;
+    optionId: string;
+    rationCount: string;
+    tempHpPerRation: number;
+  } | null>(null);
+  
+  // Track custom ration counts for options that require input
+  const [customRationCounts, setCustomRationCounts] = useState<Record<string, number>>({});
+  
+  // Injury selection state - for when player has multiple injuries and selects Patch Wounds
+  const [selectedInjuryToHeal, setSelectedInjuryToHeal] = useState<'minorInjury' | 'seriousInjury' | 'criticalInjury' | null>(null);
+  const [injurySelectionPrompt, setInjurySelectionPrompt] = useState<{ isOpen: boolean }>({ isOpen: false });
+  
   // Long rest location state
   const [restLocation, setRestLocation] = useState<RestLocationType | null>(null);
   const [selectedRoomType, setSelectedRoomType] = useState<SettlementRoomType | null>(null);
   
   // Hit dice spending state
   const [hitDieSpendPrompt, setHitDieSpendPrompt] = useState<{ isOpen: boolean; hpRecovered: string }>({ isOpen: false, hpRecovered: '' });
+  
+  // Calculate active injury count for determining if we need selection prompt
+  const activeInjuryList = useMemo(() => {
+    const injuries: { type: 'minorInjury' | 'seriousInjury' | 'criticalInjury'; data: InjuryConditionData; label: string }[] = [];
+    if (activeInjuries?.criticalInjury) {
+      injuries.push({ type: 'criticalInjury', data: activeInjuries.criticalInjury, label: 'Critical Injury' });
+    }
+    if (activeInjuries?.seriousInjury) {
+      injuries.push({ type: 'seriousInjury', data: activeInjuries.seriousInjury, label: 'Serious Injury' });
+    }
+    if (activeInjuries?.minorInjury) {
+      injuries.push({ type: 'minorInjury', data: activeInjuries.minorInjury, label: 'Minor Injury' });
+    }
+    return injuries;
+  }, [activeInjuries]);
 
   // Build localStorage keys per token
   const shortRestStorageKey = `${LAST_SHORT_REST_CHOICES_KEY}-${tokenId}`;
@@ -208,14 +263,28 @@ export const RestModal: React.FC<RestModalProps> = ({
   // Get last rest info
   const lastShortRest = restHistory.lastShortRest;
   const lastLongRest = restHistory.lastLongRest;
+  
+  // Get previous selected benefits for current rest type (to prevent same benefit twice in a row)
+  const previousSelectedBenefits = useMemo(() => {
+    if (selectedRestType === 'short') {
+      return lastShortRest?.selectedBenefits || lastShortRest?.chosenOptionIds || [];
+    } else {
+      return lastLongRest?.selectedBenefits || lastLongRest?.chosenOptionIds || [];
+    }
+  }, [selectedRestType, lastShortRest, lastLongRest]);
 
   // Check if an option requires rations and if we have enough
-  const checkRationRequirement = useCallback((option: RestOption): { required: number; hasEnough: boolean } => {
+  const checkRationRequirement = useCallback((option: RestOption): { required: number; hasEnough: boolean; requiresPrompt: boolean } => {
+    // Check if this option requires a ration prompt (variable ration input)
+    if (option.effect?.requiresRationPrompt) {
+      // For ration prompt options, we need at least 1 ration
+      return { required: 1, hasEnough: availableRations >= 1, requiresPrompt: true };
+    }
     if (!option.effect?.requiresRations) {
-      return { required: 0, hasEnough: true };
+      return { required: 0, hasEnough: true, requiresPrompt: false };
     }
     const required = option.effect.requiresRations;
-    return { required, hasEnough: availableRations >= required };
+    return { required, hasEnough: availableRations >= required, requiresPrompt: false };
   }, [availableRations]);
 
   // Toggle option selection
@@ -226,8 +295,17 @@ export const RestModal: React.FC<RestModalProps> = ({
     const newSet = new Set(selectedOptionIds);
     
     if (newSet.has(optionId)) {
-      // Deselecting
+      // Deselecting - also clear custom ration count and selected injury if any
       newSet.delete(optionId);
+      if (customRationCounts[optionId]) {
+        const newCounts = { ...customRationCounts };
+        delete newCounts[optionId];
+        setCustomRationCounts(newCounts);
+      }
+      // Clear selected injury if deselecting Patch Wounds
+      if (optionId === 'short-standard-patch-wounds' || optionId === 'long-standard-patch-wounds') {
+        setSelectedInjuryToHeal(null);
+      }
       setError(null);
     } else {
       // Only add if not at max
@@ -236,9 +314,51 @@ export const RestModal: React.FC<RestModalProps> = ({
       }
       
       // Check ration requirement
-      const { required, hasEnough } = checkRationRequirement(option);
+      const { required, hasEnough, requiresPrompt } = checkRationRequirement(option);
+      
+      // If option requires ration prompt, show the ration input modal
+      if (requiresPrompt) {
+        if (availableRations < 1) {
+          setError(`Not enough rations! "${option.name}" requires at least 1 ration but you have none.`);
+          return;
+        }
+        // Show ration input prompt
+        setRationInputPrompt({
+          isOpen: true,
+          optionId: optionId,
+          rationCount: '1',
+          tempHpPerRation: option.effect?.value || 5,
+        });
+        return;
+      }
+      
       if (required > 0 && !hasEnough) {
         setError(`Not enough rations! "${option.name}" requires ${required} ration(s) but you only have ${availableRations}. Choose a different benefit.`);
+        return;
+      }
+      
+      // Check if this is Patch Wounds and there are multiple injuries - show injury selection
+      const isPatchWounds = optionId === 'short-standard-patch-wounds' || optionId === 'long-standard-patch-wounds';
+      if (isPatchWounds && activeInjuryList.length > 1) {
+        // Show injury selection prompt
+        setInjurySelectionPrompt({ isOpen: true });
+        // Temporarily add to selection to track that this option is being configured
+        newSet.add(optionId);
+        setSelectedOptionIds(newSet);
+        return;
+      } else if (isPatchWounds && activeInjuryList.length === 1) {
+        // Auto-select the only injury
+        setSelectedInjuryToHeal(activeInjuryList[0].type);
+      }
+      
+      // Check if this is Work on Project - show project modal
+      const isWorkOnProject = optionId === 'short-standard-project' || optionId === 'long-standard-project';
+      if (isWorkOnProject) {
+        // Show project prompt
+        setProjectPrompt({ isOpen: true });
+        // Temporarily add to selection
+        newSet.add(optionId);
+        setSelectedOptionIds(newSet);
         return;
       }
       
@@ -248,6 +368,90 @@ export const RestModal: React.FC<RestModalProps> = ({
     
     setSelectedOptionIds(newSet);
   };
+  
+  // Handle ration input confirmation
+  const handleRationInputConfirm = () => {
+    if (!rationInputPrompt) return;
+    
+    const rationCount = parseInt(rationInputPrompt.rationCount, 10);
+    if (isNaN(rationCount) || rationCount < 1) {
+      setError('Please enter a valid number of rations (at least 1)');
+      return;
+    }
+    if (rationCount > availableRations) {
+      setError(`Not enough rations! You have ${availableRations} but entered ${rationCount}.`);
+      return;
+    }
+    
+    // Add the option and store the custom ration count
+    const newSet = new Set(selectedOptionIds);
+    newSet.add(rationInputPrompt.optionId);
+    setSelectedOptionIds(newSet);
+    setCustomRationCounts({
+      ...customRationCounts,
+      [rationInputPrompt.optionId]: rationCount,
+    });
+    setRationInputPrompt(null);
+    setError(null);
+  };
+  
+  // Handle injury selection confirmation
+  const handleInjurySelectionConfirm = (injuryType: 'minorInjury' | 'seriousInjury' | 'criticalInjury') => {
+    setSelectedInjuryToHeal(injuryType);
+    setInjurySelectionPrompt({ isOpen: false });
+    setError(null);
+  };
+  
+  // Cancel injury selection
+  const handleInjurySelectionCancel = () => {
+    // Remove Patch Wounds from selection
+    const newSet = new Set(selectedOptionIds);
+    newSet.delete('short-standard-patch-wounds');
+    newSet.delete('long-standard-patch-wounds');
+    setSelectedOptionIds(newSet);
+    setSelectedInjuryToHeal(null);
+    setInjurySelectionPrompt({ isOpen: false });
+  };
+  
+  // Handle project selection - work on existing project
+  const handleSelectProject = (projectId: string) => {
+    setSelectedProjectId(projectId);
+    setNewProjectData(null); // Clear any new project data
+    setProjectPrompt({ isOpen: false });
+    setError(null);
+  };
+  
+  // Handle creating and working on a new project
+  const handleCreateProject = () => {
+    if (!newProjectName.trim()) {
+      setError('Please enter a project name');
+      return;
+    }
+    // Store new project data in a proper object (not string parsing)
+    setNewProjectData({
+      name: newProjectName,
+      description: newProjectDescription,
+      totalWorkUnits: newProjectWorkUnits,
+    });
+    setSelectedProjectId(null); // Clear any existing project selection
+    setProjectPrompt({ isOpen: false });
+    setNewProjectName('');
+    setNewProjectDescription('');
+    setNewProjectWorkUnits(5);
+    setError(null);
+  };
+  
+  // Cancel project selection
+  const handleProjectCancel = () => {
+    // Remove Work on Project from selection
+    const newSet = new Set(selectedOptionIds);
+    newSet.delete('short-standard-project');
+    newSet.delete('long-standard-project');
+    setSelectedOptionIds(newSet);
+    setSelectedProjectId(null);
+    setNewProjectData(null);
+    setProjectPrompt({ isOpen: false });
+  };
 
   // Calculate effects to apply from selected options
   const calculateEffects = useCallback((): RestEffectsToApply => {
@@ -255,6 +459,31 @@ export const RestModal: React.FC<RestModalProps> = ({
     
     // Short rest and long rest both recover superiority dice
     effects.recoverSuperiorityDice = true;
+    
+    // Include selected injury to heal if any
+    if (selectedInjuryToHeal) {
+      effects.selectedInjuryToHeal = selectedInjuryToHeal;
+    }
+    
+    // Include project work - either existing project or new project
+    const workUnits = selectedRestType === 'short' ? 1 : (race === 'Elf' ? 3 : 2);
+    
+    if (newProjectData) {
+      // Creating and working on a new project
+      effects.workUnitsToAdd = workUnits;
+      effects.newProject = {
+        id: `project-${Date.now()}`,
+        name: newProjectData.name,
+        description: newProjectData.description,
+        totalWorkUnits: newProjectData.totalWorkUnits,
+        completedWorkUnits: workUnits,
+        isCompleted: false,
+      };
+    } else if (selectedProjectId) {
+      // Working on existing project
+      effects.workUnitsToAdd = workUnits;
+      effects.projectToWorkOn = selectedProjectId;
+    }
     
     // Long rest specific effects
     if (selectedRestType === 'long') {
@@ -296,7 +525,15 @@ export const RestModal: React.FC<RestModalProps> = ({
       
       switch (effect.type) {
         case 'tempHp':
-          effects.tempHp = (effects.tempHp || 0) + (effect.value || 0);
+          // Check if this option uses custom ration count (for Prepare a Meal/Snack)
+          if (effect.requiresRationPrompt && customRationCounts[optionId]) {
+            // Scale temp HP based on rations used
+            const rationCount = customRationCounts[optionId];
+            effects.tempHp = (effects.tempHp || 0) + (effect.value || 0) * rationCount;
+            effects.rationsToDeduct = (effects.rationsToDeduct || 0) + rationCount;
+          } else {
+            effects.tempHp = (effects.tempHp || 0) + (effect.value || 0);
+          }
           break;
         case 'heroicInspiration':
           effects.heroicInspiration = true;
@@ -307,14 +544,14 @@ export const RestModal: React.FC<RestModalProps> = ({
           break;
       }
       
-      // Track rations to deduct
-      if (effect.requiresRations) {
+      // Track rations to deduct (for non-prompt options)
+      if (effect.requiresRations && !effect.requiresRationPrompt) {
         effects.rationsToDeduct = (effects.rationsToDeduct || 0) + effect.requiresRations;
       }
     });
     
     return effects;
-  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked]);
+  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal, selectedProjectId, newProjectData, race]);
 
   // Handle rest completion
   const handleRest = () => {
@@ -864,6 +1101,8 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#51cf66"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -879,6 +1118,8 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#fcc419"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -894,6 +1135,8 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#4dabf7"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -909,6 +1152,8 @@ export const RestModal: React.FC<RestModalProps> = ({
               color="#c084fc"
               isAtMax={isAtMaxSelections}
               checkRationRequirement={checkRationRequirement}
+              customRationCounts={customRationCounts}
+              previousSelectedBenefits={previousSelectedBenefits}
             />
           )}
 
@@ -1122,6 +1367,428 @@ export const RestModal: React.FC<RestModalProps> = ({
           </div>
         </>
       )}
+
+      {/* Ration Input Prompt Modal (for Prepare a Meal / Prepare a Snack) */}
+      {rationInputPrompt && rationInputPrompt.isOpen && (
+        <>
+          <div
+            onClick={() => setRationInputPrompt(null)}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '300px',
+          }}>
+            <h4 style={{ margin: '0 0 12px', color: '#fcc419' }}>🍖 How Many Rations?</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '8px' }}>
+              Enter how many rations you want to use. Each ration provides <strong style={{ color: '#4dabf7' }}>+{rationInputPrompt.tempHpPerRation} temp HP</strong>.
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', marginBottom: '12px' }}>
+              Available rations: <strong style={{ color: '#fcc419' }}>{availableRations}</strong>
+            </p>
+            <input
+              type="number"
+              min="1"
+              max={availableRations}
+              value={rationInputPrompt.rationCount}
+              onChange={(e) => setRationInputPrompt({ ...rationInputPrompt, rationCount: e.target.value })}
+              placeholder="Enter ration count..."
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid #fcc419',
+                borderRadius: '6px',
+                color: 'var(--text-main)',
+                marginBottom: '8px',
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+            <p style={{ fontSize: '11px', color: '#51cf66', marginBottom: '12px' }}>
+              Total temp HP: <strong>+{(parseInt(rationInputPrompt.rationCount, 10) || 0) * rationInputPrompt.tempHpPerRation}</strong>
+            </p>
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setRationInputPrompt(null)}
+                style={{
+                  padding: '8px 16px',
+                  background: '#444',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRationInputConfirm}
+                style={{
+                  padding: '8px 16px',
+                  background: '#51cf66',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                }}
+              >
+                Use Rations
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Injury Selection Prompt Modal (for Patch Wounds with multiple injuries) */}
+      {injurySelectionPrompt.isOpen && (
+        <>
+          <div
+            onClick={handleInjurySelectionCancel}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '320px',
+            maxWidth: '400px',
+          }}>
+            <h4 style={{ margin: '0 0 12px', color: '#ff9800' }}>🩹 Which Injury to Treat?</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              You have multiple active injuries. Select which one to treat during this rest.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
+              {activeInjuryList.map((injury) => {
+                const currentHP = injury.data.injuryHP || INJURY_HP_VALUES[injury.type];
+                const maxHP = INJURY_HP_VALUES[injury.type];
+                const hpPercentage = (currentHP / maxHP) * 100;
+                const location = injury.data.injuryLocation || 'Unknown';
+                const healAmount = selectedRestType === 'short' ? 1 : 2;
+                
+                return (
+                  <button
+                    key={injury.type}
+                    onClick={() => handleInjurySelectionConfirm(injury.type)}
+                    style={{
+                      padding: '12px',
+                      background: injury.type === 'criticalInjury' 
+                        ? 'rgba(229, 57, 53, 0.15)' 
+                        : injury.type === 'seriousInjury'
+                          ? 'rgba(255, 152, 0, 0.15)'
+                          : 'rgba(255, 193, 7, 0.15)',
+                      border: `1px solid ${
+                        injury.type === 'criticalInjury' 
+                          ? 'rgba(229, 57, 53, 0.4)' 
+                          : injury.type === 'seriousInjury'
+                            ? 'rgba(255, 152, 0, 0.4)'
+                            : 'rgba(255, 193, 7, 0.4)'
+                      }`,
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      color: 'var(--text-main)',
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <span style={{ 
+                        fontWeight: 'bold', 
+                        color: injury.type === 'criticalInjury' 
+                          ? '#e53935' 
+                          : injury.type === 'seriousInjury'
+                            ? '#ff9800'
+                            : '#ffc107',
+                      }}>
+                        {injury.type === 'criticalInjury' ? '💀' : injury.type === 'seriousInjury' ? '🩸' : '🩹'} {injury.label}
+                      </span>
+                      <span style={{ fontSize: '10px', color: 'var(--text-muted)', textTransform: 'capitalize' }}>
+                        {location}
+                      </span>
+                    </div>
+                    {/* HP Bar */}
+                    <div style={{
+                      width: '100%',
+                      height: '8px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: '4px',
+                      overflow: 'hidden',
+                      marginBottom: '4px',
+                    }}>
+                      <div style={{
+                        width: `${hpPercentage}%`,
+                        height: '100%',
+                        background: injury.type === 'criticalInjury' 
+                          ? '#e53935' 
+                          : injury.type === 'seriousInjury'
+                            ? '#ff9800'
+                            : '#ffc107',
+                        transition: 'width 0.3s ease',
+                      }} />
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>
+                        HP: {currentHP}/{maxHP}
+                      </span>
+                      <span style={{ color: '#51cf66' }}>
+                        -{healAmount} HP on rest
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={handleInjurySelectionCancel}
+              style={{
+                width: '100%',
+                padding: '8px 16px',
+                background: '#444',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Project Selection Prompt Modal (for Work on Project) */}
+      {projectPrompt.isOpen && (
+        <>
+          <div
+            onClick={handleProjectCancel}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid #51cf66',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '360px',
+            maxWidth: '450px',
+            maxHeight: '80vh',
+            overflow: 'auto',
+          }}>
+            <h4 style={{ margin: '0 0 16px', color: '#51cf66' }}>📋 Work on Project</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+              Progress a project by <strong style={{ color: '#51cf66' }}>{selectedRestType === 'short' ? 1 : (race === 'Elf' ? 3 : 2)} work unit(s)</strong> during this rest.
+            </p>
+
+            {/* Existing Projects Section */}
+            {projects.length > 0 && (
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '11px', color: '#51cf66', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 'bold' }}>
+                  Existing Projects
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {projects.filter(p => !p.isCompleted).map((project) => {
+                    const progressPercent = (project.completedWorkUnits / project.totalWorkUnits) * 100;
+                    return (
+                      <button
+                        key={project.id}
+                        onClick={() => handleSelectProject(project.id)}
+                        style={{
+                          padding: '12px',
+                          background: selectedProjectId === project.id ? 'rgba(81, 207, 102, 0.2)' : 'rgba(0, 0, 0, 0.3)',
+                          border: `1px solid ${selectedProjectId === project.id ? '#51cf66' : 'transparent'}`,
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          textAlign: 'left',
+                          color: 'var(--text-main)',
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold', fontSize: '12px', marginBottom: '4px', color: '#51cf66' }}>
+                          {project.name}
+                        </div>
+                        {project.description && (
+                          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginBottom: '6px' }}>
+                            {project.description.length > 60 ? `${project.description.substring(0, 60)}...` : project.description}
+                          </div>
+                        )}
+                        {/* Progress bar */}
+                        <div style={{
+                          width: '100%',
+                          height: '6px',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                          borderRadius: '3px',
+                          overflow: 'hidden',
+                          marginBottom: '4px',
+                        }}>
+                          <div style={{
+                            width: `${progressPercent}%`,
+                            height: '100%',
+                            background: '#51cf66',
+                            transition: 'width 0.3s ease',
+                          }} />
+                        </div>
+                        <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                          Progress: {project.completedWorkUnits}/{project.totalWorkUnits} work units
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Create New Project Section */}
+            <div style={{ borderTop: projects.length > 0 ? '1px solid var(--glass-border)' : 'none', paddingTop: projects.length > 0 ? '16px' : '0' }}>
+              <div style={{ fontSize: '11px', color: '#fcc419', textTransform: 'uppercase', marginBottom: '12px', fontWeight: 'bold' }}>
+                Start New Project
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  Project Name *
+                </label>
+                <input
+                  type="text"
+                  value={newProjectName}
+                  onChange={(e) => setNewProjectName(e.target.value)}
+                  placeholder="e.g., Craft a magic sword..."
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '12px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                    boxSizing: 'border-box',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '10px' }}>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  Description (optional)
+                </label>
+                <textarea
+                  value={newProjectDescription}
+                  onChange={(e) => setNewProjectDescription(e.target.value)}
+                  placeholder="Describe your project..."
+                  rows={2}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                    boxSizing: 'border-box',
+                    resize: 'none',
+                  }}
+                />
+              </div>
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', marginBottom: '4px' }}>
+                  Work Units Required
+                </label>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  {[3, 5, 10, 15].map((units) => (
+                    <button
+                      key={units}
+                      onClick={() => setNewProjectWorkUnits(units)}
+                      style={{
+                        flex: 1,
+                        padding: '6px',
+                        background: newProjectWorkUnits === units ? 'rgba(252, 196, 25, 0.2)' : 'rgba(0, 0, 0, 0.3)',
+                        border: `1px solid ${newProjectWorkUnits === units ? '#fcc419' : 'transparent'}`,
+                        borderRadius: '4px',
+                        color: newProjectWorkUnits === units ? '#fcc419' : 'var(--text-muted)',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                      }}
+                    >
+                      {units}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={handleCreateProject}
+                disabled={!newProjectName.trim()}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  background: newProjectName.trim() ? '#fcc419' : '#666',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: newProjectName.trim() ? '#000' : '#999',
+                  cursor: newProjectName.trim() ? 'pointer' : 'not-allowed',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                }}
+              >
+                Create & Work on Project
+              </button>
+            </div>
+
+            <button
+              onClick={handleProjectCancel}
+              style={{
+                width: '100%',
+                marginTop: '12px',
+                padding: '8px 16px',
+                background: '#444',
+                border: 'none',
+                borderRadius: '4px',
+                color: 'white',
+                cursor: 'pointer',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
     </>
   );
 };
@@ -1136,7 +1803,9 @@ interface OptionSectionProps {
   onExpand: (id: string | null) => void;
   color: string;
   isAtMax: boolean;
-  checkRationRequirement: (option: RestOption) => { required: number; hasEnough: boolean };
+  checkRationRequirement: (option: RestOption) => { required: number; hasEnough: boolean; requiresPrompt: boolean };
+  customRationCounts?: Record<string, number>;
+  previousSelectedBenefits?: string[];
 }
 
 const OptionSection: React.FC<OptionSectionProps> = ({
@@ -1149,6 +1818,8 @@ const OptionSection: React.FC<OptionSectionProps> = ({
   color,
   isAtMax,
   checkRationRequirement,
+  customRationCounts = {},
+  previousSelectedBenefits = [],
 }) => (
   <div style={{ marginBottom: '16px' }}>
     <h4 style={{
@@ -1169,7 +1840,8 @@ const OptionSection: React.FC<OptionSectionProps> = ({
         const isDisabled = isAtMax && !isSelected;
         const { required: rationRequired, hasEnough: hasEnoughRations } = checkRationRequirement(option);
         const hasRationIssue = rationRequired > 0 && !hasEnoughRations && !isSelected;
-        const isOptionUnavailable = isDisabled || hasRationIssue;
+        const wasPreviouslySelected = previousSelectedBenefits.includes(option.id);
+        const isOptionUnavailable = isDisabled || hasRationIssue || (wasPreviouslySelected && !isSelected);
         
         return (
           <div key={option.id}>
@@ -1179,20 +1851,21 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                 alignItems: 'center',
                 gap: '8px',
                 padding: '8px 10px',
-                background: isSelected ? `${color}15` : hasRationIssue ? 'rgba(255, 107, 107, 0.1)' : 'rgba(0, 0, 0, 0.2)',
-                border: `1px solid ${isSelected ? color : hasRationIssue ? 'rgba(255, 107, 107, 0.3)' : 'transparent'}`,
+                background: isSelected ? `${color}15` : wasPreviouslySelected ? 'rgba(128, 128, 128, 0.15)' : hasRationIssue ? 'rgba(255, 107, 107, 0.1)' : 'rgba(0, 0, 0, 0.2)',
+                border: `1px solid ${isSelected ? color : wasPreviouslySelected ? 'rgba(128, 128, 128, 0.3)' : hasRationIssue ? 'rgba(255, 107, 107, 0.3)' : 'transparent'}`,
                 borderRadius: isExpanded ? '6px 6px 0 0' : '6px',
                 cursor: isOptionUnavailable ? 'not-allowed' : 'pointer',
                 opacity: isOptionUnavailable ? 0.6 : 1,
               }}
               onClick={() => !isOptionUnavailable && onToggle(option.id)}
+              title={wasPreviouslySelected && !isSelected ? 'You selected this benefit in your last rest' : undefined}
             >
               {/* Checkbox */}
               <div style={{
                 width: '18px',
                 height: '18px',
                 borderRadius: '4px',
-                border: `2px solid ${isSelected ? color : hasRationIssue ? '#ff6b6b' : '#555'}`,
+                border: `2px solid ${isSelected ? color : wasPreviouslySelected ? '#888' : hasRationIssue ? '#ff6b6b' : '#555'}`,
                 background: isSelected ? color : 'transparent',
                 display: 'flex',
                 alignItems: 'center',
@@ -1209,11 +1882,40 @@ const OptionSection: React.FC<OptionSectionProps> = ({
               <span style={{
                 flex: 1,
                 fontSize: '11px',
-                color: isSelected ? color : hasRationIssue ? '#ff6b6b' : 'var(--text-main)',
+                color: isSelected ? color : wasPreviouslySelected ? '#888' : hasRationIssue ? '#ff6b6b' : 'var(--text-main)',
                 fontWeight: isSelected ? 'bold' : 'normal',
               }}>
                 {option.name}
-                {rationRequired > 0 && (
+                {wasPreviouslySelected && !isSelected && (
+                  <span style={{ 
+                    marginLeft: '6px', 
+                    fontSize: '9px', 
+                    color: '#888',
+                    fontStyle: 'italic',
+                  }}>
+                    (used last rest)
+                  </span>
+                )}
+                {/* Show ration info - either custom count (for prompt options) or fixed requirement */}
+                {option.effect?.requiresRationPrompt && isSelected && customRationCounts[option.id] ? (
+                  <span style={{ 
+                    marginLeft: '6px', 
+                    fontSize: '9px', 
+                    color: '#fcc419',
+                    fontWeight: 'normal',
+                  }}>
+                    🍖 ×{customRationCounts[option.id]}
+                  </span>
+                ) : option.effect?.requiresRationPrompt && !isSelected ? (
+                  <span style={{ 
+                    marginLeft: '6px', 
+                    fontSize: '9px', 
+                    color: hasEnoughRations ? '#fcc419' : '#ff6b6b',
+                    fontWeight: 'normal',
+                  }}>
+                    🍖 (choose count)
+                  </span>
+                ) : rationRequired > 0 && (
                   <span style={{ 
                     marginLeft: '6px', 
                     fontSize: '9px', 
@@ -1223,6 +1925,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                     🍖 {rationRequired}
                   </span>
                 )}
+                {/* Show temp HP - scaled if using custom ration count */}
                 {option.effect?.type === 'tempHp' && option.effect.value && (
                   <span style={{ 
                     marginLeft: '6px', 
@@ -1230,7 +1933,10 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                     color: '#4dabf7',
                     fontWeight: 'normal',
                   }}>
-                    💚 +{option.effect.value} temp HP
+                    💚 +{option.effect.requiresRationPrompt && customRationCounts[option.id] 
+                      ? option.effect.value * customRationCounts[option.id] 
+                      : option.effect.value} temp HP
+                    {option.effect.requiresRationPrompt && !isSelected && '/ration'}
                   </span>
                 )}
                 {option.effect?.type === 'heroicInspiration' && (

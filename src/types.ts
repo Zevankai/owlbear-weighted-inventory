@@ -314,7 +314,10 @@ export interface InjuryConditionData {
   injuryDaysSinceRest?: number; // For infection tracking (long rests without treatment)
   infectionDeathSavesFailed?: number; // For infection death saves
   injuryHP?: number; // HP remaining - must be depleted to heal (default based on injury type)
+  maxInjuryHP?: number; // Max HP for this injury (4 for critical, 3 for serious, 1 for minor)
+  longRestsSinceLastTreatment?: number; // For infection tracking - counts long rests without Patch Wounds
   dateAcquired?: string; // ISO date string for when the injury was acquired (for scar logging)
+  acquiredDate?: { year: number; monthIndex: number; day: number }; // Calendar date for scar logging
 }
 
 export interface CharacterConditions {
@@ -397,12 +400,16 @@ export interface RestHistory {
   lastShortRest: {
     timestamp: number;
     chosenOptionIds: string[];
+    calendarDate?: { year: number; monthIndex: number; day: number; hour: number; minute: number };
+    selectedBenefits?: string[];  // IDs of rest options chosen (for preventing same benefit twice)
   } | null;
   lastLongRest: {
     timestamp: number;
     chosenOptionIds: string[];
     location?: RestLocationType;
     roomType?: SettlementRoomType;
+    calendarDate?: { year: number; monthIndex: number; day: number; hour: number; minute: number };
+    selectedBenefits?: string[];  // IDs of rest options chosen (for preventing same benefit twice)
   } | null;
   heroicInspirationGainedToday: boolean;
   consecutiveWildernessRests: number; // Track wilderness rest streak
@@ -425,6 +432,28 @@ export interface GMCustomizations {
 export interface DeathSaves {
   successes: number;  // 0-3
   failures: number;   // 0-3
+}
+
+// Project System types
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  totalWorkUnits: number;      // How much work needed to complete
+  completedWorkUnits: number;  // How much work done so far
+  createdDate?: { year: number; monthIndex: number; day: number };
+  completedDate?: { year: number; monthIndex: number; day: number };
+  isCompleted: boolean;
+}
+
+// Scar System types
+export interface Scar {
+  id: string;
+  source: string;           // What caused it
+  size: 'small' | 'medium' | 'large';
+  location: string;         // Body location
+  injuryType: 'serious' | 'critical';
+  acquiredDate?: { year: number; monthIndex: number; day: number }; // Optional for when calendar not available
 }
 
 // Character Stats (unified character stats for dashboard)
@@ -468,4 +497,7 @@ export interface CharacterData {
   name?: string;  // Custom display name (overrides token name, GM-editable for lore tokens)
   characterSheet?: CharacterSheet;  // D&D 5e character sheet (optional for backwards compatibility)
   characterStats?: CharacterStats;  // New unified character stats
+  projects?: Project[];  // Active projects in progress
+  completedProjects?: Project[];  // Completed projects for display
+  scars?: Scar[];  // Scars from healed serious/critical injuries
 }

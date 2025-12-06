@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react';
 import type { RefObject } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice } from '../../types';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
@@ -1365,6 +1365,205 @@ interface StorageDef {
   capacity: number;
 }
 
+// Scar Prompt Modal Component
+interface ScarPromptModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  injuryType: 'serious' | 'critical';
+  defaultLocation: string;
+  onSave: (scar: Scar) => void;
+}
+
+const ScarPromptModal: React.FC<ScarPromptModalProps> = ({
+  isOpen,
+  onClose,
+  injuryType,
+  defaultLocation,
+  onSave,
+}) => {
+  const [source, setSource] = useState('');
+  const [size, setSize] = useState<'small' | 'medium' | 'large'>('medium');
+  const [location, setLocation] = useState(defaultLocation);
+  
+  // Get calendar date for scar acquisition
+  const { config: calendarConfig } = useCalendar();
+  
+  if (!isOpen) return null;
+  
+  const handleSave = () => {
+    const scar: Scar = {
+      id: `scar-${Date.now()}`,
+      source: source || 'Unknown injury',
+      size,
+      location: location || defaultLocation,
+      injuryType,
+      acquiredDate: calendarConfig ? {
+        year: calendarConfig.currentDate.year,
+        monthIndex: calendarConfig.currentDate.monthIndex,
+        day: calendarConfig.currentDate.day,
+      } : undefined,
+    };
+    onSave(scar);
+  };
+  
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          zIndex: 1000,
+        }}
+      />
+      <div style={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: 'linear-gradient(135deg, rgba(30, 30, 50, 0.98), rgba(40, 40, 60, 0.98))',
+        padding: '20px',
+        borderRadius: '12px',
+        border: `2px solid ${injuryType === 'critical' ? '#e53935' : '#ff9800'}`,
+        zIndex: 1001,
+        minWidth: '320px',
+        maxWidth: '420px',
+        boxShadow: `0 8px 32px ${injuryType === 'critical' ? 'rgba(229, 57, 53, 0.3)' : 'rgba(255, 152, 0, 0.3)'}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '28px' }}>{injuryType === 'critical' ? '💀' : '🩸'}</span>
+          <h3 style={{ 
+            margin: 0, 
+            color: injuryType === 'critical' ? '#e53935' : '#ff9800', 
+            fontSize: '16px',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+          }}>
+            New Scar
+          </h3>
+        </div>
+        
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Your {injuryType === 'critical' ? 'critical' : 'serious'} injury has healed, leaving a permanent scar. 
+          Describe the scar below.
+        </p>
+        
+        {/* Source Input */}
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            What caused this injury?
+          </label>
+          <input
+            type="text"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder="e.g., Dragon fire, Sword slash..."
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '13px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '6px',
+              color: 'var(--text-main)',
+              boxSizing: 'border-box',
+            }}
+            autoFocus
+          />
+        </div>
+        
+        {/* Size Selection */}
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            Scar Size
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {(['small', 'medium', 'large'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSize(s)}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: size === s ? `${injuryType === 'critical' ? '#e53935' : '#ff9800'}20` : 'rgba(0, 0, 0, 0.3)',
+                  border: `1px solid ${size === s ? (injuryType === 'critical' ? '#e53935' : '#ff9800') : 'transparent'}`,
+                  borderRadius: '4px',
+                  color: size === s ? (injuryType === 'critical' ? '#e53935' : '#ff9800') : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                  fontSize: '12px',
+                  fontWeight: size === s ? 'bold' : 'normal',
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Location Input */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            Location on Body
+          </label>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g., Left arm, Face, Chest..."
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '13px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '6px',
+              color: 'var(--text-main)',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        
+        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '8px 16px',
+              background: '#444',
+              border: 'none',
+              borderRadius: '4px',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            Skip
+          </button>
+          <button
+            onClick={handleSave}
+            style={{
+              padding: '8px 16px',
+              background: injuryType === 'critical' ? '#e53935' : '#ff9800',
+              border: 'none',
+              borderRadius: '4px',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold',
+            }}
+          >
+            Save Scar
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
 interface HomeTabProps {
   stats: Stats;
   viewingStorageId: string | null;
@@ -1429,8 +1628,18 @@ export function HomeTab({
   // State for Rest Modal
   const [showRestModal, setShowRestModal] = useState(false);
   
+  // State for Scar Prompt Modal
+  const [scarPrompt, setScarPrompt] = useState<{
+    isOpen: boolean;
+    injuryType: 'serious' | 'critical';
+    injuryLocation: string;
+  } | null>(null);
+  
   // Helper to check if user can edit this token (GM, owner, or party token)
   const canUserEdit = playerRole === 'GM' || characterData.claimedBy === playerId || characterData.tokenType === 'party';
+  
+  // Get calendar config for date tracking (projects, scars, etc.)
+  const { config: calendarConfig } = useCalendar();
   
   // Get character stats with defaults - memoize to avoid recreating on every render
   const characterStats = characterData.characterStats;
@@ -1568,30 +1777,48 @@ export function HomeTab({
       const injuryData = { ...(currentStats.injuryData || {}) };
       const healAmount = effects.healInjuryLevels; // 1 for short rest, 2 for long rest
       
-      // Find the first active injury and reduce its HP
-      // Priority: Critical -> Serious -> Minor
-      const injuryPriority: ('criticalInjury' | 'seriousInjury' | 'minorInjury')[] = ['criticalInjury', 'seriousInjury', 'minorInjury'];
+      // If a specific injury was selected from the prompt, heal that one
+      // Otherwise, use priority order: Critical -> Serious -> Minor
+      let injuryToHeal: 'criticalInjury' | 'seriousInjury' | 'minorInjury' | null = null;
       
-      for (const injuryType of injuryPriority) {
-        if (conditions[injuryType] && injuryData[injuryType]) {
-          const currentHP = injuryData[injuryType]?.injuryHP || INJURY_HP_VALUES[injuryType];
-          const newHP = Math.max(0, currentHP - healAmount);
-          
-          if (newHP <= 0) {
-            // Injury is fully healed - remove the condition
-            conditions[injuryType] = false;
-            delete injuryData[injuryType];
-            
-            // TODO: Future enhancement - prompt for scar description for serious/critical injuries
-          } else {
-            // Update injury HP and reset days since rest (injury was treated)
-            injuryData[injuryType] = {
-              ...injuryData[injuryType],
-              injuryHP: newHP,
-              injuryDaysSinceRest: 0,
-            };
+      if (effects.selectedInjuryToHeal && conditions[effects.selectedInjuryToHeal] && injuryData[effects.selectedInjuryToHeal]) {
+        injuryToHeal = effects.selectedInjuryToHeal;
+      } else {
+        // Find the first active injury with priority order
+        const injuryPriority: ('criticalInjury' | 'seriousInjury' | 'minorInjury')[] = ['criticalInjury', 'seriousInjury', 'minorInjury'];
+        for (const injuryType of injuryPriority) {
+          if (conditions[injuryType] && injuryData[injuryType]) {
+            injuryToHeal = injuryType;
+            break;
           }
-          break; // Only heal one injury per rest
+        }
+      }
+      
+      if (injuryToHeal) {
+        const currentHP = injuryData[injuryToHeal]?.injuryHP || INJURY_HP_VALUES[injuryToHeal];
+        const newHP = Math.max(0, currentHP - healAmount);
+        
+        if (newHP <= 0) {
+          // Injury is fully healed - remove the condition
+          const healedInjuryLocation = injuryData[injuryToHeal]?.injuryLocation || 'Unknown';
+          conditions[injuryToHeal] = false;
+          delete injuryData[injuryToHeal];
+          
+          // Trigger scar prompt for serious/critical injuries
+          if (injuryToHeal === 'seriousInjury' || injuryToHeal === 'criticalInjury') {
+            setScarPrompt({
+              isOpen: true,
+              injuryType: injuryToHeal === 'seriousInjury' ? 'serious' : 'critical',
+              injuryLocation: healedInjuryLocation || 'Unknown',
+            });
+          }
+        } else {
+          // Update injury HP and reset days since rest (injury was treated)
+          injuryData[injuryToHeal] = {
+            ...injuryData[injuryToHeal],
+            injuryHP: newHP,
+            injuryDaysSinceRest: 0,
+          };
         }
       }
       
@@ -1661,6 +1888,7 @@ export function HomeTab({
         lastShortRest: {
           timestamp: now,
           chosenOptionIds: selectedOptionIds,
+          selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
         }
       };
     } else {
@@ -1698,6 +1926,7 @@ export function HomeTab({
           chosenOptionIds: selectedOptionIds,
           location: effects.restLocation,
           roomType: effects.roomType,
+          selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
         },
         heroicInspirationGainedToday: effects.heroicInspiration || false,
         consecutiveWildernessRests: newConsecutiveWildernessRests,
@@ -1734,6 +1963,85 @@ export function HomeTab({
       const gpInCopper = effects.gpCost * 100;
       deductCopperPieces(updatedCurrency, gpInCopper);
       updateData({ currency: updatedCurrency });
+    }
+    
+    // Handle project work
+    if (effects.newProject) {
+      // Create a new project and add initial work
+      const existingProjects = characterData.projects || [];
+      const newProject: Project = {
+        ...effects.newProject,
+        createdDate: calendarConfig ? {
+          year: calendarConfig.currentDate.year,
+          monthIndex: calendarConfig.currentDate.monthIndex,
+          day: calendarConfig.currentDate.day,
+        } : undefined,
+      };
+      
+      // Check if project is completed immediately
+      if (newProject.completedWorkUnits >= newProject.totalWorkUnits) {
+        newProject.isCompleted = true;
+        newProject.completedDate = calendarConfig ? {
+          year: calendarConfig.currentDate.year,
+          monthIndex: calendarConfig.currentDate.monthIndex,
+          day: calendarConfig.currentDate.day,
+        } : undefined;
+        
+        // Add to completed projects
+        const completedProjects = characterData.completedProjects || [];
+        updateData({
+          completedProjects: [...completedProjects, newProject],
+        });
+      } else {
+        updateData({
+          projects: [...existingProjects, newProject],
+        });
+      }
+    } else if (effects.projectToWorkOn && effects.workUnitsToAdd) {
+      // Work on existing project
+      const existingProjects = characterData.projects || [];
+      const projectIndex = existingProjects.findIndex(p => p.id === effects.projectToWorkOn);
+      
+      if (projectIndex !== -1) {
+        const project = existingProjects[projectIndex];
+        const newCompletedUnits = project.completedWorkUnits + effects.workUnitsToAdd;
+        
+        if (newCompletedUnits >= project.totalWorkUnits) {
+          // Project is completed
+          const completedProject: Project = {
+            ...project,
+            completedWorkUnits: project.totalWorkUnits,
+            isCompleted: true,
+            completedDate: calendarConfig ? {
+              year: calendarConfig.currentDate.year,
+              monthIndex: calendarConfig.currentDate.monthIndex,
+              day: calendarConfig.currentDate.day,
+            } : undefined,
+          };
+          
+          // Remove from active projects and add to completed
+          const updatedProjects = existingProjects.filter((_, i) => i !== projectIndex);
+          const completedProjects = characterData.completedProjects || [];
+          
+          updateData({
+            projects: updatedProjects,
+            completedProjects: [...completedProjects, completedProject],
+          });
+        } else {
+          // Update project progress
+          const updatedProject: Project = {
+            ...project,
+            completedWorkUnits: newCompletedUnits,
+          };
+          
+          const updatedProjects = [...existingProjects];
+          updatedProjects[projectIndex] = updatedProject;
+          
+          updateData({
+            projects: updatedProjects,
+          });
+        }
+      }
     }
   };
   
@@ -2139,7 +2447,30 @@ export function HomeTab({
         superiorityDice={characterStats?.superiorityDice}
         currency={characterData.currency}
         onSpendHitDie={handleSpendHitDie}
+        activeInjuries={{
+          minorInjury: characterStats?.conditions?.minorInjury ? characterStats.injuryData?.minorInjury : undefined,
+          seriousInjury: characterStats?.conditions?.seriousInjury ? characterStats.injuryData?.seriousInjury : undefined,
+          criticalInjury: characterStats?.conditions?.criticalInjury ? characterStats.injuryData?.criticalInjury : undefined,
+        }}
+        projects={characterData.projects || []}
       />
+
+      {/* Scar Prompt Modal - shown when a serious/critical injury fully heals */}
+      {scarPrompt && scarPrompt.isOpen && (
+        <ScarPromptModal
+          isOpen={scarPrompt.isOpen}
+          onClose={() => setScarPrompt(null)}
+          injuryType={scarPrompt.injuryType}
+          defaultLocation={scarPrompt.injuryLocation}
+          onSave={(scar) => {
+            const existingScars = characterData.scars || [];
+            updateData({
+              scars: [...existingScars, scar],
+            });
+            setScarPrompt(null);
+          }}
+        />
+      )}
 
       {/* === LORE TOKEN SPECIFIC UI === */}
       {!viewingStorageId && characterData.tokenType === 'lore' && (
@@ -2362,6 +2693,52 @@ export function HomeTab({
                 />
               </div>
               
+              {/* Scars from Healed Injuries - Display scars from the scar system */}
+              {characterData.scars && characterData.scars.length > 0 && (
+                <div style={{ marginTop: '8px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#ff9800', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 'bold' }}>
+                    🩸 Scars from Healed Injuries
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {/* Sort by injury type - critical first, then serious */}
+                    {[...characterData.scars]
+                      .sort((a, b) => a.injuryType === 'critical' && b.injuryType !== 'critical' ? -1 : b.injuryType === 'critical' && a.injuryType !== 'critical' ? 1 : 0)
+                      .map((scar) => (
+                        <div
+                          key={scar.id}
+                          style={{
+                            padding: '10px',
+                            background: scar.injuryType === 'critical' ? 'rgba(229, 57, 53, 0.1)' : 'rgba(255, 152, 0, 0.1)',
+                            border: `1px solid ${scar.injuryType === 'critical' ? 'rgba(229, 57, 53, 0.3)' : 'rgba(255, 152, 0, 0.3)'}`,
+                            borderRadius: '6px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                            <span style={{ 
+                              fontSize: '12px', 
+                              fontWeight: 'bold',
+                              color: scar.injuryType === 'critical' ? '#e53935' : '#ff9800',
+                              textTransform: 'capitalize',
+                            }}>
+                              {scar.injuryType === 'critical' ? '💀' : '🩸'} {scar.size} scar on {scar.location}
+                            </span>
+                            {scar.acquiredDate && (
+                              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                                Day {scar.acquiredDate.day}, M{scar.acquiredDate.monthIndex + 1}, Y{scar.acquiredDate.year}
+                              </span>
+                            )}
+                          </div>
+                          {scar.source && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-main)', fontStyle: 'italic' }}>
+                              Caused by: {scar.source}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+              
               {/* Values Field */}
               <div>
                 <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
@@ -2453,6 +2830,48 @@ export function HomeTab({
                   }}
                 />
               </div>
+              
+              {/* Completed Projects - Display projects completed through the project system */}
+              {characterData.completedProjects && characterData.completedProjects.length > 0 && (
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '10px', color: '#51cf66', textTransform: 'uppercase', marginBottom: '8px', fontWeight: 'bold' }}>
+                    📋 Completed Projects
+                  </label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {characterData.completedProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        style={{
+                          padding: '10px',
+                          background: 'rgba(81, 207, 102, 0.1)',
+                          border: '1px solid rgba(81, 207, 102, 0.3)',
+                          borderRadius: '6px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
+                          <span style={{ 
+                            fontSize: '12px', 
+                            fontWeight: 'bold',
+                            color: '#51cf66',
+                          }}>
+                            ✓ {project.name}
+                          </span>
+                          {project.completedDate && project.completedDate.year > 0 && (
+                            <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
+                              Completed: Day {project.completedDate.day}, M{project.completedDate.monthIndex + 1}, Y{project.completedDate.year}
+                            </span>
+                          )}
+                        </div>
+                        {project.description && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-main)' }}>
+                            {project.description}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               
               {canUserEdit && <MarkdownHint />}
             </div>

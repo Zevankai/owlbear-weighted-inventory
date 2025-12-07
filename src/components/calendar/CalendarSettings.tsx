@@ -21,6 +21,12 @@ export const CalendarSettings: React.FC<CalendarSettingsProps> = ({ config, logs
   // Local state for banner editing (for the currently viewed month/year)
   const [localBanner, setLocalBanner] = useState<MonthBanner | undefined>(currentMonthMeta?.banner);
 
+  // Sync localConfig when config prop changes (e.g., when GM saves from another tab)
+  // This ensures settings stay in sync across tabs and sessions
+  React.useEffect(() => {
+    setLocalConfig(JSON.parse(JSON.stringify(config)));
+  }, [config]);
+
   // --- ARCHIVING HELPERS ---
 
   const handleExport = async () => {

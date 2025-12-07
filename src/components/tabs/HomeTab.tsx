@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
@@ -1581,6 +1581,13 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
   const [source, setSource] = useState(scar.source);
   const [size, setSize] = useState<'small' | 'medium' | 'large'>(scar.size);
   const [location, setLocation] = useState(scar.location);
+  
+  // Reset state when scar changes (when editing a different scar)
+  useEffect(() => {
+    setSource(scar.source);
+    setSize(scar.size);
+    setLocation(scar.location);
+  }, [scar.id, scar.source, scar.size, scar.location]);
   
   if (!isOpen) return null;
   

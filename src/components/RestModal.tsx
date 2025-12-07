@@ -9,6 +9,12 @@ import { getTotalCopperPieces } from '../utils/currency';
 const LAST_SHORT_REST_CHOICES_KEY = 'owlbear-weighted-inventory-last-short-rest-choices';
 const LAST_LONG_REST_CHOICES_KEY = 'owlbear-weighted-inventory-last-long-rest-choices';
 
+// Rest options that are exceptions to the duplicate prevention rule
+const DUPLICATE_PREVENTION_EXCEPTIONS = [
+  'short-standard-patch-wounds',
+  'long-standard-patch-wounds',
+];
+
 // Maximum benefit selections for each rest type
 // Short rest: 1 benefit total
 // Long rest: 2 benefits total
@@ -308,7 +314,7 @@ export const RestModal: React.FC<RestModalProps> = ({
         setCustomRationCounts(newCounts);
       }
       // Clear selected injury if deselecting Patch Wounds
-      if (optionId === 'short-standard-patch-wounds' || optionId === 'long-standard-patch-wounds') {
+      if (DUPLICATE_PREVENTION_EXCEPTIONS.includes(optionId)) {
         setSelectedInjuryToHeal(null);
       }
       setError(null);
@@ -343,7 +349,7 @@ export const RestModal: React.FC<RestModalProps> = ({
       }
       
       // Check if this is Patch Wounds and there are multiple injuries - show injury selection
-      const isPatchWounds = optionId === 'short-standard-patch-wounds' || optionId === 'long-standard-patch-wounds';
+      const isPatchWounds = DUPLICATE_PREVENTION_EXCEPTIONS.includes(optionId);
       if (isPatchWounds && activeInjuryList.length > 1) {
         // Show injury selection prompt
         setInjurySelectionPrompt({ isOpen: true });
@@ -411,8 +417,7 @@ export const RestModal: React.FC<RestModalProps> = ({
   const handleInjurySelectionCancel = () => {
     // Remove Patch Wounds from selection
     const newSet = new Set(selectedOptionIds);
-    newSet.delete('short-standard-patch-wounds');
-    newSet.delete('long-standard-patch-wounds');
+    DUPLICATE_PREVENTION_EXCEPTIONS.forEach(id => newSet.delete(id));
     setSelectedOptionIds(newSet);
     setSelectedInjuryToHeal(null);
     setInjurySelectionPrompt({ isOpen: false });
@@ -1995,10 +2000,10 @@ const OptionSection: React.FC<OptionSectionProps> = ({
         const { required: rationRequired, hasEnough: hasEnoughRations } = checkRationRequirement(option);
         const hasRationIssue = rationRequired > 0 && !hasEnoughRations && !isSelected;
         const wasPreviouslySelected = previousSelectedBenefits.includes(option.id);
-        // Check if this is Patch Wounds (exception to the duplicate prevention rule)
-        const isPatchWounds = option.id === 'short-standard-patch-wounds' || option.id === 'long-standard-patch-wounds';
-        // Option is unavailable if: at max selections, has ration issue, OR was previously selected (except Patch Wounds)
-        const isOptionUnavailable = isDisabled || hasRationIssue || (wasPreviouslySelected && !isSelected && !isPatchWounds);
+        // Check if this option is an exception to the duplicate prevention rule
+        const isDuplicateException = DUPLICATE_PREVENTION_EXCEPTIONS.includes(option.id);
+        // Option is unavailable if: at max selections, has ration issue, OR was previously selected (except exceptions)
+        const isOptionUnavailable = isDisabled || hasRationIssue || (wasPreviouslySelected && !isSelected && !isDuplicateException);
         
         return (
           <div key={option.id}>
@@ -2015,7 +2020,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                 opacity: isOptionUnavailable ? 0.6 : 1,
               }}
               onClick={() => !isOptionUnavailable && onToggle(option.id)}
-              title={wasPreviouslySelected && !isSelected && !isPatchWounds ? 'Cannot select the same benefit two times in a row (except Patch Wounds)' : undefined}
+              title={wasPreviouslySelected && !isSelected && !isDuplicateException ? 'Cannot select the same benefit two times in a row (except Patch Wounds)' : undefined}
             >
               {/* Checkbox */}
               <div style={{

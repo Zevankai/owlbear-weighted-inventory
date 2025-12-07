@@ -839,6 +839,32 @@ export const RestModal: React.FC<RestModalProps> = ({
             )}
           </div>
 
+          {/* Display Last Selected Benefits */}
+          {previousSelectedBenefits.length > 0 && (
+            <div style={{
+              padding: '10px 12px',
+              background: 'rgba(147, 197, 253, 0.1)',
+              border: '1px solid rgba(147, 197, 253, 0.3)',
+              borderRadius: '6px',
+              marginBottom: '16px',
+              fontSize: '11px',
+              color: '#93c5fd',
+            }}>
+              <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
+                📜 Last {selectedRestType === 'short' ? 'Short' : 'Long'} Rest Benefits:
+              </div>
+              <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                {previousSelectedBenefits.map(benefitId => {
+                  const option = allAvailableOptions.find(opt => opt.id === benefitId) || getRestOptionById(benefitId);
+                  return option ? option.name : benefitId;
+                }).join(', ')}
+              </div>
+              <div style={{ fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '4px' }}>
+                Note: You cannot select the same benefit twice in a row (except Patch Wounds)
+              </div>
+            </div>
+          )}
+
           {/* Long Rest Location Selection */}
           {selectedRestType === 'long' && (
             <div style={{
@@ -1841,7 +1867,10 @@ const OptionSection: React.FC<OptionSectionProps> = ({
         const { required: rationRequired, hasEnough: hasEnoughRations } = checkRationRequirement(option);
         const hasRationIssue = rationRequired > 0 && !hasEnoughRations && !isSelected;
         const wasPreviouslySelected = previousSelectedBenefits.includes(option.id);
-        const isOptionUnavailable = isDisabled || hasRationIssue || (wasPreviouslySelected && !isSelected);
+        // Check if this is Patch Wounds (exception to the duplicate prevention rule)
+        const isPatchWounds = option.id === 'short-standard-patch-wounds' || option.id === 'long-standard-patch-wounds';
+        // Option is unavailable if: at max selections, has ration issue, OR was previously selected (except Patch Wounds)
+        const isOptionUnavailable = isDisabled || hasRationIssue || (wasPreviouslySelected && !isSelected && !isPatchWounds);
         
         return (
           <div key={option.id}>
@@ -1858,7 +1887,7 @@ const OptionSection: React.FC<OptionSectionProps> = ({
                 opacity: isOptionUnavailable ? 0.6 : 1,
               }}
               onClick={() => !isOptionUnavailable && onToggle(option.id)}
-              title={wasPreviouslySelected && !isSelected ? 'You selected this benefit in your last rest' : undefined}
+              title={wasPreviouslySelected && !isSelected && !isPatchWounds ? 'Cannot select the same benefit two times in a row (except Patch Wounds)' : undefined}
             >
               {/* Checkbox */}
               <div style={{

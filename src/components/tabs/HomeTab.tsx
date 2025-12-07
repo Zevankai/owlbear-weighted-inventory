@@ -1863,6 +1863,9 @@ export function HomeTab({
   const characterStats = characterData.characterStats;
   const defaultStats = useMemo(() => createDefaultCharacterStats(), []);
   
+  // Track the last checked date for exhaustion to prevent duplicate checks
+  const lastExhaustionCheckRef = useRef<string | null>(null);
+  
   // Helper to update character stats
   const updateCharacterStats = (updates: Partial<CharacterStats>) => {
     const currentStats = characterStats || defaultStats;
@@ -1910,33 +1913,52 @@ export function HomeTab({
     return minutesDiff / 60; // Convert to hours
   }, []);
   
-  // Function to handle opening rest modal with 24-hour exhaustion check
-  const handleOpenRestModal = useCallback(() => {
-    // Check if 24+ hours have passed since last long rest
-    if (calendarConfig && characterStats?.restHistory?.lastLongRest?.calendarDate) {
-      const lastRestDate = characterStats.restHistory.lastLongRest.calendarDate;
-      const currentDate = calendarConfig.currentDate;
-      
-      const hoursSinceLastRest = calculateHoursBetweenDates(calendarConfig, lastRestDate, currentDate);
-      
-      if (hoursSinceLastRest >= 24) {
-        // Automatically add 1 exhaustion level
-        const currentExhaustion = characterStats.exhaustion || createDefaultCharacterStats().exhaustion;
-        const newExhaustionLevel = Math.min(currentExhaustion.maxLevels, currentExhaustion.currentLevel + 1);
-        
-        updateCharacterStats({
-          exhaustion: {
-            ...currentExhaustion,
-            currentLevel: newExhaustionLevel,
-          }
-        });
-        
-        // Note: We could show a notification here, but for now just silently apply it
-      }
+  // Daily exhaustion check at 8:00 AM in-game time
+  useEffect(() => {
+    if (!calendarConfig || !characterStats?.restHistory?.lastLongRest?.calendarDate || !canUserEdit) {
+      return;
     }
     
+    const currentDate = calendarConfig.currentDate;
+    
+    // Only check at 8:00 AM (hour === 8)
+    if (currentDate.hour !== 8) {
+      return;
+    }
+    
+    // Create a unique key for this day to prevent duplicate checks
+    const dayKey = `${currentDate.year}-${currentDate.monthIndex}-${currentDate.day}`;
+    
+    // Skip if we've already checked this day
+    if (lastExhaustionCheckRef.current === dayKey) {
+      return;
+    }
+    
+    // Check if 24+ hours have passed since last long rest
+    const lastRestDate = characterStats.restHistory.lastLongRest.calendarDate;
+    const hoursSinceLastRest = calculateHoursBetweenDates(calendarConfig, lastRestDate, currentDate);
+    
+    if (hoursSinceLastRest >= 24) {
+      // Automatically add 1 exhaustion level
+      const currentExhaustion = characterStats.exhaustion || createDefaultCharacterStats().exhaustion;
+      const newExhaustionLevel = Math.min(currentExhaustion.maxLevels, currentExhaustion.currentLevel + 1);
+      
+      updateCharacterStats({
+        exhaustion: {
+          ...currentExhaustion,
+          currentLevel: newExhaustionLevel,
+        }
+      });
+      
+      // Mark that we've checked this day
+      lastExhaustionCheckRef.current = dayKey;
+    }
+  }, [calendarConfig, characterStats, calculateHoursBetweenDates, updateCharacterStats, canUserEdit]);
+  
+  // Function to handle opening rest modal
+  const handleOpenRestModal = useCallback(() => {
     setShowRestModal(true);
-  }, [calendarConfig, characterStats, calculateHoursBetweenDates, updateCharacterStats]);
+  }, []);
   
   // Toggle heroic inspiration
   const toggleHeroicInspiration = () => {

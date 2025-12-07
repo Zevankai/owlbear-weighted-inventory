@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
@@ -1564,6 +1564,218 @@ const ScarPromptModal: React.FC<ScarPromptModalProps> = ({
   );
 };
 
+// Scar Edit Modal Component
+interface ScarEditModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  scar: Scar;
+  onSave: (scarId: string, updates: Partial<Scar>) => void;
+}
+
+const ScarEditModal: React.FC<ScarEditModalProps> = ({
+  isOpen,
+  onClose,
+  scar,
+  onSave,
+}) => {
+  const [source, setSource] = useState(scar.source);
+  const [size, setSize] = useState<'small' | 'medium' | 'large'>(scar.size);
+  const [location, setLocation] = useState(scar.location);
+  
+  // Reset state when scar changes (when editing a different scar)
+  useEffect(() => {
+    setSource(scar.source);
+    setSize(scar.size);
+    setLocation(scar.location);
+  }, [scar.id, scar.source, scar.size, scar.location]);
+  
+  if (!isOpen) return null;
+  
+  const handleSave = () => {
+    onSave(scar.id, {
+      source,
+      size,
+      location,
+    });
+    onClose();
+  };
+  
+  return (
+    <>
+      <div
+        onClick={onClose}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          zIndex: 1000,
+        }}
+      />
+      <div style={{
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: 'linear-gradient(135deg, rgba(30, 30, 50, 0.98), rgba(40, 40, 60, 0.98))',
+        padding: '20px',
+        borderRadius: '12px',
+        border: `2px solid ${scar.injuryType === 'critical' ? '#e53935' : '#ff9800'}`,
+        zIndex: 1001,
+        minWidth: '320px',
+        maxWidth: '420px',
+        boxShadow: `0 8px 32px ${scar.injuryType === 'critical' ? 'rgba(229, 57, 53, 0.3)' : 'rgba(255, 152, 0, 0.3)'}`,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+          <span style={{ fontSize: '28px' }}>{scar.injuryType === 'critical' ? '💀' : '🩸'}</span>
+          <h3 style={{ 
+            margin: 0, 
+            color: scar.injuryType === 'critical' ? '#e53935' : '#ff9800', 
+            fontSize: '16px',
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+          }}>
+            Edit Scar
+          </h3>
+        </div>
+        
+        <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '16px' }}>
+          Update the details of this scar.
+        </p>
+        
+        {/* Source Input */}
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            What caused this injury?
+          </label>
+          <input
+            type="text"
+            value={source}
+            onChange={(e) => setSource(e.target.value)}
+            placeholder="e.g., Dragon fire, Sword slash..."
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '13px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '6px',
+              color: 'var(--text-main)',
+              boxSizing: 'border-box',
+            }}
+            autoFocus
+          />
+        </div>
+        
+        {/* Size Selection */}
+        <div style={{ marginBottom: '12px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            Scar Size
+          </label>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {(['small', 'medium', 'large'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSize(s)}
+                style={{
+                  flex: 1,
+                  padding: '8px',
+                  background: size === s ? `${scar.injuryType === 'critical' ? '#e53935' : '#ff9800'}20` : 'rgba(0, 0, 0, 0.3)',
+                  border: `1px solid ${size === s ? (scar.injuryType === 'critical' ? '#e53935' : '#ff9800') : 'transparent'}`,
+                  borderRadius: '4px',
+                  color: size === s ? (scar.injuryType === 'critical' ? '#e53935' : '#ff9800') : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  textTransform: 'capitalize',
+                  fontSize: '12px',
+                  fontWeight: size === s ? 'bold' : 'normal',
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        
+        {/* Location Input */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            Location on Body
+          </label>
+          <input
+            type="text"
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g., Left arm, Face, Chest..."
+            style={{
+              width: '100%',
+              padding: '10px',
+              fontSize: '13px',
+              background: 'rgba(0, 0, 0, 0.3)',
+              border: '1px solid var(--glass-border)',
+              borderRadius: '6px',
+              color: 'var(--text-main)',
+              boxSizing: 'border-box',
+            }}
+          />
+        </div>
+        
+        {/* Acquired Date Display (read-only) */}
+        {scar.acquiredDate && (
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+              Acquired Date
+            </label>
+            <div style={{ 
+              padding: '10px', 
+              background: 'rgba(0, 0, 0, 0.2)', 
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-muted)',
+            }}>
+              Day {scar.acquiredDate.day}, Month {scar.acquiredDate.monthIndex + 1}, Year {scar.acquiredDate.year}
+            </div>
+          </div>
+        )}
+        
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button
+            onClick={onClose}
+            style={{
+              padding: '10px 16px',
+              background: 'rgba(128, 128, 128, 0.2)',
+              border: '1px solid rgba(128, 128, 128, 0.4)',
+              borderRadius: '6px',
+              color: 'var(--text-muted)',
+              cursor: 'pointer',
+              fontSize: '12px',
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            style={{
+              padding: '10px 16px',
+              background: scar.injuryType === 'critical' ? '#e53935' : '#ff9800',
+              border: 'none',
+              borderRadius: '6px',
+              color: 'white',
+              cursor: 'pointer',
+              fontSize: '12px',
+              fontWeight: 'bold',
+            }}
+          >
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </>
+  );
+};
+
 interface HomeTabProps {
   stats: Stats;
   viewingStorageId: string | null;
@@ -1635,6 +1847,12 @@ export function HomeTab({
     injuryLocation: string;
   } | null>(null);
   
+  // State for Scar Edit Modal
+  const [scarEditModal, setScarEditModal] = useState<{
+    isOpen: boolean;
+    scar: Scar;
+  } | null>(null);
+  
   // Helper to check if user can edit this token (GM, owner, or party token)
   const canUserEdit = playerRole === 'GM' || characterData.claimedBy === playerId || characterData.tokenType === 'party';
   
@@ -1656,11 +1874,92 @@ export function HomeTab({
     });
   };
   
+  // Helper function to calculate hours between two calendar dates
+  const calculateHoursBetweenDates = useCallback((
+    config: typeof calendarConfig,
+    date1: { year: number; monthIndex: number; day: number; hour: number; minute: number },
+    date2: { year: number; monthIndex: number; day: number; hour: number; minute: number }
+  ): number => {
+    if (!config) return 0;
+    
+    // Calculate total minutes for date1
+    let totalMinutes1 = date1.minute + (date1.hour * 60);
+    for (let y = 0; y < date1.year; y++) {
+      for (let m = 0; m < config.months.length; m++) {
+        totalMinutes1 += config.months[m].days * 24 * 60;
+      }
+    }
+    for (let m = 0; m < date1.monthIndex; m++) {
+      totalMinutes1 += config.months[m].days * 24 * 60;
+    }
+    totalMinutes1 += (date1.day - 1) * 24 * 60;
+    
+    // Calculate total minutes for date2
+    let totalMinutes2 = date2.minute + (date2.hour * 60);
+    for (let y = 0; y < date2.year; y++) {
+      for (let m = 0; m < config.months.length; m++) {
+        totalMinutes2 += config.months[m].days * 24 * 60;
+      }
+    }
+    for (let m = 0; m < date2.monthIndex; m++) {
+      totalMinutes2 += config.months[m].days * 24 * 60;
+    }
+    totalMinutes2 += (date2.day - 1) * 24 * 60;
+    
+    const minutesDiff = Math.abs(totalMinutes2 - totalMinutes1);
+    return minutesDiff / 60; // Convert to hours
+  }, []);
+  
+  // Function to handle opening rest modal with 24-hour exhaustion check
+  const handleOpenRestModal = useCallback(() => {
+    // Check if 24+ hours have passed since last long rest
+    if (calendarConfig && characterStats?.restHistory?.lastLongRest?.calendarDate) {
+      const lastRestDate = characterStats.restHistory.lastLongRest.calendarDate;
+      const currentDate = calendarConfig.currentDate;
+      
+      const hoursSinceLastRest = calculateHoursBetweenDates(calendarConfig, lastRestDate, currentDate);
+      
+      if (hoursSinceLastRest >= 24) {
+        // Automatically add 1 exhaustion level
+        const currentExhaustion = characterStats.exhaustion || createDefaultCharacterStats().exhaustion;
+        const newExhaustionLevel = Math.min(currentExhaustion.maxLevels, currentExhaustion.currentLevel + 1);
+        
+        updateCharacterStats({
+          exhaustion: {
+            ...currentExhaustion,
+            currentLevel: newExhaustionLevel,
+          }
+        });
+        
+        // Note: We could show a notification here, but for now just silently apply it
+      }
+    }
+    
+    setShowRestModal(true);
+  }, [calendarConfig, characterStats, calculateHoursBetweenDates, updateCharacterStats]);
+  
   // Toggle heroic inspiration
   const toggleHeroicInspiration = () => {
     if (!canUserEdit) return;
     const currentStats = characterStats || defaultStats;
     updateCharacterStats({ heroicInspiration: !currentStats.heroicInspiration });
+  };
+  
+  // Scar management functions
+  const handleUpdateScar = (scarId: string, updates: Partial<Scar>) => {
+    if (!canUserEdit) return;
+    const existingScars = characterData.scars || [];
+    const updatedScars = existingScars.map(scar => 
+      scar.id === scarId ? { ...scar, ...updates } : scar
+    );
+    updateData({ scars: updatedScars });
+  };
+  
+  const handleDeleteScar = (scarId: string) => {
+    if (!canUserEdit) return;
+    const existingScars = characterData.scars || [];
+    const updatedScars = existingScars.filter(scar => scar.id !== scarId);
+    updateData({ scars: updatedScars });
   };
   
   // Update condition
@@ -1889,6 +2188,13 @@ export function HomeTab({
           timestamp: now,
           chosenOptionIds: selectedOptionIds,
           selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
+          calendarDate: calendarConfig ? {
+            year: calendarConfig.currentDate.year,
+            monthIndex: calendarConfig.currentDate.monthIndex,
+            day: calendarConfig.currentDate.day,
+            hour: calendarConfig.currentDate.hour,
+            minute: calendarConfig.currentDate.minute,
+          } : undefined,
         }
       };
     } else {
@@ -1900,9 +2206,9 @@ export function HomeTab({
         // Increment wilderness counter
         newConsecutiveWildernessRests++;
         
-        // Check if we've hit 7 consecutive wilderness rests
-        if (newConsecutiveWildernessRests >= 7 && !newWildernessExhaustionBlocked) {
-          // Add 1 level of exhaustion
+        // Handle wilderness exhaustion mechanics based on consecutive count
+        if (newConsecutiveWildernessRests === 7) {
+          // Exactly 7 consecutive: Auto-add 1 exhaustion (no prompt)
           const currentExhaustionLevel = statsUpdates.exhaustion?.currentLevel ?? (currentStats.exhaustion?.currentLevel || 0);
           const maxLevels = currentStats.exhaustion?.maxLevels || 10;
           statsUpdates.exhaustion = {
@@ -1910,7 +2216,21 @@ export function HomeTab({
             ...statsUpdates.exhaustion,
             currentLevel: Math.min(maxLevels, currentExhaustionLevel + 1),
           };
-          // Block future exhaustion reduction until settlement rest
+          // Block exhaustion reduction until settlement rest
+          newWildernessExhaustionBlocked = true;
+        } else if (newConsecutiveWildernessRests >= 8 && effects.wildernessD4Roll) {
+          // 8+ consecutive: Check d4 roll result (odd = +1 exhaustion, even = no exhaustion)
+          const isOdd = effects.wildernessD4Roll % 2 === 1;
+          if (isOdd) {
+            const currentExhaustionLevel = statsUpdates.exhaustion?.currentLevel ?? (currentStats.exhaustion?.currentLevel || 0);
+            const maxLevels = currentStats.exhaustion?.maxLevels || 10;
+            statsUpdates.exhaustion = {
+              ...currentStats.exhaustion,
+              ...statsUpdates.exhaustion,
+              currentLevel: Math.min(maxLevels, currentExhaustionLevel + 1),
+            };
+          }
+          // Keep exhaustion reduction blocked
           newWildernessExhaustionBlocked = true;
         }
       } else if (effects.restLocation === 'settlement') {
@@ -1927,6 +2247,13 @@ export function HomeTab({
           location: effects.restLocation,
           roomType: effects.roomType,
           selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
+          calendarDate: calendarConfig ? {
+            year: calendarConfig.currentDate.year,
+            monthIndex: calendarConfig.currentDate.monthIndex,
+            day: calendarConfig.currentDate.day,
+            hour: calendarConfig.currentDate.hour,
+            minute: calendarConfig.currentDate.minute,
+          } : undefined,
         },
         heroicInspirationGainedToday: effects.heroicInspiration || false,
         consecutiveWildernessRests: newConsecutiveWildernessRests,
@@ -2321,7 +2648,7 @@ export function HomeTab({
             onUpdateCharacterStats={updateCharacterStats}
             onToggleHeroicInspiration={toggleHeroicInspiration}
             onOpenTradePartnerModal={onOpenTradePartnerModal}
-            onOpenRestModal={() => setShowRestModal(true)}
+            onOpenRestModal={handleOpenRestModal}
             onUpdateDeathSaves={updateDeathSaves}
             onApplyInjury={applyInjury}
             showTradeButton={!!showTradeButton}
@@ -2468,6 +2795,19 @@ export function HomeTab({
               scars: [...existingScars, scar],
             });
             setScarPrompt(null);
+          }}
+        />
+      )}
+
+      {/* Scar Edit Modal - shown when editing an existing scar */}
+      {scarEditModal && scarEditModal.isOpen && (
+        <ScarEditModal
+          isOpen={scarEditModal.isOpen}
+          onClose={() => setScarEditModal(null)}
+          scar={scarEditModal.scar}
+          onSave={(scarId, updates) => {
+            handleUpdateScar(scarId, updates);
+            setScarEditModal(null);
           }}
         />
       )}
@@ -2714,18 +3054,60 @@ export function HomeTab({
                           }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '4px' }}>
-                            <span style={{ 
-                              fontSize: '12px', 
-                              fontWeight: 'bold',
-                              color: scar.injuryType === 'critical' ? '#e53935' : '#ff9800',
-                              textTransform: 'capitalize',
-                            }}>
-                              {scar.injuryType === 'critical' ? '💀' : '🩸'} {scar.size} scar on {scar.location}
-                            </span>
-                            {scar.acquiredDate && (
-                              <span style={{ fontSize: '9px', color: 'var(--text-muted)' }}>
-                                Day {scar.acquiredDate.day}, M{scar.acquiredDate.monthIndex + 1}, Y{scar.acquiredDate.year}
+                            <div style={{ flex: 1 }}>
+                              <span style={{ 
+                                fontSize: '12px', 
+                                fontWeight: 'bold',
+                                color: scar.injuryType === 'critical' ? '#e53935' : '#ff9800',
+                                textTransform: 'capitalize',
+                              }}>
+                                {scar.injuryType === 'critical' ? '💀' : '🩸'} {scar.size} scar on {scar.location}
                               </span>
+                              {scar.acquiredDate && (
+                                <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                                  Day {scar.acquiredDate.day}, M{scar.acquiredDate.monthIndex + 1}, Y{scar.acquiredDate.year}
+                                </div>
+                              )}
+                            </div>
+                            {canUserEdit && (
+                              <div style={{ display: 'flex', gap: '4px', marginLeft: '8px' }}>
+                                <button
+                                  onClick={() => setScarEditModal({ isOpen: true, scar })}
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: '10px',
+                                    background: 'rgba(77, 171, 247, 0.2)',
+                                    border: '1px solid rgba(77, 171, 247, 0.4)',
+                                    borderRadius: '4px',
+                                    color: '#4dabf7',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                  }}
+                                  title="Edit scar"
+                                >
+                                  ✏️
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    if (confirm('Are you sure you want to delete this scar?')) {
+                                      handleDeleteScar(scar.id);
+                                    }
+                                  }}
+                                  style={{
+                                    padding: '4px 8px',
+                                    fontSize: '10px',
+                                    background: 'rgba(255, 107, 107, 0.2)',
+                                    border: '1px solid rgba(255, 107, 107, 0.4)',
+                                    borderRadius: '4px',
+                                    color: '#ff6b6b',
+                                    cursor: 'pointer',
+                                    fontWeight: 'bold',
+                                  }}
+                                  title="Delete scar"
+                                >
+                                  🗑️
+                                </button>
+                              </div>
                             )}
                           </div>
                           {scar.source && (

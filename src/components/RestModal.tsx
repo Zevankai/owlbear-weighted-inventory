@@ -45,6 +45,7 @@ export interface RestEffectsToApply {
   projectToWorkOn?: string; // ID of project to add work to
   newProject?: Project; // New project to create and work on
   workUnitsToAdd?: number; // Work units to add (1 for short, 2 for long)
+  wildernessD4Roll?: number; // D4 roll result for 8+ consecutive wilderness rests (1-4)
 }
 
 interface RestModalProps {
@@ -140,6 +141,10 @@ export const RestModal: React.FC<RestModalProps> = ({
   
   // Hit dice spending state
   const [hitDieSpendPrompt, setHitDieSpendPrompt] = useState<{ isOpen: boolean; hpRecovered: string }>({ isOpen: false, hpRecovered: '' });
+  
+  // Wilderness d4 roll state (for 8+ consecutive wilderness rests)
+  const [wildernessD4Prompt, setWildernessD4Prompt] = useState<{ isOpen: boolean; rollResult: string }>({ isOpen: false, rollResult: '' });
+  const [wildernessD4RollResult, setWildernessD4RollResult] = useState<number | null>(null);
   
   // Calculate active injury count for determining if we need selection prompt
   const activeInjuryList = useMemo(() => {
@@ -494,6 +499,11 @@ export const RestModal: React.FC<RestModalProps> = ({
           effects.reduceExhaustion = 1;
         }
         effects.restLocation = 'wilderness';
+        
+        // Include wilderness d4 roll result if we have one (for 8+ consecutive)
+        if (wildernessD4RollResult !== null) {
+          effects.wildernessD4Roll = wildernessD4RollResult;
+        }
       } else if (restLocation === 'settlement' && selectedRoomType) {
         // Settlement room reduces exhaustion based on room type
         const room = SETTLEMENT_ROOMS[selectedRoomType];
@@ -551,7 +561,7 @@ export const RestModal: React.FC<RestModalProps> = ({
     });
     
     return effects;
-  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal, selectedProjectId, newProjectData, race]);
+  }, [selectedOptionIds, selectedRestType, allAvailableOptions, restLocation, selectedRoomType, hitDice, restHistory.wildernessExhaustionBlocked, customRationCounts, selectedInjuryToHeal, selectedProjectId, newProjectData, race, wildernessD4RollResult]);
 
   // Handle rest completion
   const handleRest = () => {
@@ -565,6 +575,16 @@ export const RestModal: React.FC<RestModalProps> = ({
     if (selectedRestType === 'long' && restLocation === 'settlement' && !selectedRoomType) {
       setError('Please select a room type');
       return;
+    }
+    
+    // Check if we need to prompt for wilderness d4 roll (8+ consecutive wilderness rests)
+    if (selectedRestType === 'long' && restLocation === 'wilderness') {
+      const consecutiveCount = (restHistory.consecutiveWildernessRests || 0) + 1; // +1 because we're about to rest
+      if (consecutiveCount >= 8 && wildernessD4RollResult === null) {
+        // Show d4 prompt
+        setWildernessD4Prompt({ isOpen: true, rollResult: '' });
+        return;
+      }
     }
     
     // Calculate effects
@@ -597,6 +617,7 @@ export const RestModal: React.FC<RestModalProps> = ({
     setSelectedOptionIds(new Set());
     setRestLocation(null);
     setSelectedRoomType(null);
+    setWildernessD4RollResult(null);
     setError(null);
     onClose();
   };
@@ -621,6 +642,20 @@ export const RestModal: React.FC<RestModalProps> = ({
     onSpendHitDie(hpRecovered);
     setHitDieSpendPrompt({ isOpen: false, hpRecovered: '' });
     setError(null);
+  };
+  
+  // Handle wilderness d4 roll confirmation
+  const handleWildernessD4Confirm = () => {
+    const roll = parseInt(wildernessD4Prompt.rollResult, 10);
+    if (isNaN(roll) || roll < 1 || roll > 4) {
+      setError('Please enter a valid d4 roll result (1-4)');
+      return;
+    }
+    setWildernessD4RollResult(roll);
+    setWildernessD4Prompt({ isOpen: false, rollResult: '' });
+    setError(null);
+    // Now complete the rest with the d4 result
+    handleRest();
   };
 
   if (!isOpen) return null;
@@ -1812,6 +1847,99 @@ export const RestModal: React.FC<RestModalProps> = ({
             >
               Cancel
             </button>
+          </div>
+        </>
+      )}
+
+      {/* Wilderness D4 Roll Prompt Modal (for 8+ consecutive wilderness rests) */}
+      {wildernessD4Prompt.isOpen && (
+        <>
+          <div
+            onClick={() => setWildernessD4Prompt({ isOpen: false, rollResult: '' })}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.4)',
+              zIndex: 10000,
+            }}
+          />
+          <div style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 10001,
+            background: 'rgba(30, 30, 50, 0.98)',
+            border: '1px solid var(--glass-border)',
+            borderRadius: '8px',
+            padding: '20px',
+            minWidth: '320px',
+            maxWidth: '400px',
+          }}>
+            <h4 style={{ margin: '0 0 12px', color: '#ff9800' }}>🎲 Wilderness Exhaustion Check</h4>
+            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginBottom: '12px' }}>
+              You've taken <strong style={{ color: '#ff9800' }}>{(restHistory.consecutiveWildernessRests || 0) + 1} consecutive</strong> wilderness rests. 
+              The harsh conditions are taking their toll on your body.
+            </p>
+            <p style={{ fontSize: '12px', color: 'var(--text-main)', marginBottom: '16px' }}>
+              <strong>Roll a d4:</strong>
+            </p>
+            <ul style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '16px', paddingLeft: '20px' }}>
+              <li>If you roll <strong style={{ color: '#ff6b6b' }}>odd (1 or 3)</strong>: Gain 1 exhaustion level</li>
+              <li>If you roll <strong style={{ color: '#51cf66' }}>even (2 or 4)</strong>: No exhaustion</li>
+            </ul>
+            <input
+              type="number"
+              min="1"
+              max="4"
+              value={wildernessD4Prompt.rollResult}
+              onChange={(e) => setWildernessD4Prompt({ ...wildernessD4Prompt, rollResult: e.target.value })}
+              placeholder="Enter your d4 roll (1-4)..."
+              style={{
+                width: '100%',
+                padding: '10px',
+                fontSize: '14px',
+                background: 'rgba(0, 0, 0, 0.3)',
+                border: '1px solid #ff9800',
+                borderRadius: '6px',
+                color: 'var(--text-main)',
+                marginBottom: '12px',
+                boxSizing: 'border-box',
+              }}
+              autoFocus
+            />
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setWildernessD4Prompt({ isOpen: false, rollResult: '' })}
+                style={{
+                  padding: '8px 16px',
+                  background: '#444',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleWildernessD4Confirm}
+                style={{
+                  padding: '8px 16px',
+                  background: '#ff9800',
+                  border: 'none',
+                  borderRadius: '4px',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontWeight: 'bold',
+                }}
+              >
+                Confirm Roll
+              </button>
+            </div>
           </div>
         </>
       )}

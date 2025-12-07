@@ -1900,9 +1900,9 @@ export function HomeTab({
         // Increment wilderness counter
         newConsecutiveWildernessRests++;
         
-        // Check if we've hit 7 consecutive wilderness rests
-        if (newConsecutiveWildernessRests >= 7 && !newWildernessExhaustionBlocked) {
-          // Add 1 level of exhaustion
+        // Handle wilderness exhaustion mechanics based on consecutive count
+        if (newConsecutiveWildernessRests === 7) {
+          // Exactly 7 consecutive: Auto-add 1 exhaustion (no prompt)
           const currentExhaustionLevel = statsUpdates.exhaustion?.currentLevel ?? (currentStats.exhaustion?.currentLevel || 0);
           const maxLevels = currentStats.exhaustion?.maxLevels || 10;
           statsUpdates.exhaustion = {
@@ -1910,7 +1910,21 @@ export function HomeTab({
             ...statsUpdates.exhaustion,
             currentLevel: Math.min(maxLevels, currentExhaustionLevel + 1),
           };
-          // Block future exhaustion reduction until settlement rest
+          // Block exhaustion reduction until settlement rest
+          newWildernessExhaustionBlocked = true;
+        } else if (newConsecutiveWildernessRests >= 8 && effects.wildernessD4Roll) {
+          // 8+ consecutive: Check d4 roll result (odd = +1 exhaustion, even = no exhaustion)
+          const isOdd = effects.wildernessD4Roll % 2 === 1;
+          if (isOdd) {
+            const currentExhaustionLevel = statsUpdates.exhaustion?.currentLevel ?? (currentStats.exhaustion?.currentLevel || 0);
+            const maxLevels = currentStats.exhaustion?.maxLevels || 10;
+            statsUpdates.exhaustion = {
+              ...currentStats.exhaustion,
+              ...statsUpdates.exhaustion,
+              currentLevel: Math.min(maxLevels, currentExhaustionLevel + 1),
+            };
+          }
+          // Keep exhaustion reduction blocked
           newWildernessExhaustionBlocked = true;
         }
       } else if (effects.restLocation === 'settlement') {

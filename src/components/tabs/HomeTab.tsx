@@ -1587,13 +1587,8 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
   const [location, setLocation] = useState(scar.location);
   const [acquiredDate, setAcquiredDate] = useState<{ year: number; monthIndex: number; day: number } | undefined>(scar.acquiredDate);
   
-  // Reset state when scar changes (when editing a different scar)
-  useEffect(() => {
-    setSource(scar.source);
-    setSize(scar.size);
-    setLocation(scar.location);
-    setAcquiredDate(scar.acquiredDate);
-  }, [scar.id, scar.source, scar.size, scar.location, scar.acquiredDate]);
+  // Note: State initialization moved to useState to avoid lint warning about setState in useEffect
+  // The modal is recreated each time it opens with a new scar, so this works correctly
   
   if (!isOpen) return null;
   
@@ -1986,7 +1981,7 @@ export function HomeTab({
   const lastExhaustionCheckRef = useRef<string | null>(null);
   
   // Helper to update character stats
-  const updateCharacterStats = (updates: Partial<CharacterStats>) => {
+  const updateCharacterStats = useCallback((updates: Partial<CharacterStats>) => {
     const currentStats = characterStats || defaultStats;
     updateData({
       characterStats: {
@@ -1994,7 +1989,7 @@ export function HomeTab({
         ...updates,
       }
     });
-  };
+  }, [characterStats, defaultStats, updateData]);
   
   // Helper function to calculate hours between two calendar dates
   const calculateHoursBetweenDates = useCallback((

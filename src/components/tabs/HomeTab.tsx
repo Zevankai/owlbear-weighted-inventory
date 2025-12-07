@@ -20,6 +20,7 @@ import { deductRationsFromInventory } from '../../utils/inventory';
 import { deductCopperPieces } from '../../utils/currency';
 import { useCalendar } from '../../hooks/useCalendar';
 import { formatCustomDate } from '../../utils/calendar/dateFormatting';
+import { initiateRestNotification } from '../../utils/restNotifications';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -912,7 +913,7 @@ const TwoColumnDashboard = ({
                   padding: '2px 4px',
                   color: '#ff9800',
                 }}
-                title="Take a rest"
+                title="Take a rest (option for party rest)"
               >
                 🏕️
               </button>
@@ -2102,9 +2103,29 @@ export function HomeTab({
     }
   }, [calendarConfig, characterStats, calculateHoursBetweenDates, updateCharacterStats, canUserEdit]);
   
-  // Function to handle opening rest modal
-  const handleOpenRestModal = useCallback(() => {
-    setShowRestModal(true);
+  // Function to handle opening rest modal with party rest option
+  const handleOpenRestModal = useCallback(async () => {
+    // Prompt user if they want to initiate a party rest
+    const partyRestPrompt = window.confirm('Would you like to initiate a party rest?\n\nClick OK to notify all players and rest together.\nClick Cancel to rest alone.');
+    
+    if (partyRestPrompt) {
+      // User wants party rest - prompt for rest type
+      const restTypePrompt = window.prompt('Initiate a party rest:\n1 = Short Rest (2 hours)\n2 = Long Rest (8 hours)', '1');
+      if (!restTypePrompt) return; // User cancelled
+      
+      const restType: RestType = restTypePrompt === '2' ? 'long' : 'short';
+      
+      try {
+        await initiateRestNotification(restType);
+        // The RestNotification component will automatically redirect the initiator to the rest modal
+      } catch (error) {
+        console.error('Failed to initiate party rest:', error);
+        alert('Failed to initiate party rest notification.');
+      }
+    } else {
+      // User wants to rest alone - just open the modal
+      setShowRestModal(true);
+    }
   }, []);
   
   // Toggle heroic inspiration

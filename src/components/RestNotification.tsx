@@ -40,6 +40,11 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
           if (!notification || notification.id !== notificationData.id) {
             setNotification(notificationData);
             setHasResponded(false);
+            
+            // If this player is the initiator, auto-redirect them to rest tab
+            if (notificationData.initiatorId === id) {
+              onConfirm(notificationData.restType);
+            }
           } else {
             // Update existing notification (confirmations may have changed)
             setNotification(notificationData);
@@ -76,7 +81,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
       active = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [onAllConfirmed]);
+  }, [onAllConfirmed, onConfirm, notification]);
 
   const handleConfirm = async () => {
     if (!notification || hasResponded) return;
@@ -124,140 +129,17 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
     return null;
   }
 
+  // Check if this is the initiator - they should not see the popup
+  const isInitiator = notification.initiatorId === playerId;
+  
+  // If initiator, don't show notification (they're already redirected via useEffect)
+  if (isInitiator) {
+    return null;
+  }
+
   // Calculate how many players have confirmed
   const confirmedCount = Object.values(notification.confirmations).filter((c) => c === true).length;
   const totalCount = notification.allPlayerIds.length;
-
-  // Check if this is the initiator
-  const isInitiator = notification.initiatorId === playerId;
-
-  // If initiator, auto-redirect them to rest tab immediately
-  if (isInitiator) {
-    // Trigger the confirm callback to redirect them
-    onConfirm(notification.restType);
-    
-    // Show waiting view for initiator
-    return (
-      <>
-        {/* Backdrop */}
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: 'rgba(0, 0, 0, 0.7)',
-            zIndex: 10000,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          {/* Notification Card */}
-          <div
-            style={{
-              background: 'linear-gradient(135deg, rgba(30, 30, 50, 0.98), rgba(40, 40, 60, 0.98))',
-              backdropFilter: 'blur(16px)',
-              border: `2px solid ${notification.restType === 'short' ? '#4dabf7' : '#c084fc'}`,
-              borderRadius: '16px',
-              padding: '24px',
-              minWidth: '360px',
-              maxWidth: '500px',
-              boxShadow: `0 8px 32px ${
-                notification.restType === 'short' ? 'rgba(77, 171, 247, 0.4)' : 'rgba(192, 132, 252, 0.4)'
-              }`,
-              animation: 'slideIn 0.3s ease-out',
-            }}
-          >
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-              <span style={{ fontSize: '32px' }}>
-                {notification.restType === 'short' ? '☀️' : '🌙'}
-              </span>
-              <div>
-                <h3
-                  style={{
-                    margin: 0,
-                    color: notification.restType === 'short' ? '#4dabf7' : '#c084fc',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                  }}
-                >
-                  {notification.restType === 'short' ? 'Short Rest' : 'Long Rest'} Initiated
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: '12px',
-                    color: 'var(--text-muted)',
-                  }}
-                >
-                  Waiting for party...
-                </p>
-              </div>
-            </div>
-
-            {/* Description */}
-            <p
-              style={{
-                fontSize: '13px',
-                color: 'var(--text-main)',
-                marginBottom: '16px',
-                lineHeight: 1.5,
-              }}
-            >
-              You've initiated a party rest. Waiting for other players to respond...
-            </p>
-
-            {/* Confirmation Status */}
-            <div
-              style={{
-                padding: '10px 12px',
-                background: 'rgba(0, 0, 0, 0.3)',
-                borderRadius: '8px',
-                marginBottom: '16px',
-                fontSize: '11px',
-                color: 'var(--text-muted)',
-              }}
-            >
-              <strong>Status:</strong> {confirmedCount} of {totalCount} player
-              {totalCount !== 1 ? 's' : ''} confirmed
-            </div>
-
-            {/* Loading animation */}
-            <div style={{ textAlign: 'center', padding: '20px 0' }}>
-              <div style={{
-                display: 'inline-block',
-                width: '40px',
-                height: '40px',
-                border: `4px solid ${notification.restType === 'short' ? 'rgba(77, 171, 247, 0.3)' : 'rgba(192, 132, 252, 0.3)'}`,
-                borderTopColor: notification.restType === 'short' ? '#4dabf7' : '#c084fc',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite',
-              }} />
-            </div>
-          </div>
-        </div>
-
-        <style>{`
-          @keyframes slideIn {
-            from {
-              opacity: 0;
-              transform: translateY(-20px);
-            }
-            to {
-              opacity: 1;
-              transform: translateY(0);
-            }
-          }
-          @keyframes spin {
-            to { transform: rotate(360deg); }
-          }
-        `}</style>
-      </>
-    );
-  }
 
   return (
     <>

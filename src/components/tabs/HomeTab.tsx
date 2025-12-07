@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
@@ -1656,6 +1656,70 @@ export function HomeTab({
     });
   };
   
+  // Helper function to calculate hours between two calendar dates
+  const calculateHoursBetweenDates = useCallback((
+    config: typeof calendarConfig,
+    date1: { year: number; monthIndex: number; day: number; hour: number; minute: number },
+    date2: { year: number; monthIndex: number; day: number; hour: number; minute: number }
+  ): number => {
+    if (!config) return 0;
+    
+    // Calculate total minutes for date1
+    let totalMinutes1 = date1.minute + (date1.hour * 60);
+    for (let y = 0; y < date1.year; y++) {
+      for (let m = 0; m < config.months.length; m++) {
+        totalMinutes1 += config.months[m].days * 24 * 60;
+      }
+    }
+    for (let m = 0; m < date1.monthIndex; m++) {
+      totalMinutes1 += config.months[m].days * 24 * 60;
+    }
+    totalMinutes1 += (date1.day - 1) * 24 * 60;
+    
+    // Calculate total minutes for date2
+    let totalMinutes2 = date2.minute + (date2.hour * 60);
+    for (let y = 0; y < date2.year; y++) {
+      for (let m = 0; m < config.months.length; m++) {
+        totalMinutes2 += config.months[m].days * 24 * 60;
+      }
+    }
+    for (let m = 0; m < date2.monthIndex; m++) {
+      totalMinutes2 += config.months[m].days * 24 * 60;
+    }
+    totalMinutes2 += (date2.day - 1) * 24 * 60;
+    
+    const minutesDiff = Math.abs(totalMinutes2 - totalMinutes1);
+    return minutesDiff / 60; // Convert to hours
+  }, []);
+  
+  // Function to handle opening rest modal with 24-hour exhaustion check
+  const handleOpenRestModal = useCallback(() => {
+    // Check if 24+ hours have passed since last long rest
+    if (calendarConfig && characterStats?.restHistory?.lastLongRest?.calendarDate) {
+      const lastRestDate = characterStats.restHistory.lastLongRest.calendarDate;
+      const currentDate = calendarConfig.currentDate;
+      
+      const hoursSinceLastRest = calculateHoursBetweenDates(calendarConfig, lastRestDate, currentDate);
+      
+      if (hoursSinceLastRest >= 24) {
+        // Automatically add 1 exhaustion level
+        const currentExhaustion = characterStats.exhaustion || createDefaultCharacterStats().exhaustion;
+        const newExhaustionLevel = Math.min(currentExhaustion.maxLevels, currentExhaustion.currentLevel + 1);
+        
+        updateCharacterStats({
+          exhaustion: {
+            ...currentExhaustion,
+            currentLevel: newExhaustionLevel,
+          }
+        });
+        
+        // Note: We could show a notification here, but for now just silently apply it
+      }
+    }
+    
+    setShowRestModal(true);
+  }, [calendarConfig, characterStats, calculateHoursBetweenDates, updateCharacterStats]);
+  
   // Toggle heroic inspiration
   const toggleHeroicInspiration = () => {
     if (!canUserEdit) return;
@@ -1889,6 +1953,13 @@ export function HomeTab({
           timestamp: now,
           chosenOptionIds: selectedOptionIds,
           selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
+          calendarDate: calendarConfig ? {
+            year: calendarConfig.currentDate.year,
+            monthIndex: calendarConfig.currentDate.monthIndex,
+            day: calendarConfig.currentDate.day,
+            hour: calendarConfig.currentDate.hour,
+            minute: calendarConfig.currentDate.minute,
+          } : undefined,
         }
       };
     } else {
@@ -1941,6 +2012,13 @@ export function HomeTab({
           location: effects.restLocation,
           roomType: effects.roomType,
           selectedBenefits: selectedOptionIds, // Track selected benefits for preventing same choice twice
+          calendarDate: calendarConfig ? {
+            year: calendarConfig.currentDate.year,
+            monthIndex: calendarConfig.currentDate.monthIndex,
+            day: calendarConfig.currentDate.day,
+            hour: calendarConfig.currentDate.hour,
+            minute: calendarConfig.currentDate.minute,
+          } : undefined,
         },
         heroicInspirationGainedToday: effects.heroicInspiration || false,
         consecutiveWildernessRests: newConsecutiveWildernessRests,
@@ -2335,7 +2413,7 @@ export function HomeTab({
             onUpdateCharacterStats={updateCharacterStats}
             onToggleHeroicInspiration={toggleHeroicInspiration}
             onOpenTradePartnerModal={onOpenTradePartnerModal}
-            onOpenRestModal={() => setShowRestModal(true)}
+            onOpenRestModal={handleOpenRestModal}
             onUpdateDeathSaves={updateDeathSaves}
             onApplyInjury={applyInjury}
             showTradeButton={!!showTradeButton}

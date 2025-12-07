@@ -82,6 +82,7 @@ interface RestModalProps {
   }; // Active injuries for the injury selection prompt
   projects?: Project[]; // Current active projects
   calendarConfig?: CalendarConfig | null; // Calendar configuration for in-game time display
+  initialRestType?: RestType | null; // Pre-selected rest type for automatic opening
 }
 
 export const RestModal: React.FC<RestModalProps> = ({
@@ -106,8 +107,9 @@ export const RestModal: React.FC<RestModalProps> = ({
   activeInjuries,
   projects = [],
   calendarConfig,
+  initialRestType,
 }) => {
-  const [selectedRestType, setSelectedRestType] = useState<RestType>('short');
+  const [selectedRestType, setSelectedRestType] = useState<RestType>(initialRestType || 'short');
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
   const [expandedOptionId, setExpandedOptionId] = useState<string | null>(null);
   const [rationPrompt, setRationPrompt] = useState<{
@@ -236,6 +238,13 @@ export const RestModal: React.FC<RestModalProps> = ({
 
   // Available rations in inventory
   const availableRations = useMemo(() => getTotalRations(inventory), [inventory]);
+
+  // Set initial rest type when modal opens with pre-selected type
+  useEffect(() => {
+    if (isOpen && initialRestType) {
+      setSelectedRestType(initialRestType);
+    }
+  }, [isOpen, initialRestType]);
 
   // Load last choices from localStorage when rest type changes
   useEffect(() => {

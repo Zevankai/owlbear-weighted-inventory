@@ -1932,6 +1932,8 @@ interface HomeTabProps {
   showCoverPhoto?: boolean;
   showTokenProfile?: boolean;
   gmCustomizations?: GMCustomizations;
+  preSelectedRestType?: RestType | null;
+  onRestTypeUsed?: () => void;
 }
 
 export function HomeTab({
@@ -1962,10 +1964,28 @@ export function HomeTab({
   hasClaimedToken,
   showCoverPhoto = true,
   showTokenProfile = true,
-  gmCustomizations
+  gmCustomizations,
+  preSelectedRestType,
+  onRestTypeUsed
 }: HomeTabProps) {
   // State for Rest Modal
   const [showRestModal, setShowRestModal] = useState(false);
+  const [initialRestType, setInitialRestType] = useState<RestType | null>(null);
+  
+  // Effect to open RestModal when preSelectedRestType is set
+  useEffect(() => {
+    if (preSelectedRestType && !showRestModal) {
+      // Use a microtask to avoid setState during render
+      Promise.resolve().then(() => {
+        setInitialRestType(preSelectedRestType);
+        setShowRestModal(true);
+        // Clear the pre-selected rest type from parent
+        if (onRestTypeUsed) {
+          onRestTypeUsed();
+        }
+      });
+    }
+  }, [preSelectedRestType, showRestModal, onRestTypeUsed]);
   
   // State for Scar Prompt Modal
   const [scarPrompt, setScarPrompt] = useState<{
@@ -2906,7 +2926,10 @@ export function HomeTab({
       {/* Rest Modal */}
       <RestModal
         isOpen={showRestModal}
-        onClose={() => setShowRestModal(false)}
+        onClose={() => {
+          setShowRestModal(false);
+          setInitialRestType(null);
+        }}
         race={characterStats?.race}
         characterClass={characterStats?.characterClass}
         secondaryRace={characterStats?.secondaryRace}
@@ -2930,6 +2953,7 @@ export function HomeTab({
         }}
         projects={characterData.projects || []}
         calendarConfig={calendarConfig}
+        initialRestType={initialRestType}
       />
 
       {/* Scar Prompt Modal - shown when a serious/critical injury fully heals */}

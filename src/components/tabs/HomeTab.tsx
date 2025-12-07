@@ -2780,6 +2780,7 @@ export function HomeTab({
           criticalInjury: characterStats?.conditions?.criticalInjury ? characterStats.injuryData?.criticalInjury : undefined,
         }}
         projects={characterData.projects || []}
+        calendarConfig={calendarConfig}
       />
 
       {/* Scar Prompt Modal - shown when a serious/critical injury fully heals */}

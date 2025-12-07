@@ -1,9 +1,11 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import type { RestType, RestOption, RestHistory, CharacterRace, CharacterClass, Item, RestOptionEffect, RestLocationType, SettlementRoomType, HitDice, SuperiorityDice, Currency, InjuryConditionData, Project } from '../types';
 import { INJURY_HP_VALUES } from '../types';
+import type { CalendarConfig } from '../types/calendar';
 import { getStandardRestOptions, getNonStandardRestOptions, getRestOptionById } from '../data/restOptions';
 import { getTotalRations } from '../utils/inventory';
 import { getTotalCopperPieces } from '../utils/currency';
+import { formatTimeElapsed } from '../utils/calendar/dateFormatting';
 
 // LocalStorage keys for persisting last rest choices
 const LAST_SHORT_REST_CHOICES_KEY = 'owlbear-weighted-inventory-last-short-rest-choices';
@@ -79,6 +81,7 @@ interface RestModalProps {
     criticalInjury?: InjuryConditionData;
   }; // Active injuries for the injury selection prompt
   projects?: Project[]; // Current active projects
+  calendarConfig?: CalendarConfig | null; // Calendar configuration for in-game time display
 }
 
 export const RestModal: React.FC<RestModalProps> = ({
@@ -102,6 +105,7 @@ export const RestModal: React.FC<RestModalProps> = ({
   onSpendHitDie,
   activeInjuries,
   projects = [],
+  calendarConfig,
 }) => {
   const [selectedRestType, setSelectedRestType] = useState<RestType>('short');
   const [selectedOptionIds, setSelectedOptionIds] = useState<Set<string>>(new Set());
@@ -258,9 +262,25 @@ export const RestModal: React.FC<RestModalProps> = ({
     setError(null);
   }, [selectedRestType, isOpen, allAvailableOptions, maxSelections, shortRestStorageKey, longRestStorageKey]);
 
-  // Format timestamp for display
-  const formatLastRest = (timestamp: number | null): string => {
+  // Format timestamp for display using in-game calendar time if available
+  const formatLastRest = (timestamp: number | null, restCalendarDate?: { year: number; monthIndex: number; day: number; hour: number; minute: number }): string => {
     if (!timestamp) return 'Never';
+    
+    // Use in-game calendar time if both calendar config and rest calendar date are available
+    if (calendarConfig && restCalendarDate) {
+      try {
+        return formatTimeElapsed(
+          calendarConfig,
+          restCalendarDate,
+          calendarConfig.currentDate
+        );
+      } catch (error) {
+        console.error('Error formatting in-game time:', error);
+        // Fall back to real-world time if calculation fails
+      }
+    }
+    
+    // Fall back to real-world time
     const date = new Date(timestamp);
     const now = new Date();
     const diffHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
@@ -812,10 +832,10 @@ export const RestModal: React.FC<RestModalProps> = ({
         }}>
           <div style={{ display: 'flex', gap: '20px' }}>
             <div>
-              <strong>Last Short Rest:</strong> {formatLastRest(lastShortRest?.timestamp || null)}
+              <strong>Last Short Rest:</strong> {formatLastRest(lastShortRest?.timestamp || null, lastShortRest?.calendarDate)}
             </div>
             <div>
-              <strong>Last Long Rest:</strong> {formatLastRest(lastLongRest?.timestamp || null)}
+              <strong>Last Long Rest:</strong> {formatLastRest(lastLongRest?.timestamp || null, lastLongRest?.calendarDate)}
             </div>
           </div>
           <div style={{ 

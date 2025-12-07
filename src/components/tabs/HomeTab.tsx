@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
+import type { CalendarConfig } from '../../types/calendar';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
@@ -18,6 +19,7 @@ import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } fro
 import { deductRationsFromInventory } from '../../utils/inventory';
 import { deductCopperPieces } from '../../utils/currency';
 import { useCalendar } from '../../hooks/useCalendar';
+import { formatCustomDate } from '../../utils/calendar/dateFormatting';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -1570,6 +1572,7 @@ interface ScarEditModalProps {
   onClose: () => void;
   scar: Scar;
   onSave: (scarId: string, updates: Partial<Scar>) => void;
+  calendarConfig?: CalendarConfig | null;
 }
 
 const ScarEditModal: React.FC<ScarEditModalProps> = ({
@@ -1577,17 +1580,20 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
   onClose,
   scar,
   onSave,
+  calendarConfig,
 }) => {
   const [source, setSource] = useState(scar.source);
   const [size, setSize] = useState<'small' | 'medium' | 'large'>(scar.size);
   const [location, setLocation] = useState(scar.location);
+  const [acquiredDate, setAcquiredDate] = useState<{ year: number; monthIndex: number; day: number } | undefined>(scar.acquiredDate);
   
   // Reset state when scar changes (when editing a different scar)
   useEffect(() => {
     setSource(scar.source);
     setSize(scar.size);
     setLocation(scar.location);
-  }, [scar.id, scar.source, scar.size, scar.location]);
+    setAcquiredDate(scar.acquiredDate);
+  }, [scar.id, scar.source, scar.size, scar.location, scar.acquiredDate]);
   
   if (!isOpen) return null;
   
@@ -1596,6 +1602,7 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
       source,
       size,
       location,
+      acquiredDate,
     });
     onClose();
   };
@@ -1721,12 +1728,22 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
           />
         </div>
         
-        {/* Acquired Date Display (read-only) */}
-        {scar.acquiredDate && (
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Acquired Date
-            </label>
+        {/* Acquired Date Display and Edit */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            Acquired Date
+          </label>
+          {calendarConfig && acquiredDate ? (
+            <div style={{ 
+              padding: '10px', 
+              background: 'rgba(0, 0, 0, 0.2)', 
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-main)',
+            }}>
+              {formatCustomDate(calendarConfig, acquiredDate)}
+            </div>
+          ) : acquiredDate ? (
             <div style={{ 
               padding: '10px', 
               background: 'rgba(0, 0, 0, 0.2)', 
@@ -1734,10 +1751,112 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
               fontSize: '12px',
               color: 'var(--text-muted)',
             }}>
-              Day {scar.acquiredDate.day}, Month {scar.acquiredDate.monthIndex + 1}, Year {scar.acquiredDate.year}
+              Day {acquiredDate.day}, Month {acquiredDate.monthIndex + 1}, Year {acquiredDate.year}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ 
+              padding: '10px', 
+              background: 'rgba(0, 0, 0, 0.2)', 
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-muted)',
+              fontStyle: 'italic',
+            }}>
+              No date recorded
+            </div>
+          )}
+          
+          {/* Date editing inputs */}
+          {calendarConfig && (
+            <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {/* Year selector */}
+              <div style={{ flex: '0 1 auto' }}>
+                <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                  Year
+                </label>
+                <input
+                  type="number"
+                  value={acquiredDate?.year ?? calendarConfig.currentDate.year}
+                  onChange={(e) => setAcquiredDate({
+                    year: parseInt(e.target.value, 10) || calendarConfig.currentDate.year,
+                    monthIndex: acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex,
+                    day: acquiredDate?.day ?? calendarConfig.currentDate.day,
+                  })}
+                  style={{
+                    width: '70px',
+                    padding: '6px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              </div>
+              
+              {/* Month selector */}
+              <div style={{ flex: '1 1 auto' }}>
+                <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                  Month
+                </label>
+                <select
+                  value={acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex}
+                  onChange={(e) => setAcquiredDate({
+                    year: acquiredDate?.year ?? calendarConfig.currentDate.year,
+                    monthIndex: parseInt(e.target.value, 10),
+                    day: acquiredDate?.day ?? 1,
+                  })}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                  }}
+                >
+                  {calendarConfig.months.map((month, index) => (
+                    <option key={index} value={index}>
+                      {month.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Day selector */}
+              <div style={{ flex: '0 1 auto' }}>
+                <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                  Day
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={calendarConfig.months[acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex]?.days || 30}
+                  value={acquiredDate?.day ?? calendarConfig.currentDate.day}
+                  onChange={(e) => {
+                    const maxDays = calendarConfig.months[acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex]?.days || 30;
+                    const day = Math.min(maxDays, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    setAcquiredDate({
+                      year: acquiredDate?.year ?? calendarConfig.currentDate.year,
+                      monthIndex: acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex,
+                      day,
+                    });
+                  }}
+                  style={{
+                    width: '60px',
+                    padding: '6px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -2832,6 +2951,7 @@ export function HomeTab({
             handleUpdateScar(scarId, updates);
             setScarEditModal(null);
           }}
+          calendarConfig={calendarConfig}
         />
       )}
 
@@ -3088,7 +3208,7 @@ export function HomeTab({
                               </span>
                               {scar.acquiredDate && (
                                 <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  Day {scar.acquiredDate.day}, M{scar.acquiredDate.monthIndex + 1}, Y{scar.acquiredDate.year}
+                                  {calendarConfig ? formatCustomDate(calendarConfig, scar.acquiredDate) : `Day ${scar.acquiredDate.day}, M${scar.acquiredDate.monthIndex + 1}, Y${scar.acquiredDate.year}`}
                                 </div>
                               )}
                             </div>

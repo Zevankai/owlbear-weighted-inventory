@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
 import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
+import type { CalendarConfig } from '../../types/calendar';
 import { ReputationDisplay } from '../ReputationDisplay';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { CharacterSheetSection } from '../CharacterSheet';
@@ -18,6 +19,7 @@ import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } fro
 import { deductRationsFromInventory } from '../../utils/inventory';
 import { deductCopperPieces } from '../../utils/currency';
 import { useCalendar } from '../../hooks/useCalendar';
+import { formatCustomDate } from '../../utils/calendar/dateFormatting';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -30,6 +32,9 @@ const DESCRIPTION_WIDTH_EDITABLE = '100%';
 // Level bounds constants
 const MIN_LEVEL = 1;
 const MAX_LEVEL = 20;
+
+// Daily exhaustion check time (in-game hour, 0-23)
+const EXHAUSTION_CHECK_HOUR = 8;
 
 // Purple Collapsible Section Component
 interface PurpleCollapsibleSectionProps {
@@ -1570,6 +1575,7 @@ interface ScarEditModalProps {
   onClose: () => void;
   scar: Scar;
   onSave: (scarId: string, updates: Partial<Scar>) => void;
+  calendarConfig?: CalendarConfig | null;
 }
 
 const ScarEditModal: React.FC<ScarEditModalProps> = ({
@@ -1577,17 +1583,21 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
   onClose,
   scar,
   onSave,
+  calendarConfig,
 }) => {
   const [source, setSource] = useState(scar.source);
   const [size, setSize] = useState<'small' | 'medium' | 'large'>(scar.size);
   const [location, setLocation] = useState(scar.location);
+  const [acquiredDate, setAcquiredDate] = useState<{ year: number; monthIndex: number; day: number } | undefined>(scar.acquiredDate);
   
-  // Reset state when scar changes (when editing a different scar)
+  // Sync state when scar prop changes (when editing a different scar)
+  // This is necessary because the modal reuses the same component instance
   useEffect(() => {
     setSource(scar.source);
     setSize(scar.size);
     setLocation(scar.location);
-  }, [scar.id, scar.source, scar.size, scar.location]);
+    setAcquiredDate(scar.acquiredDate);
+  }, [scar.id, scar.source, scar.size, scar.location, scar.acquiredDate]);
   
   if (!isOpen) return null;
   
@@ -1596,6 +1606,7 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
       source,
       size,
       location,
+      acquiredDate,
     });
     onClose();
   };
@@ -1721,12 +1732,22 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
           />
         </div>
         
-        {/* Acquired Date Display (read-only) */}
-        {scar.acquiredDate && (
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
-              Acquired Date
-            </label>
+        {/* Acquired Date Display and Edit */}
+        <div style={{ marginBottom: '16px' }}>
+          <label style={{ display: 'block', fontSize: '10px', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            Acquired Date
+          </label>
+          {calendarConfig && acquiredDate ? (
+            <div style={{ 
+              padding: '10px', 
+              background: 'rgba(0, 0, 0, 0.2)', 
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-main)',
+            }}>
+              {formatCustomDate(calendarConfig, acquiredDate)}
+            </div>
+          ) : acquiredDate ? (
             <div style={{ 
               padding: '10px', 
               background: 'rgba(0, 0, 0, 0.2)', 
@@ -1734,10 +1755,116 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
               fontSize: '12px',
               color: 'var(--text-muted)',
             }}>
-              Day {scar.acquiredDate.day}, Month {scar.acquiredDate.monthIndex + 1}, Year {scar.acquiredDate.year}
+              Day {acquiredDate.day}, Month {acquiredDate.monthIndex + 1}, Year {acquiredDate.year}
             </div>
-          </div>
-        )}
+          ) : (
+            <div style={{ 
+              padding: '10px', 
+              background: 'rgba(0, 0, 0, 0.2)', 
+              borderRadius: '6px',
+              fontSize: '12px',
+              color: 'var(--text-muted)',
+              fontStyle: 'italic',
+            }}>
+              No date recorded
+            </div>
+          )}
+          
+          {/* Date editing inputs */}
+          {calendarConfig && (
+            <div style={{ marginTop: '8px', display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {/* Year selector */}
+              <div style={{ flex: '0 1 auto' }}>
+                <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                  Year
+                </label>
+                <input
+                  type="number"
+                  value={acquiredDate?.year ?? calendarConfig.currentDate.year}
+                  onChange={(e) => setAcquiredDate({
+                    year: parseInt(e.target.value, 10) || calendarConfig.currentDate.year,
+                    monthIndex: acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex,
+                    day: acquiredDate?.day ?? calendarConfig.currentDate.day,
+                  })}
+                  style={{
+                    width: '70px',
+                    padding: '6px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              </div>
+              
+              {/* Month selector */}
+              <div style={{ flex: '1 1 auto' }}>
+                <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                  Month
+                </label>
+                <select
+                  value={acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex}
+                  onChange={(e) => setAcquiredDate({
+                    year: acquiredDate?.year ?? calendarConfig.currentDate.year,
+                    monthIndex: parseInt(e.target.value, 10),
+                    day: acquiredDate?.day ?? 1,
+                  })}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                  }}
+                >
+                  {calendarConfig.months.map((month, index) => (
+                    <option key={index} value={index}>
+                      {month.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Day selector */}
+              <div style={{ flex: '0 1 auto' }}>
+                <label style={{ display: 'block', fontSize: '9px', color: 'var(--text-muted)', marginBottom: '2px' }}>
+                  Day
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={(() => {
+                    const monthIndex = acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex;
+                    return calendarConfig.months[monthIndex]?.days || 30;
+                  })()}
+                  value={acquiredDate?.day ?? calendarConfig.currentDate.day}
+                  onChange={(e) => {
+                    const monthIndex = acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex;
+                    const maxDays = calendarConfig.months[monthIndex]?.days || 30;
+                    const day = Math.min(maxDays, Math.max(1, parseInt(e.target.value, 10) || 1));
+                    setAcquiredDate({
+                      year: acquiredDate?.year ?? calendarConfig.currentDate.year,
+                      monthIndex: acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex,
+                      day,
+                    });
+                  }}
+                  style={{
+                    width: '60px',
+                    padding: '6px',
+                    fontSize: '11px',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    border: '1px solid var(--glass-border)',
+                    borderRadius: '4px',
+                    color: 'var(--text-main)',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+        </div>
         
         {/* Action Buttons */}
         <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
@@ -1863,8 +1990,11 @@ export function HomeTab({
   const characterStats = characterData.characterStats;
   const defaultStats = useMemo(() => createDefaultCharacterStats(), []);
   
+  // Track the last checked date for exhaustion to prevent duplicate checks
+  const lastExhaustionCheckRef = useRef<string | null>(null);
+  
   // Helper to update character stats
-  const updateCharacterStats = (updates: Partial<CharacterStats>) => {
+  const updateCharacterStats = useCallback((updates: Partial<CharacterStats>) => {
     const currentStats = characterStats || defaultStats;
     updateData({
       characterStats: {
@@ -1872,7 +2002,7 @@ export function HomeTab({
         ...updates,
       }
     });
-  };
+  }, [characterStats, defaultStats, updateData]);
   
   // Helper function to calculate hours between two calendar dates
   const calculateHoursBetweenDates = useCallback((
@@ -1910,33 +2040,52 @@ export function HomeTab({
     return minutesDiff / 60; // Convert to hours
   }, []);
   
-  // Function to handle opening rest modal with 24-hour exhaustion check
-  const handleOpenRestModal = useCallback(() => {
-    // Check if 24+ hours have passed since last long rest
-    if (calendarConfig && characterStats?.restHistory?.lastLongRest?.calendarDate) {
-      const lastRestDate = characterStats.restHistory.lastLongRest.calendarDate;
-      const currentDate = calendarConfig.currentDate;
-      
-      const hoursSinceLastRest = calculateHoursBetweenDates(calendarConfig, lastRestDate, currentDate);
-      
-      if (hoursSinceLastRest >= 24) {
-        // Automatically add 1 exhaustion level
-        const currentExhaustion = characterStats.exhaustion || createDefaultCharacterStats().exhaustion;
-        const newExhaustionLevel = Math.min(currentExhaustion.maxLevels, currentExhaustion.currentLevel + 1);
-        
-        updateCharacterStats({
-          exhaustion: {
-            ...currentExhaustion,
-            currentLevel: newExhaustionLevel,
-          }
-        });
-        
-        // Note: We could show a notification here, but for now just silently apply it
-      }
+  // Daily exhaustion check at 8:00 AM in-game time
+  useEffect(() => {
+    if (!calendarConfig || !characterStats?.restHistory?.lastLongRest?.calendarDate || !canUserEdit) {
+      return;
     }
     
+    const currentDate = calendarConfig.currentDate;
+    
+    // Only check at the configured exhaustion check hour
+    if (currentDate.hour !== EXHAUSTION_CHECK_HOUR) {
+      return;
+    }
+    
+    // Create a unique key for this day to prevent duplicate checks
+    const dayKey = `${currentDate.year}-${currentDate.monthIndex}-${currentDate.day}`;
+    
+    // Skip if we've already checked this day
+    if (lastExhaustionCheckRef.current === dayKey) {
+      return;
+    }
+    
+    // Check if 24+ hours have passed since last long rest
+    const lastRestDate = characterStats.restHistory.lastLongRest.calendarDate;
+    const hoursSinceLastRest = calculateHoursBetweenDates(calendarConfig, lastRestDate, currentDate);
+    
+    if (hoursSinceLastRest >= 24) {
+      // Automatically add 1 exhaustion level
+      const currentExhaustion = characterStats.exhaustion || createDefaultCharacterStats().exhaustion;
+      const newExhaustionLevel = Math.min(currentExhaustion.maxLevels, currentExhaustion.currentLevel + 1);
+      
+      updateCharacterStats({
+        exhaustion: {
+          ...currentExhaustion,
+          currentLevel: newExhaustionLevel,
+        }
+      });
+      
+      // Mark that we've checked this day
+      lastExhaustionCheckRef.current = dayKey;
+    }
+  }, [calendarConfig, characterStats, calculateHoursBetweenDates, updateCharacterStats, canUserEdit]);
+  
+  // Function to handle opening rest modal
+  const handleOpenRestModal = useCallback(() => {
     setShowRestModal(true);
-  }, [calendarConfig, characterStats, calculateHoursBetweenDates, updateCharacterStats]);
+  }, []);
   
   // Toggle heroic inspiration
   const toggleHeroicInspiration = () => {
@@ -2780,6 +2929,7 @@ export function HomeTab({
           criticalInjury: characterStats?.conditions?.criticalInjury ? characterStats.injuryData?.criticalInjury : undefined,
         }}
         projects={characterData.projects || []}
+        calendarConfig={calendarConfig}
       />
 
       {/* Scar Prompt Modal - shown when a serious/critical injury fully heals */}
@@ -2809,6 +2959,7 @@ export function HomeTab({
             handleUpdateScar(scarId, updates);
             setScarEditModal(null);
           }}
+          calendarConfig={calendarConfig}
         />
       )}
 
@@ -3065,7 +3216,7 @@ export function HomeTab({
                               </span>
                               {scar.acquiredDate && (
                                 <div style={{ fontSize: '9px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                                  Day {scar.acquiredDate.day}, M{scar.acquiredDate.monthIndex + 1}, Y{scar.acquiredDate.year}
+                                  {calendarConfig ? formatCustomDate(calendarConfig, scar.acquiredDate) : `Day ${scar.acquiredDate.day}, M${scar.acquiredDate.monthIndex + 1}, Y${scar.acquiredDate.year}`}
                                 </div>
                               )}
                             </div>

@@ -2409,11 +2409,13 @@ function App() {
       />
 
       {/* Rest Notification */}
-      <RestNotification
-        onConfirm={handleRestNotificationConfirm}
-        onAllConfirmed={handleRestNotificationAllConfirmed}
-        isVisible={true}
-      />
+      {ready && playerId && (
+        <RestNotification
+          onConfirm={handleRestNotificationConfirm}
+          onAllConfirmed={handleRestNotificationAllConfirmed}
+          isVisible={true}
+        />
+      )}
 
       {/* Time Advancement Notification */}
       {timeAdvancementData && (

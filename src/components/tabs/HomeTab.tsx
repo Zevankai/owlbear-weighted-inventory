@@ -1976,17 +1976,16 @@ export function HomeTab({
   // Effect to open RestModal when preSelectedRestType is set
   useEffect(() => {
     if (preSelectedRestType && !showRestModal) {
-      // Use a microtask to avoid setState during render
-      Promise.resolve().then(() => {
-        setInitialRestType(preSelectedRestType);
-        setShowRestModal(true);
-        // Clear the pre-selected rest type from parent
-        if (onRestTypeUsed) {
-          onRestTypeUsed();
-        }
-      });
+      setInitialRestType(preSelectedRestType);
+      setShowRestModal(true);
+      // Clear the pre-selected rest type from parent
+      if (onRestTypeUsed) {
+        onRestTypeUsed();
+      }
     }
-  }, [preSelectedRestType, showRestModal, onRestTypeUsed]);
+    // Only run when preSelectedRestType changes to avoid loops
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preSelectedRestType]);
   
   // State for Scar Prompt Modal
   const [scarPrompt, setScarPrompt] = useState<{

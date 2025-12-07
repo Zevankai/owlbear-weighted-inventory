@@ -18,7 +18,31 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
   const [hasResponded, setHasResponded] = useState(false);
   const [playerId, setPlayerId] = useState<string>('');
 
+  // Get player ID
   useEffect(() => {
+    let active = true;
+
+    const getPlayerId = async () => {
+      await new Promise<void>(resolve => OBR.onReady(() => resolve()));
+      if (!active) return;
+
+      const id = await OBR.player.getId();
+      setPlayerId(id);
+    };
+
+    if (OBR.isAvailable) {
+      getPlayerId();
+    }
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Subscribe to room metadata changes for rest notifications
+  useEffect(() => {
+    if (!playerId) return;
+
     let active = true;
     let unsubscribe: (() => void) | undefined;
 
@@ -26,10 +50,6 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
       await new Promise<void>(resolve => OBR.onReady(() => resolve()));
       if (!active) return;
 
-      const id = await OBR.player.getId();
-      setPlayerId(id);
-
-      // Subscribe to room metadata changes for rest notifications
       unsubscribe = OBR.room.onMetadataChange((metadata) => {
         if (!active) return;
 
@@ -40,6 +60,11 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
           if (!notification || notification.id !== notificationData.id) {
             setNotification(notificationData);
             setHasResponded(false);
+            
+            // If this player is the initiator, auto-redirect them to rest tab
+            if (notificationData.initiatorId === playerId) {
+              onConfirm(notificationData.restType);
+            }
           } else {
             // Update existing notification (confirmations may have changed)
             setNotification(notificationData);
@@ -76,7 +101,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
       active = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [onAllConfirmed]);
+  }, [playerId, onAllConfirmed, onConfirm, notification]);
 
   const handleConfirm = async () => {
     if (!notification || hasResponded) return;
@@ -124,8 +149,11 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
     return null;
   }
 
-  // Don't show to the initiator
-  if (notification.initiatorId === playerId) {
+  // Check if this is the initiator - they should not see the popup
+  const isInitiator = notification.initiatorId === playerId;
+  
+  // If initiator, don't show notification (they're already redirected via useEffect)
+  if (isInitiator) {
     return null;
   }
 

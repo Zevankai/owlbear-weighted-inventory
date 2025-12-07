@@ -8,7 +8,7 @@ import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID, WIDE_POPOVER_WIDTH } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry, TokenType } from './types';
+import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry, TokenType, RestType } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
 
 // Lore constants
@@ -29,12 +29,16 @@ import { SpellsTab } from './components/tabs/SpellsTab';
 import { CalendarTab } from './components/tabs/CalendarTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
+import { RestNotification } from './components/RestNotification';
+import { TimeAdvancementNotification } from './components/TimeAdvancementNotification';
 import { ToggleButtons } from './components/ToggleButtons';
 import { SettingsPanel } from './components/SettingsPanel';
 import { TradePartnerModal } from './components/TradePartnerModal';
 import type { TradePartner } from './components/TradePartnerModal';
 import { mapItemsToTradePartners } from './utils/tradePartners';
 import { DebouncedInput, DebouncedTextarea } from './components/DebouncedInput';
+import { useCalendar } from './hooks/useCalendar';
+import { formatCustomDate } from './utils/calendar/dateFormatting';
 
 // Token type group labels for favorites display
 const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
@@ -253,6 +257,18 @@ function App() {
   const [tradePartners, setTradePartners] = useState<TradePartner[]>([]);
   const [loadingTradePartners, setLoadingTradePartners] = useState(false);
 
+  // Rest notification state
+  const [preSelectedRestType, setPreSelectedRestType] = useState<RestType | null>(null);
+  const [showTimeAdvancementNotif, setShowTimeAdvancementNotif] = useState(false);
+  const [timeAdvancementData, setTimeAdvancementData] = useState<{
+    restType: RestType;
+    hoursAdvanced: number;
+    newDateTime: string;
+  } | null>(null);
+
+  // Calendar hook for time advancement
+  const { ready: calendarReady, config: calendarConfig, actions: calendarActions } = useCalendar();
+
   // Open separate trade window - defined early to be available in useEffect
   const openTradeWindow = (tradeId: string) => {
     // Prevent opening multiple windows for the same trade
@@ -385,6 +401,46 @@ function App() {
     await OBR.room.setMetadata(updates);
     alert('Legacy data cleaned up! Room metadata freed.');
     loadDebugInfo();
+  };
+
+  // --- REST NOTIFICATION HANDLERS ---
+  const handleRestNotificationConfirm = (restType: RestType) => {
+    // Set the pre-selected rest type
+    setPreSelectedRestType(restType);
+    // Switch to Home tab
+    setActiveTab('Home');
+  };
+
+  const handleRestNotificationAllConfirmed = (restType: RestType, hoursToAdvance: number) => {
+    // Advance calendar time
+    if (calendarReady && calendarActions.updateTime) {
+      const minutesToAdvance = hoursToAdvance * 60;
+      calendarActions.updateTime(minutesToAdvance);
+    }
+    
+    // Format the new date/time for the notification
+    if (calendarConfig) {
+      const newDate = calendarConfig.currentDate;
+      const formattedDate = formatCustomDate(calendarConfig, {
+        year: newDate.year,
+        monthIndex: newDate.monthIndex,
+        day: newDate.day,
+      });
+      const formattedTime = `${String(newDate.hour).padStart(2, '0')}:${String(newDate.minute).padStart(2, '0')}`;
+      const fullDateTime = `${formattedDate} at ${formattedTime}`;
+      
+      // Show time advancement notification
+      setTimeAdvancementData({
+        restType,
+        hoursAdvanced: hoursToAdvance,
+        newDateTime: fullDateTime,
+      });
+      setShowTimeAdvancementNotif(true);
+    }
+    
+    // Also redirect to Home tab with rest type pre-selected
+    setPreSelectedRestType(restType);
+    setActiveTab('Home');
   };
 
   // --- CORE UPDATE HANDLER ---
@@ -1481,6 +1537,8 @@ function App() {
             activeStorageDef={activeStorageDef}
             hasClaimedToken={!!playerClaimedTokenId}
             gmCustomizations={gmCustomizations || undefined}
+            preSelectedRestType={preSelectedRestType}
+            onRestTypeUsed={() => setPreSelectedRestType(null)}
           />
         )}
 
@@ -2349,6 +2407,29 @@ function App() {
         onAccept={handleAcceptTrade}
         onDecline={handleDeclineTrade}
       />
+
+      {/* Rest Notification */}
+      {ready && playerId && (
+        <RestNotification
+          onConfirm={handleRestNotificationConfirm}
+          onAllConfirmed={handleRestNotificationAllConfirmed}
+          isVisible={true}
+        />
+      )}
+
+      {/* Time Advancement Notification */}
+      {timeAdvancementData && (
+        <TimeAdvancementNotification
+          isVisible={showTimeAdvancementNotif}
+          onClose={() => {
+            setShowTimeAdvancementNotif(false);
+            setTimeAdvancementData(null);
+          }}
+          restType={timeAdvancementData.restType}
+          hoursAdvanced={timeAdvancementData.hoursAdvanced}
+          newDateTime={timeAdvancementData.newDateTime}
+        />
+      )}
 
       {/* Trade Modal - Now handled in separate window (see TradeWindow.tsx) */}
 

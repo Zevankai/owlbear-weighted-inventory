@@ -76,7 +76,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
       active = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [notification, onAllConfirmed]);
+  }, [onAllConfirmed]);
 
   const handleConfirm = async () => {
     if (!notification || hasResponded) return;

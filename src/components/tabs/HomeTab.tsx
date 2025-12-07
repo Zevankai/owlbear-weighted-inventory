@@ -33,6 +33,9 @@ const DESCRIPTION_WIDTH_EDITABLE = '100%';
 const MIN_LEVEL = 1;
 const MAX_LEVEL = 20;
 
+// Daily exhaustion check time (in-game hour, 0-23)
+const EXHAUSTION_CHECK_HOUR = 8;
+
 // Purple Collapsible Section Component
 interface PurpleCollapsibleSectionProps {
   title: string;
@@ -1587,8 +1590,14 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
   const [location, setLocation] = useState(scar.location);
   const [acquiredDate, setAcquiredDate] = useState<{ year: number; monthIndex: number; day: number } | undefined>(scar.acquiredDate);
   
-  // Note: State initialization moved to useState to avoid lint warning about setState in useEffect
-  // The modal is recreated each time it opens with a new scar, so this works correctly
+  // Sync state when scar prop changes (when editing a different scar)
+  // This is necessary because the modal reuses the same component instance
+  useEffect(() => {
+    setSource(scar.source);
+    setSize(scar.size);
+    setLocation(scar.location);
+    setAcquiredDate(scar.acquiredDate);
+  }, [scar.id, scar.source, scar.size, scar.location, scar.acquiredDate]);
   
   if (!isOpen) return null;
   
@@ -1827,10 +1836,14 @@ const ScarEditModal: React.FC<ScarEditModalProps> = ({
                 <input
                   type="number"
                   min={1}
-                  max={calendarConfig.months[acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex]?.days || 30}
+                  max={(() => {
+                    const monthIndex = acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex;
+                    return calendarConfig.months[monthIndex]?.days || 30;
+                  })()}
                   value={acquiredDate?.day ?? calendarConfig.currentDate.day}
                   onChange={(e) => {
-                    const maxDays = calendarConfig.months[acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex]?.days || 30;
+                    const monthIndex = acquiredDate?.monthIndex ?? calendarConfig.currentDate.monthIndex;
+                    const maxDays = calendarConfig.months[monthIndex]?.days || 30;
                     const day = Math.min(maxDays, Math.max(1, parseInt(e.target.value, 10) || 1));
                     setAcquiredDate({
                       year: acquiredDate?.year ?? calendarConfig.currentDate.year,
@@ -2035,8 +2048,8 @@ export function HomeTab({
     
     const currentDate = calendarConfig.currentDate;
     
-    // Only check at 8:00 AM (hour === 8)
-    if (currentDate.hour !== 8) {
+    // Only check at the configured exhaustion check hour
+    if (currentDate.hour !== EXHAUSTION_CHECK_HOUR) {
       return;
     }
     

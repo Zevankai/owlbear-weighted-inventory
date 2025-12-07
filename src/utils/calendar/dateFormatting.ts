@@ -76,19 +76,32 @@ export const calculateTimeElapsed = (
   totalMinutes += yearDiff * daysInYear * 24 * 60;
   
   // Calculate month difference within the same or different years
-  if (toDate.monthIndex > fromDate.monthIndex || yearDiff !== 0) {
+  if (yearDiff > 0) {
     // Add days from remaining months in the from year
-    for (let i = fromDate.monthIndex + 1; i < config.months.length && yearDiff >= 0; i++) {
+    for (let i = fromDate.monthIndex + 1; i < config.months.length; i++) {
       totalMinutes += config.months[i].days * 24 * 60;
+    }
+    // Add days from all complete years in between
+    for (let y = fromDate.year + 1; y < toDate.year; y++) {
+      for (let m = 0; m < config.months.length; m++) {
+        totalMinutes += config.months[m].days * 24 * 60;
+      }
     }
     // Add days from months in the to year
     for (let i = 0; i < toDate.monthIndex; i++) {
       totalMinutes += config.months[i].days * 24 * 60;
     }
-  } else if (toDate.monthIndex < fromDate.monthIndex) {
-    // Going backwards, subtract months
-    for (let i = toDate.monthIndex + 1; i < fromDate.monthIndex; i++) {
-      totalMinutes -= config.months[i].days * 24 * 60;
+  } else if (yearDiff === 0) {
+    // Same year, just handle month difference
+    if (toDate.monthIndex > fromDate.monthIndex) {
+      for (let i = fromDate.monthIndex + 1; i < toDate.monthIndex; i++) {
+        totalMinutes += config.months[i].days * 24 * 60;
+      }
+    } else if (toDate.monthIndex < fromDate.monthIndex) {
+      // Going backwards within same year
+      for (let i = toDate.monthIndex + 1; i < fromDate.monthIndex; i++) {
+        totalMinutes -= config.months[i].days * 24 * 60;
+      }
     }
   }
   

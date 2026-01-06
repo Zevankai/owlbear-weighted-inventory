@@ -228,12 +228,56 @@ export interface HitPoints {
 }
 
 // Spell types for spell management
+export type SpellSchool = 'abjuration' | 'conjuration' | 'divination' | 'enchantment' | 
+  'evocation' | 'illusion' | 'necromancy' | 'transmutation';
+
+export type SpellActionType = 'action' | 'bonusAction' | 'reaction';
+
+export type SpellComponent = 'v' | 's' | 'm';
+
+export type SpellCasterClass = 'bard' | 'cleric' | 'druid' | 'paladin' | 'ranger' | 
+  'sorcerer' | 'warlock' | 'wizard';
+
+export interface RepositorySpell {
+  name: string;
+  level: number;
+  school: SpellSchool;
+  classes: SpellCasterClass[];
+  actionType: SpellActionType;
+  concentration: boolean;
+  ritual: boolean;
+  castingTime?: string;
+  castingTrigger?: string;
+  range: string;
+  components: SpellComponent[];
+  material?: string;
+  duration: string;
+  description: string;
+  cantripUpgrade?: string;
+  higherLevelSlot?: string;
+}
+
 export interface Spell {
   id: string;
   name: string;
   level: number;       // 0 for cantrips, 1-9 for spell levels
   description: string;
   prepared?: boolean;  // Is this spell currently prepared/equipped?
+  school?: SpellSchool;
+  classes?: SpellCasterClass[];
+  actionType?: SpellActionType;
+  concentration?: boolean;
+  ritual?: boolean;
+  castingTime?: string;
+  castingTrigger?: string;
+  range?: string;
+  components?: SpellComponent[];
+  material?: string;
+  duration?: string;
+  cantripUpgrade?: string;
+  higherLevelSlot?: string;
+  notes?: string;
+  fromRepository?: boolean;
 }
 
 export interface SpellSlots {

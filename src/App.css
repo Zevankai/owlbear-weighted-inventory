@@ -841,6 +841,459 @@ button.action-btn:hover {
   color: var(--accent-gold);
 }
 
+/* Spell School Indicators */
+.spell-school-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.spell-info-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spell-notes-indicator {
+  font-size: 10px;
+  margin-left: 4px;
+}
+
+.spell-prepared-toggle.cantrip {
+  font-size: 10px;
+  font-weight: bold;
+  padding: 2px 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  cursor: default;
+}
+
+/* Spell Repository Section */
+.spell-repository-section {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 12px;
+  border: 1px solid var(--glass-border);
+}
+
+.repository-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.spell-search {
+  flex: 1;
+}
+
+.filter-select {
+  flex: 1;
+  min-width: 120px;
+}
+
+.filter-toggles {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.filter-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.filter-toggle input {
+  accent-color: var(--accent-gold);
+}
+
+.clear-filters-btn {
+  background: rgba(255, 77, 77, 0.2);
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.clear-filters-btn:hover {
+  background: rgba(255, 77, 77, 0.3);
+}
+
+.repository-spell-results {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.results-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  text-align: center;
+}
+
+.repository-level-group {
+  margin-bottom: 12px;
+}
+
+.repository-level-header {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--accent-gold);
+  border-bottom: 1px solid var(--border-bright);
+  padding-bottom: 4px;
+}
+
+.repository-spell-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.repository-spell-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.repository-spell-item:hover {
+  background: rgba(0, 0, 0, 0.4);
+  transform: translateX(4px);
+}
+
+.repository-spell-item.known {
+  opacity: 0.6;
+}
+
+.spell-item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.spell-item-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spell-item-name {
+  font-size: 12px;
+  color: var(--text-main);
+  font-weight: 500;
+}
+
+.known-badge {
+  font-size: 9px;
+  padding: 2px 6px;
+  background: rgba(77, 255, 136, 0.2);
+  color: var(--success);
+  border: 1px solid var(--success);
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spell-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.spell-meta-tag {
+  font-size: 9px;
+  padding: 2px 4px;
+  background: rgba(240, 225, 48, 0.2);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+  border-radius: 2px;
+  font-weight: bold;
+}
+
+.spell-meta-text {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+/* Spell Detail Modal */
+.spell-detail-modal {
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.spell-detail-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.spell-detail-name {
+  margin: 0;
+  font-size: 18px;
+  color: var(--text-main);
+}
+
+.spell-detail-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.spell-school-badge {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: bold;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spell-level-text {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.spell-tag {
+  font-size: 9px;
+  padding: 2px 6px;
+  background: rgba(240, 225, 48, 0.2);
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+  border-radius: 2px;
+  font-weight: bold;
+}
+
+.concentration-tag {
+  background: rgba(240, 130, 48, 0.2);
+  color: #f08230;
+  border-color: #f08230;
+}
+
+.ritual-tag {
+  background: rgba(130, 130, 240, 0.2);
+  color: #8282f0;
+  border-color: #8282f0;
+}
+
+.spell-detail-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.spell-properties {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+.spell-property {
+  font-size: 11px;
+  color: var(--text-main);
+  line-height: 1.6;
+}
+
+.spell-property strong {
+  color: var(--accent-gold);
+  margin-right: 6px;
+}
+
+.spell-trigger {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding-left: 12px;
+}
+
+.spell-description-section h3,
+.spell-upgrade-section h4,
+.spell-notes-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--accent-gold);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.spell-description,
+.spell-upgrade-text {
+  font-size: 11px;
+  color: var(--text-main);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.spell-upgrade-section {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  border-left: 3px solid var(--accent-gold);
+}
+
+.spell-notes-section {
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+}
+
+.spell-notes-input {
+  width: 100%;
+  min-height: 80px;
+  resize: vertical;
+  font-size: 11px;
+}
+
+.spell-notes-display {
+  font-size: 11px;
+  color: var(--text-main);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Modal Overlay and Content */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--bg-panel);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  max-width: 90%;
+}
+
+.modal-header {
+  margin-bottom: 16px;
+}
+
+.modal-body {
+  margin-bottom: 16px;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  transition: all 0.2s ease;
+}
+
+.modal-close-btn:hover {
+  color: var(--danger);
+  transform: scale(1.1);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--glass-border);
+}
+
+.spell-action-btn {
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.spell-action-btn.add-to-spellbook {
+  background: var(--accent-gold);
+  color: #000;
+  border: none;
+}
+
+.spell-action-btn.add-to-spellbook:hover {
+  filter: brightness(1.1);
+  transform: translateY(-2px);
+}
+
+.spell-action-btn.disabled {
+  background: #666;
+  color: #333;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.spell-action-btn.cancel-btn {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  border: 1px solid var(--glass-border);
+}
+
+.spell-action-btn.cancel-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.prepared-spell-item {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.prepared-spell-item:hover {
+  transform: translateX(2px);
+  background: rgba(240, 225, 48, 0.15);
+}
+
 /* --- HP Color Classes (standalone) --- */
 .hp-healthy {
   color: #4dff88;

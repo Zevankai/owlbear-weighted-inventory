@@ -6,12 +6,10 @@ import { createDefaultSpellManagement, getDefaultSpellSlots } from '../../utils/
 import { CollapsibleSection } from '../CollapsibleSection';
 import { SpellDetailModal } from '../SpellDetailModal';
 import { 
-  SPELL_REPOSITORY, 
   searchSpells, 
   getSpellSchools, 
   getSpellClasses,
   getSpellSchoolColor,
-  getSpellLevelName,
   type SpellFilters 
 } from '../../data/spellRepository';
 

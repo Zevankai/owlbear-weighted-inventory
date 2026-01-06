@@ -1,9 +1,19 @@
 import React, { useState } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import type { CharacterData, Spell, SpellManagement } from '../../types';
+import type { CharacterData, Spell, SpellManagement, RepositorySpell, SpellSchool, SpellCasterClass } from '../../types';
 import { DebouncedInput, DebouncedTextarea } from '../DebouncedInput';
 import { createDefaultSpellManagement, getDefaultSpellSlots } from '../../utils/characterSheet';
 import { CollapsibleSection } from '../CollapsibleSection';
+import { SpellDetailModal } from '../SpellDetailModal';
+import { 
+  SPELL_REPOSITORY, 
+  searchSpells, 
+  getSpellSchools, 
+  getSpellClasses,
+  getSpellSchoolColor,
+  getSpellLevelName,
+  type SpellFilters 
+} from '../../data/spellRepository';
 
 interface SpellsTabProps {
   characterData: CharacterData;
@@ -44,6 +54,18 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
 }) => {
   const [editingSpellId, setEditingSpellId] = useState<string | null>(null);
   const [newSpellLevel, setNewSpellLevel] = useState<number>(0);
+  
+  // Repository search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterLevel, setFilterLevel] = useState<number | null>(null);
+  const [filterSchool, setFilterSchool] = useState<SpellSchool | null>(null);
+  const [filterClass, setFilterClass] = useState<SpellCasterClass | null>(null);
+  const [filterConcentration, setFilterConcentration] = useState(false);
+  const [filterRitual, setFilterRitual] = useState(false);
+  
+  // Modal state
+  const [viewingSpell, setViewingSpell] = useState<Spell | RepositorySpell | null>(null);
+  const [viewingFromRepository, setViewingFromRepository] = useState(false);
 
   const sheet = characterData.characterSheet;
   if (!sheet) return null;
@@ -152,7 +174,69 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
     }
   };
 
+  // Add spell from repository to spellbook
+  const addSpellFromRepository = (repoSpell: RepositorySpell) => {
+    const newSpell: Spell = {
+      id: uuidv4(),
+      name: repoSpell.name,
+      level: repoSpell.level,
+      description: repoSpell.description,
+      prepared: false,
+      school: repoSpell.school,
+      classes: repoSpell.classes,
+      actionType: repoSpell.actionType,
+      concentration: repoSpell.concentration,
+      ritual: repoSpell.ritual,
+      castingTime: repoSpell.castingTime,
+      castingTrigger: repoSpell.castingTrigger,
+      range: repoSpell.range,
+      components: repoSpell.components,
+      material: repoSpell.material,
+      duration: repoSpell.duration,
+      cantripUpgrade: repoSpell.cantripUpgrade,
+      higherLevelSlot: repoSpell.higherLevelSlot,
+      notes: '',
+      fromRepository: true,
+    };
+    updateSpellManagement({
+      knownSpells: [...spellManagement.knownSpells, newSpell],
+    });
+    setViewingSpell(null);
+  };
+
+  // Check if spell is already known
+  const isSpellKnown = (spellName: string): boolean => {
+    return spellManagement.knownSpells.some(s => 
+      s.name.toLowerCase() === spellName.toLowerCase()
+    );
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery('');
+    setFilterLevel(null);
+    setFilterSchool(null);
+    setFilterClass(null);
+    setFilterConcentration(false);
+    setFilterRitual(false);
+  };
+
+  // Get filtered repository spells
+  const getFilteredSpells = (): RepositorySpell[] => {
+    const filters: SpellFilters = {
+      query: searchQuery,
+      level: filterLevel,
+      school: filterSchool,
+      class: filterClass,
+      concentration: filterConcentration,
+      ritual: filterRitual,
+    };
+    return searchSpells(filters);
+  };
+
   const groupedSpells = groupSpellsByLevel(spellManagement.knownSpells);
+  const filteredRepoSpells = getFilteredSpells();
+  const groupedRepoSpells = groupSpellsByLevel(filteredRepoSpells);
 
   // Render slot circles
   const renderSlotCircles = (spellLevel: number) => {
@@ -236,6 +320,147 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
         </div>
       </div>
 
+      {/* Spell Repository Section */}
+      <CollapsibleSection title="Spell Repository" defaultExpanded={false}>
+        <div className="spell-repository-section">
+          {/* Search and Filter Controls */}
+          <div className="repository-filters">
+            {/* Search Input */}
+            <div className="filter-row">
+              <DebouncedInput
+                value={searchQuery}
+                onChange={setSearchQuery}
+                className="search-input spell-search"
+                placeholder="Search spells by name or description..."
+              />
+            </div>
+
+            {/* Filter Controls */}
+            <div className="filter-row">
+              <select
+                value={filterLevel ?? ''}
+                onChange={(e) => setFilterLevel(e.target.value ? parseInt(e.target.value) : null)}
+                className="search-input filter-select"
+              >
+                <option value="">All Levels</option>
+                {Object.entries(SPELL_LEVEL_NAMES).map(([lvl, name]) => (
+                  <option key={lvl} value={lvl}>{name}</option>
+                ))}
+              </select>
+
+              <select
+                value={filterSchool ?? ''}
+                onChange={(e) => setFilterSchool(e.target.value as SpellSchool || null)}
+                className="search-input filter-select"
+              >
+                <option value="">All Schools</option>
+                {getSpellSchools().map(school => (
+                  <option key={school} value={school}>
+                    {school.charAt(0).toUpperCase() + school.slice(1)}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={filterClass ?? ''}
+                onChange={(e) => setFilterClass(e.target.value as SpellCasterClass || null)}
+                className="search-input filter-select"
+              >
+                <option value="">All Classes</option>
+                {getSpellClasses().map(cls => (
+                  <option key={cls} value={cls}>
+                    {cls.charAt(0).toUpperCase() + cls.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Toggle Filters */}
+            <div className="filter-row filter-toggles">
+              <label className="filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={filterConcentration}
+                  onChange={(e) => setFilterConcentration(e.target.checked)}
+                />
+                <span>Concentration Only</span>
+              </label>
+              <label className="filter-toggle">
+                <input
+                  type="checkbox"
+                  checked={filterRitual}
+                  onChange={(e) => setFilterRitual(e.target.checked)}
+                />
+                <span>Ritual Only</span>
+              </label>
+              <button onClick={clearFilters} className="clear-filters-btn">
+                Clear Filters
+              </button>
+            </div>
+          </div>
+
+          {/* Repository Spell List */}
+          <div className="repository-spell-results">
+            <p className="results-count">
+              {filteredRepoSpells.length} spell{filteredRepoSpells.length !== 1 ? 's' : ''} found
+            </p>
+            
+            {Object.entries(groupedRepoSpells).map(([levelStr, repoSpells]) => {
+              const lvl = parseInt(levelStr);
+              if (repoSpells.length === 0) return null;
+
+              return (
+                <div key={lvl} className="repository-level-group">
+                  <h4 className="repository-level-header">{SPELL_LEVEL_NAMES[lvl]}</h4>
+                  <div className="repository-spell-list">
+                    {repoSpells.map((spell, index) => {
+                      const known = isSpellKnown(spell.name);
+                      const schoolColor = getSpellSchoolColor(spell.school);
+
+                      return (
+                        <div 
+                          key={`${spell.name}-${index}`}
+                          className={`repository-spell-item ${known ? 'known' : ''}`}
+                          onClick={() => {
+                            setViewingSpell(spell);
+                            setViewingFromRepository(true);
+                          }}
+                        >
+                          <div
+                            className="spell-school-dot"
+                            style={{ backgroundColor: schoolColor }}
+                            title={spell.school}
+                          />
+                          <div className="spell-item-content">
+                            <div className="spell-item-header">
+                              <span className="spell-item-name">{spell.name}</span>
+                              {known && <span className="known-badge">Known</span>}
+                            </div>
+                            <div className="spell-item-meta">
+                              {spell.concentration && <span className="spell-meta-tag">C</span>}
+                              {spell.ritual && <span className="spell-meta-tag">R</span>}
+                              <span className="spell-meta-text">
+                                {spell.school.charAt(0).toUpperCase() + spell.school.slice(1)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+
+            {filteredRepoSpells.length === 0 && (
+              <p className="no-spells-message">
+                No spells match your search criteria. Try adjusting your filters.
+              </p>
+            )}
+          </div>
+        </div>
+      </CollapsibleSection>
+
       {/* Prepared Spells Section */}
       <CollapsibleSection title="Prepared Spells" defaultExpanded={true}>
         <div className="prepared-spells-section">
@@ -244,13 +469,31 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
           ) : (
             <div className="prepared-spells-list">
               {spellManagement.knownSpells.filter(s => s.prepared).map(spell => (
-                <div key={spell.id} className="prepared-spell-item">
+                <div 
+                  key={spell.id} 
+                  className="prepared-spell-item"
+                  onClick={() => {
+                    setViewingSpell(spell);
+                    setViewingFromRepository(false);
+                  }}
+                >
+                  {spell.school && (
+                    <div
+                      className="spell-school-dot"
+                      style={{ backgroundColor: getSpellSchoolColor(spell.school) }}
+                      title={spell.school}
+                    />
+                  )}
                   <span className="prepared-spell-level">{spell.level === 0 ? 'C' : spell.level}</span>
                   <span className="prepared-spell-name">{spell.name}</span>
+                  {spell.notes && <span className="spell-notes-indicator" title="Has notes">📝</span>}
                   {canEdit && (
                     <button
                       className="unprepare-btn"
-                      onClick={() => togglePrepared(spell.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePrepared(spell.id);
+                      }}
                       title="Unprepare spell"
                     >
                       ✕
@@ -339,14 +582,31 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
                       ) : (
                         <div className="spell-display">
                           <div
-                            className={`spell-prepared-toggle ${spell.prepared ? 'prepared' : ''}`}
-                            onClick={() => canEdit && togglePrepared(spell.id)}
-                            title={spell.prepared ? 'Click to unprepare' : 'Click to prepare'}
+                            className={`spell-prepared-toggle ${spell.prepared ? 'prepared' : ''} ${spell.level === 0 ? 'cantrip' : ''}`}
+                            onClick={() => canEdit && spell.level !== 0 && togglePrepared(spell.id)}
+                            title={spell.level === 0 ? 'Cantrip (always available)' : (spell.prepared ? 'Click to unprepare' : 'Click to prepare')}
+                            style={{ cursor: spell.level === 0 ? 'default' : (canEdit ? 'pointer' : 'default') }}
                           >
-                            {spell.prepared ? '◆' : '◇'}
+                            {spell.level === 0 ? 'C' : (spell.prepared ? '◆' : '◇')}
                           </div>
-                          <div className="spell-info" onClick={() => canEdit && setEditingSpellId(spell.id)}>
-                            <span className="spell-name">{spell.name}</span>
+                          <div 
+                            className="spell-info" 
+                            onClick={() => {
+                              setViewingSpell(spell);
+                              setViewingFromRepository(false);
+                            }}
+                          >
+                            <div className="spell-info-header">
+                              {spell.school && (
+                                <div
+                                  className="spell-school-dot"
+                                  style={{ backgroundColor: getSpellSchoolColor(spell.school) }}
+                                  title={spell.school}
+                                />
+                              )}
+                              <span className="spell-name">{spell.name}</span>
+                              {spell.notes && <span className="spell-notes-indicator" title="Has notes">📝</span>}
+                            </div>
                             {spell.description && (
                               <span className="spell-description-preview">
                                 {spell.description.substring(0, 50)}{spell.description.length > 50 ? '...' : ''}
@@ -355,7 +615,10 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
                           </div>
                           {canEdit && (
                             <button
-                              onClick={() => setEditingSpellId(spell.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingSpellId(spell.id);
+                              }}
                               className="spell-edit-btn"
                               title="Edit spell"
                             >
@@ -372,6 +635,19 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
           })}
         </div>
       </CollapsibleSection>
+
+      {/* Spell Detail Modal */}
+      {viewingSpell && (
+        <SpellDetailModal
+          spell={viewingSpell}
+          isFromRepository={viewingFromRepository}
+          onClose={() => setViewingSpell(null)}
+          onAddToSpellbook={viewingFromRepository ? () => addSpellFromRepository(viewingSpell as RepositorySpell) : undefined}
+          onUpdateNotes={!viewingFromRepository && 'id' in viewingSpell ? (notes) => updateSpell(viewingSpell.id, { notes }) : undefined}
+          canEdit={canEdit}
+          isAlreadyKnown={viewingFromRepository ? isSpellKnown(viewingSpell.name) : false}
+        />
+      )}
     </div>
   );
 };

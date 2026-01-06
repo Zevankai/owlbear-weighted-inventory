@@ -10,6 +10,7 @@ import {
   getSpellSchools, 
   getSpellClasses,
   getSpellSchoolColor,
+  getSpellLevelName,
   type SpellFilters 
 } from '../../data/spellRepository';
 
@@ -19,9 +20,9 @@ interface SpellsTabProps {
   updateData: (updates: Partial<CharacterData>) => void;
 }
 
-// Group spells by level
-const groupSpellsByLevel = (spells: Spell[]): Record<number, Spell[]> => {
-  const grouped: Record<number, Spell[]> = {};
+// Group spells by level - works with both Spell and RepositorySpell
+const groupSpellsByLevel = <T extends { level: number }>(spells: T[]): Record<number, T[]> => {
+  const grouped: Record<number, T[]> = {};
   for (let i = 0; i <= 9; i++) {
     grouped[i] = [];
   }
@@ -32,18 +33,11 @@ const groupSpellsByLevel = (spells: Spell[]): Record<number, Spell[]> => {
   return grouped;
 };
 
-const SPELL_LEVEL_NAMES: Record<number, string> = {
-  0: 'Cantrips',
-  1: '1st Level',
-  2: '2nd Level',
-  3: '3rd Level',
-  4: '4th Level',
-  5: '5th Level',
-  6: '6th Level',
-  7: '7th Level',
-  8: '8th Level',
-  9: '9th Level',
-};
+// Spell level options for dropdowns (0-9)
+const SPELL_LEVEL_OPTIONS = Array.from({ length: 10 }, (_, i) => ({
+  value: i,
+  label: getSpellLevelName(i)
+}));
 
 export const SpellsTab: React.FC<SpellsTabProps> = ({
   characterData,
@@ -293,7 +287,7 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
                 key={spellLevel}
                 className={`spell-slot-row ${hasSlots ? 'active' : 'inactive'}`}
               >
-                <span className="spell-slot-level">{SPELL_LEVEL_NAMES[spellLevel]}</span>
+                <span className="spell-slot-level">{getSpellLevelName(spellLevel)}</span>
                 {spellManagement.useCustomSlots && canEdit ? (
                   <div className="spell-slot-max-edit">
                     <label>Max:</label>
@@ -341,8 +335,8 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
                 className="search-input filter-select"
               >
                 <option value="">All Levels</option>
-                {Object.entries(SPELL_LEVEL_NAMES).map(([lvl, name]) => (
-                  <option key={lvl} value={lvl}>{name}</option>
+                {SPELL_LEVEL_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
                 ))}
               </select>
 
@@ -409,7 +403,7 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
 
               return (
                 <div key={lvl} className="repository-level-group">
-                  <h4 className="repository-level-header">{SPELL_LEVEL_NAMES[lvl]}</h4>
+                  <h4 className="repository-level-header">{getSpellLevelName(lvl)}</h4>
                   <div className="repository-spell-list">
                     {repoSpells.map((spell, index) => {
                       const known = isSpellKnown(spell.name);
@@ -515,8 +509,8 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
                 onChange={(e) => setNewSpellLevel(parseInt(e.target.value))}
                 className="search-input add-spell-level-select"
               >
-                {Object.entries(SPELL_LEVEL_NAMES).map(([lvl, name]) => (
-                  <option key={lvl} value={lvl}>{name}</option>
+                {SPELL_LEVEL_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>{label}</option>
                 ))}
               </select>
               <button onClick={addSpell} className="add-spell-btn">
@@ -532,7 +526,7 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
 
             return (
               <div key={lvl} className="spellbook-level-group">
-                <h4 className="spellbook-level-header">{SPELL_LEVEL_NAMES[lvl]}</h4>
+                <h4 className="spellbook-level-header">{getSpellLevelName(lvl)}</h4>
                 <div className="spellbook-spell-list">
                   {spells.map(spell => (
                     <div key={spell.id} className="spellbook-spell-item">
@@ -550,8 +544,8 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
                               onChange={(e) => updateSpell(spell.id, { level: parseInt(e.target.value) })}
                               className="search-input spell-level-select"
                             >
-                              {Object.entries(SPELL_LEVEL_NAMES).map(([lvl, name]) => (
-                                <option key={lvl} value={lvl}>{name}</option>
+                              {SPELL_LEVEL_OPTIONS.map(({ value, label }) => (
+                                <option key={value} value={value}>{label}</option>
                               ))}
                             </select>
                           </div>

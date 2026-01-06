@@ -38,7 +38,7 @@ export const SpellDetailModal: React.FC<SpellDetailModalProps> = ({
 
   // Format casting time
   const formatCastingTime = () => {
-    const actionTypeLabels: Record<string, string> = {
+    const actionTypeLabels: Record<import('../types').SpellActionType, string> = {
       action: '1 action',
       bonusAction: '1 bonus action',
       reaction: '1 reaction',

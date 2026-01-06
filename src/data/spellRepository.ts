@@ -203,7 +203,7 @@ export const SPELL_REPOSITORY: RepositorySpell[] = [
     higherLevelSlot: "When you cast this spell using a spell slot of 2nd level or higher, you can target one additional creature for each slot level above 1st. The creatures must be within 30 feet of each other when you target them."
   },
 
-  // --- 2ND LEVEL SPELLS ---
+  // --- 3RD LEVEL SPELLS ---
   {
     name: "Fireball",
     level: 3,

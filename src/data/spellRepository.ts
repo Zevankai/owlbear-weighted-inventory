@@ -7,7 +7,6 @@ import type { RepositorySpell, SpellSchool, SpellCasterClass } from '../types';
  * The full 319-spell repository should replace this data when available.
  */
 export const SPELL_REPOSITORY: RepositorySpell[] = [
-[
 	{
 		"name": "Acid Splash",
 		"level": 0,

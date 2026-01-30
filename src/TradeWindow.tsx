@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import OBR from '@owlbear-rodeo/sdk';
 import { TradeModal } from './components/TradeModal';
 import type { ActiveTrade, CharacterData, Item, Currency } from './types';
-import { getTotalCopperPieces, deductCopperPieces, addCopperPieces } from './utils/currency';
+import { getTotalCopperPieces, deductCopperPieces, addCopperPieces, ensureCurrency } from './utils/currency';
+import { waitForOBR } from './utils/obr';
 import { ACTIVE_TRADE_KEY, TRADE_POPOVER_ID } from './constants';
 
 export default function TradeWindow() {
@@ -14,11 +15,12 @@ export default function TradeWindow() {
 
   // Initialize OBR and get player info
   useEffect(() => {
-    OBR.onReady(async () => {
+    (async () => {
+      await waitForOBR();
       const id = await OBR.player.getId();
       setPlayerId(id);
       setLoading(false);
-    });
+    })();
   }, []);
 
   // Poll for trade updates and token data
@@ -235,8 +237,8 @@ export default function TradeWindow() {
           });
 
           // Ensure currency objects exist
-          if (!player1Data.currency) player1Data.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
-          if (!player2Data.currency) player2Data.currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
+          if (!player1Data.currency) player1Data.currency = ensureCurrency();
+          if (!player2Data.currency) player2Data.currency = ensureCurrency();
 
           // Get coin offers
           const p1CoinsOffered = trade.player1OfferedCoins || { cp: 0, sp: 0, gp: 0, pp: 0 };
@@ -333,9 +335,9 @@ export default function TradeWindow() {
         activeTrade={activeTrade}
         playerId={playerId}
         playerInventory={playerData.inventory || []}
-        playerCurrency={playerData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 }}
+        playerCurrency={ensureCurrency(playerData.currency)}
         otherPlayerInventory={otherPlayerData.inventory || []}
-        otherPlayerCurrency={otherPlayerData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 }}
+        otherPlayerCurrency={ensureCurrency(otherPlayerData.currency)}
         myOfferedItems={myOfferedItems}
         myOfferedCoins={myOfferedCoins}
         theirOfferedItems={theirOfferedItems}

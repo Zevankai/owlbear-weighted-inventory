@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import OBR from '@owlbear-rodeo/sdk';
 import type { RestType } from '../types';
 import { REST_NOTIFICATION_KEY, type RestNotificationData } from '../utils/restNotifications';
+import { waitForOBR } from '../utils/obr';
 
 interface RestNotificationProps {
   onConfirm: (restType: RestType) => void;
@@ -23,7 +24,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
     let active = true;
 
     const getPlayerId = async () => {
-      await new Promise<void>(resolve => OBR.onReady(() => resolve()));
+      await waitForOBR();
       if (!active) return;
 
       const id = await OBR.player.getId();
@@ -47,7 +48,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
     let unsubscribe: (() => void) | undefined;
 
     const setup = async () => {
-      await new Promise<void>(resolve => OBR.onReady(() => resolve()));
+      await waitForOBR();
       if (!active) return;
 
       unsubscribe = OBR.room.onMetadataChange((metadata) => {

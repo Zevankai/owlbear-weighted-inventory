@@ -6,7 +6,7 @@ import './App.css';
 // Data & Types
 import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
-import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID, WIDE_POPOVER_WIDTH } from './constants';
+import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID, WIDE_POPOVER_WIDTH, TOKEN_TYPE_LABELS, TOKEN_TYPE_ORDER } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry, TokenType, RestType } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
@@ -17,6 +17,8 @@ import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/l
 // Utilities
 import { hexToRgb } from './utils/color';
 import { parseMarkdown } from './utils/markdown';
+import { ensureCurrency, formatCurrency } from './utils/currency';
+import { waitForOBR } from './utils/obr';
 // Currency utilities moved to TradeWindow.tsx
 
 // Components
@@ -39,24 +41,7 @@ import { mapItemsToTradePartners } from './utils/tradePartners';
 import { DebouncedInput, DebouncedTextarea } from './components/DebouncedInput';
 import { useCalendar } from './hooks/useCalendar';
 import { formatCustomDate } from './utils/calendar/dateFormatting';
-
-// Token type group labels for favorites display
-const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
-  player: 'Player Tokens',
-  npc: 'NPC Tokens',
-  party: 'Party Tokens',
-  lore: 'Lore Tokens'
-};
-
-// Token type display order for favorites grouping
-const TOKEN_TYPE_ORDER: TokenType[] = ['player', 'npc', 'party', 'lore'];
-
-// Markdown formatting hint component
-const MarkdownHint = () => (
-  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
-    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
-  </span>
-);
+import { MarkdownHint } from './components/MarkdownHint';
 
 function App() {
   const [activeTab, setActiveTab] = useState<Tab>('Home');
@@ -285,7 +270,10 @@ function App() {
   };
 
   useEffect(() => {
-    OBR.onReady(() => setReady(true));
+    (async () => {
+      await waitForOBR();
+      setReady(true);
+    })();
   }, []);
 
   // Load active trade from room metadata
@@ -2293,18 +2281,23 @@ function App() {
                     <h3 style={{fontSize:'14px', color:'var(--accent-gold)', marginTop:0}}>VAULTS (BANKS)</h3>
                     {characterData.vaults.length === 0 && <p style={{fontSize:'11px', color:'#666'}}>No vaults created.</p>}
                     {characterData.vaults.map(vault => {
-                        // Fallback for legacy vaults
-                        const vCurrency = vault.currency || { cp: 0, sp: 0, gp: (vault as any).amount || 0, pp: 0 };
+                        // Handle legacy vault format (old vaults stored amount instead of currency)
+                        let vCurrency: Currency;
+                        if (vault.currency) {
+                            vCurrency = vault.currency;
+                        } else if ((vault as any).amount) {
+                            // Legacy vault with single amount value - assume it's gold
+                            vCurrency = { cp: 0, sp: 0, gp: (vault as any).amount, pp: 0 };
+                        } else {
+                            vCurrency = ensureCurrency();
+                        }
+                        
                         return (
                         <div key={vault.id} style={{background:'rgba(255,255,255,0.05)', padding:'8px', borderRadius:'4px', marginBottom:'8px'}}>
                             <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}>
                                 <div style={{fontWeight:'bold', color:'var(--text-main)'}}>{vault.name}</div>
                                 <div style={{fontWeight:'bold', color:'var(--accent-gold)'}}>
-                                    {vCurrency.gp > 0 ? `${vCurrency.gp} GP ` : ''}
-                                    {vCurrency.sp > 0 ? `${vCurrency.sp} SP ` : ''}
-                                    {vCurrency.cp > 0 ? `${vCurrency.cp} CP ` : ''}
-                                    {vCurrency.pp > 0 ? `${vCurrency.pp} PP` : ''}
-                                    {Object.values(vCurrency).every(v => v===0) ? 'Empty' : ''}
+                                    {formatCurrency(vCurrency)}
                                 </div>
                             </div>
                             <div style={{display:'flex', gap:'4px'}}>

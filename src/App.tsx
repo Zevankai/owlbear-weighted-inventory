@@ -1010,7 +1010,8 @@ function App() {
                   player: '#4a9eff',
                   npc: '#ff9800',
                   party: '#4caf50',
-                  lore: '#9c27b0'
+                  lore: '#9c27b0',
+                  monster: '#e53935'
                 };
                 
                 return (

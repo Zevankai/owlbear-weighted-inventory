@@ -5,7 +5,7 @@ export type Currency = {
   pp: number;
 };
 
-export type TokenType = 'player' | 'npc' | 'party' | 'lore';
+export type TokenType = 'player' | 'npc' | 'party' | 'lore' | 'monster';
 
 export interface Theme {
   accent: string;
@@ -521,8 +521,28 @@ export interface CharacterStats {
   superiorityDice?: SuperiorityDice; // Superiority dice for combat
 }
 
+// Monster system types
+export interface MonsterLootEntry {
+  id: string;
+  content: string;
+  order: number;
+}
+
+export interface MonsterActionEntry {
+  id: string;
+  content: string;
+  order: number;
+}
+
+export interface MonsterSettings {
+  lootEntries: MonsterLootEntry[];
+  actionEntries: MonsterActionEntry[];
+  lootVisibleToPlayers: boolean; // GM can toggle this manually
+  actionsVisibleToPlayers: boolean; // GM can toggle this manually
+}
+
 export interface CharacterData {
-  tokenType: TokenType;  // Type of token: player (default), npc, party, or lore
+  tokenType: TokenType;  // Type of token: player (default), npc, party, lore, or monster
   packType: PackType;
   inventory: Item[];
   currency: Currency;
@@ -538,6 +558,7 @@ export interface CharacterData {
   loreContent?: string;   // Main lore text for lore tokens
   gmNotes?: string;       // GM-only notes (hidden from players)
   loreSettings?: LoreSettings;  // Lore system settings (only for tokenType === 'lore')
+  monsterSettings?: MonsterSettings;  // Monster settings (only for tokenType === 'monster')
   name?: string;  // Custom display name (overrides token name, GM-editable for lore tokens)
   characterSheet?: CharacterSheet;  // D&D 5e character sheet (optional for backwards compatibility)
   characterStats?: CharacterStats;  // New unified character stats

@@ -8,7 +8,7 @@ import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID, WIDE_POPOVER_WIDTH, TOKEN_TYPE_LABELS, TOKEN_TYPE_ORDER } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry, TokenType, RestType } from './types';
+import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry, TokenType, RestType, MonsterSettings } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
 
 // Lore constants
@@ -19,6 +19,7 @@ import { hexToRgb } from './utils/color';
 import { parseMarkdown } from './utils/markdown';
 import { ensureCurrency, formatCurrency } from './utils/currency';
 import { waitForOBR } from './utils/obr';
+import { isMonsterDead } from './utils/monsterStatus';
 // Currency utilities moved to TradeWindow.tsx
 
 // Components
@@ -29,6 +30,8 @@ import { LoreTab } from './components/tabs/LoreTab';
 import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
 import { SpellsTab } from './components/tabs/SpellsTab';
 import { CalendarTab } from './components/tabs/CalendarTab';
+import { MonsterLootTab } from './components/tabs/MonsterLootTab';
+import { MonsterActionsTab } from './components/tabs/MonsterActionsTab';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { RestNotification } from './components/RestNotification';
@@ -1010,7 +1013,8 @@ function App() {
                   player: '#4a9eff',
                   npc: '#ff9800',
                   party: '#4caf50',
-                  lore: '#9c27b0'
+                  lore: '#9c27b0',
+                  monster: '#e53935'
                 };
                 
                 return (
@@ -1431,6 +1435,47 @@ function App() {
     visibleTabs = [];
   }
 
+  // Monster tokens have special tab handling
+  if (characterData?.tokenType === 'monster') {
+    // Initialize monster settings if not present
+    if (!characterData.monsterSettings) {
+      const defaultMonsterSettings: MonsterSettings = {
+        lootEntries: [],
+        actionEntries: [],
+        lootVisibleToPlayers: false,
+        actionsVisibleToPlayers: false,
+      };
+      updateData({ monsterSettings: defaultMonsterSettings });
+    }
+
+    // For GM: Show Home, Loot, Actions tabs
+    if (playerRole === 'GM') {
+      visibleTabs = [
+        { id: 'Home', label: '||' },
+        { id: 'GM', label: 'LOOT' },
+        { id: 'Reputation', label: 'ACTIONS' }
+      ];
+    } else {
+      // For players: Start with Home tab only
+      visibleTabs = [{ id: 'Home', label: '||' }];
+      
+      if (characterData.monsterSettings) {
+        const sheet = characterData.characterSheet || { hitPoints: { current: 0, max: 1 } };
+        const isDead = isMonsterDead(sheet.hitPoints?.current || 0);
+        
+        // Show Loot tab if monster is dead OR GM has enabled it
+        if (isDead || characterData.monsterSettings.lootVisibleToPlayers) {
+          visibleTabs.push({ id: 'GM', label: 'LOOT' });
+        }
+        
+        // Show Actions tab only if GM has enabled it
+        if (characterData.monsterSettings.actionsVisibleToPlayers) {
+          visibleTabs.push({ id: 'Reputation', label: 'ACTIONS' });
+        }
+      }
+    }
+  }
+
   const activeStorageDef = viewingStorageId ? STORAGE_DEFINITIONS[characterData.externalStorages.find(s => s.id === viewingStorageId)!.type] : null;
 
   // Handler for updating lore entries
@@ -1445,6 +1490,18 @@ function App() {
       loreSettings: {
         ...characterData.loreSettings,
         tabs: updatedTabs,
+      },
+    });
+  };
+
+  // Handler for updating monster settings
+  const handleUpdateMonsterSettings = (updates: Partial<MonsterSettings>) => {
+    if (!characterData?.monsterSettings) return;
+    
+    updateData({
+      monsterSettings: {
+        ...characterData.monsterSettings,
+        ...updates,
       },
     });
   };
@@ -1488,10 +1545,17 @@ function App() {
         </nav>
       )}
 
-      {/* Standard Tab Navigation (non-lore tokens) */}
-      {characterData?.tokenType !== 'lore' && visibleTabs.length > 1 && (
+      {/* Standard Tab Navigation (non-lore, non-monster tokens) */}
+      {characterData?.tokenType !== 'lore' && characterData?.tokenType !== 'monster' && visibleTabs.length > 1 && (
         <nav className="nav-bar">
           {visibleTabs.map((tab) => <button key={tab.id} className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)} title={tab.id}>{tab.icon ? tab.icon : tab.label}</button>)}
+        </nav>
+      )}
+
+      {/* Monster Token Navigation */}
+      {characterData?.tokenType === 'monster' && visibleTabs.length > 0 && (
+        <nav className="nav-bar">
+          {visibleTabs.map((tab) => <button key={tab.id} className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`} onClick={() => setActiveTab(tab.id)} title={tab.label}>{tab.label}</button>)}
         </nav>
       )}
 
@@ -2316,7 +2380,8 @@ function App() {
         )}
 
         {/* === GM OVERVIEW TAB === */}
-        {activeTab === 'GM' && playerRole === 'GM' && (
+        {/* For standard tokens, this is the GM overview. For monsters, this is the Loot tab */}
+        {activeTab === 'GM' && playerRole === 'GM' && characterData?.tokenType !== 'monster' && (
           <GMOverviewTab
             activeTrade={activeTrade}
             isExecutingTrade={false}
@@ -2326,12 +2391,31 @@ function App() {
           />
         )}
 
+        {/* === MONSTER LOOT TAB === */}
+        {activeTab === 'GM' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
+          <MonsterLootTab
+            monsterSettings={characterData.monsterSettings}
+            onUpdate={handleUpdateMonsterSettings}
+            canEdit={playerRole === 'GM'}
+          />
+        )}
+
         {/* === REPUTATION TAB === */}
-        {activeTab === 'Reputation' && playerRole === 'GM' && characterData?.packType === 'NPC' && (
+        {/* For NPC tokens, this is reputation. For monsters, this is the Actions tab */}
+        {activeTab === 'Reputation' && playerRole === 'GM' && characterData?.packType === 'NPC' && characterData?.tokenType !== 'monster' && (
           <ReputationTab
             characterData={characterData}
             updateData={updateData}
             playerRole={playerRole}
+          />
+        )}
+
+        {/* === MONSTER ACTIONS TAB === */}
+        {activeTab === 'Reputation' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
+          <MonsterActionsTab
+            monsterSettings={characterData.monsterSettings}
+            onUpdate={handleUpdateMonsterSettings}
+            canEdit={playerRole === 'GM'}
           />
         )}
 

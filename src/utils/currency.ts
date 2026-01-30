@@ -121,13 +121,16 @@ export const DEFAULT_CURRENCY: Currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
 /**
  * Ensure currency object exists with fallback to default
  * @param currency - Optional currency object
- * @returns Currency object (provided or default)
+ * @returns Currency object (provided or new default copy)
  */
-export const ensureCurrency = (currency?: Currency): Currency => currency || DEFAULT_CURRENCY;
+export const ensureCurrency = (currency?: Currency): Currency => currency || { ...DEFAULT_CURRENCY };
 
 /**
  * Format currency object for display
- * Shows non-zero denominations in GP, SP, CP, PP order
+ * Shows non-zero denominations in order: GP, SP, CP, PP
+ * Note: This matches the existing codebase pattern for consistency.
+ * While PP is more valuable than GP in D&D, this order prioritizes
+ * the most commonly used denomination (GP) first.
  * @param currency - Currency object to format
  * @returns Formatted string (e.g., "50 GP 5 SP") or "Empty" if all zero
  */

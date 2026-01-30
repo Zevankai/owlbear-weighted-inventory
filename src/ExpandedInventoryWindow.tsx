@@ -117,13 +117,14 @@ export default function ExpandedInventoryWindow() {
 
   // Initialize OBR and load data
   useEffect(() => {
-    waitForOBR().then(async () => {
+    (async () => {
+      await waitForOBR();
       const id = await OBR.player.getId();
       const role = await OBR.player.getRole();
       setPlayerId(id);
       setPlayerRole(role);
       setLoading(false);
-    });
+    })();
   }, []);
 
   // Poll for token selection and data updates

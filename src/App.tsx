@@ -270,7 +270,10 @@ function App() {
   };
 
   useEffect(() => {
-    waitForOBR().then(() => setReady(true));
+    (async () => {
+      await waitForOBR();
+      setReady(true);
+    })();
   }, []);
 
   // Load active trade from room metadata
@@ -2278,8 +2281,17 @@ function App() {
                     <h3 style={{fontSize:'14px', color:'var(--accent-gold)', marginTop:0}}>VAULTS (BANKS)</h3>
                     {characterData.vaults.length === 0 && <p style={{fontSize:'11px', color:'#666'}}>No vaults created.</p>}
                     {characterData.vaults.map(vault => {
-                        // Fallback for legacy vaults
-                        const vCurrency = ensureCurrency(vault.currency || (vault as any).amount ? { cp: 0, sp: 0, gp: (vault as any).amount || 0, pp: 0 } : undefined);
+                        // Handle legacy vault format (old vaults stored amount instead of currency)
+                        let vCurrency: Currency;
+                        if (vault.currency) {
+                            vCurrency = vault.currency;
+                        } else if ((vault as any).amount) {
+                            // Legacy vault with single amount value - assume it's gold
+                            vCurrency = { cp: 0, sp: 0, gp: (vault as any).amount, pp: 0 };
+                        } else {
+                            vCurrency = ensureCurrency();
+                        }
+                        
                         return (
                         <div key={vault.id} style={{background:'rgba(255,255,255,0.05)', padding:'8px', borderRadius:'4px', marginBottom:'8px'}}>
                             <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}>

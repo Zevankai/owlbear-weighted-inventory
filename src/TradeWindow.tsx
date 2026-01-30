@@ -15,11 +15,12 @@ export default function TradeWindow() {
 
   // Initialize OBR and get player info
   useEffect(() => {
-    waitForOBR().then(async () => {
+    (async () => {
+      await waitForOBR();
       const id = await OBR.player.getId();
       setPlayerId(id);
       setLoading(false);
-    });
+    })();
   }, []);
 
   // Poll for trade updates and token data

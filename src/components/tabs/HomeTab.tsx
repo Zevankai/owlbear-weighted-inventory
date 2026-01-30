@@ -21,6 +21,7 @@ import { deductCopperPieces } from '../../utils/currency';
 import { useCalendar } from '../../hooks/useCalendar';
 import { formatCustomDate } from '../../utils/calendar/dateFormatting';
 import { initiateRestNotification } from '../../utils/restNotifications';
+import { MarkdownHint } from '../MarkdownHint';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -221,13 +222,6 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
     </div>
   );
 };
-
-// Markdown formatting hint component
-const MarkdownHint = () => (
-  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
-    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
-  </span>
-);
 
 // Death Saves Component - Clickable skull icons
 interface DeathSavesDisplayProps {

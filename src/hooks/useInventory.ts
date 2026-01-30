@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import OBR, { buildShape, isImage } from '@owlbear-rodeo/sdk';
-import type { Item } from '@owlbear-rodeo/sdk';
+import type { Item as OBRItem } from '@owlbear-rodeo/sdk';
 import type { CharacterData, TokenType, GMCustomizations } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
 import type { Vector2 } from '@owlbear-rodeo/sdk';
@@ -29,7 +29,7 @@ const GM_CUSTOMIZATIONS_KEY = 'com.weighted-inventory/gm-customizations';
 const getFavoritesKey = (playerId: string) => `${FAVORITES_KEY_PREFIX}${playerId}`;
 
 // Helper to calculate the center position of a token (pure utility function)
-const getTokenCenter = (token: Item): Vector2 => {
+const getTokenCenter = (token: OBRItem): Vector2 => {
   // For Image items (tokens), calculate center based on image dimensions and scale
   if (isImage(token)) {
     // Use Math.abs to handle any unusual negative scale values
@@ -164,7 +164,7 @@ export function useInventory() {
   };
 
   // Check for and migrate legacy data
-  const migrateLegacyData = async (token: Item): Promise<CharacterData | null> => {
+  const migrateLegacyData = async (token: OBRItem): Promise<CharacterData | null> => {
     const name = token.name || 'Unnamed';
     const roomMetadata = await OBR.room.getMetadata();
 
@@ -201,7 +201,7 @@ export function useInventory() {
     return null;
   };
 
-  const handleSelection = useCallback(async (token: Item) => {
+  const handleSelection = useCallback(async (token: OBRItem) => {
     const name = token.name || 'Unnamed';
     console.log('[handleSelection] Selected token:', name, 'ID:', token.id);
     setTokenId(token.id);

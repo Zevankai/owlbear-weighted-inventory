@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import './App.css';
 
 import { usePackLogic } from './hooks/usePackLogic';
-import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID, STORAGE_DEFINITIONS, PACK_DEFINITIONS } from './constants';
+import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID, STORAGE_DEFINITIONS, PACK_DEFINITIONS, STORAGE_TYPES_WITH_EQUIPMENT, EQUIPMENT_TAB_IDS } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType, LoreTabId, LoreEntry } from './types';
 import { HomeTab } from './components/tabs/HomeTab';
@@ -13,19 +13,9 @@ import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
 import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/lore';
 import { hexToRgb } from './utils/color';
 import { parseMarkdown } from './utils/markdown';
-
-// Storage types that support equipment slots (weapons, body, quick)
-const STORAGE_TYPES_WITH_EQUIPMENT: StorageType[] = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
-
-// Tab IDs that require equipment slot functionality
-const EQUIPMENT_TAB_IDS: Tab[] = ['Weapons', 'Body', 'Quick'];
-
-// Markdown formatting hint component
-const MarkdownHint = () => (
-  <span style={{fontSize: '9px', color: 'var(--text-muted)', fontStyle: 'italic'}}>
-    Supports: **bold**, *italic*, __underline__, ~~strikethrough~~, [links](url)
-  </span>
-);
+import { ensureCurrency, formatCurrency } from './utils/currency';
+import { waitForOBR } from './utils/obr';
+import { MarkdownHint } from './components/MarkdownHint';
 
 export default function ExpandedInventoryWindow() {
   const [loading, setLoading] = useState(true);
@@ -92,10 +82,10 @@ export default function ExpandedInventoryWindow() {
   }, [theme]);
 
   // --- VIRTUAL CONTEXT SWITCHING ---
-  const currentDisplayData: CharacterData | null = (() => {
+  const currentDisplayData: CharacterData | null = useMemo(() => {
     if (!characterData) return null;
     
-    const safeCurrency = characterData.currency || { cp: 0, sp: 0, gp: 0, pp: 0 };
+    const safeCurrency = ensureCurrency(characterData.currency);
     const safeInventory = characterData.inventory || [];
 
     if (!viewingStorageId) {
@@ -109,10 +99,10 @@ export default function ExpandedInventoryWindow() {
       ...characterData, 
       packType: 'NPC' as PackType, 
       inventory: storage.inventory || [],
-      currency: storage.currency || { cp: 0, sp: 0, gp: 0, pp: 0 },
+      currency: ensureCurrency(storage.currency),
       condition: storage.description || '', 
     };
-  })();
+  }, [characterData, viewingStorageId]);
 
   const stats = usePackLogic(currentDisplayData);
 
@@ -127,7 +117,7 @@ export default function ExpandedInventoryWindow() {
 
   // Initialize OBR and load data
   useEffect(() => {
-    OBR.onReady(async () => {
+    waitForOBR().then(async () => {
       const id = await OBR.player.getId();
       const role = await OBR.player.getRole();
       setPlayerId(id);
@@ -618,16 +608,6 @@ export default function ExpandedInventoryWindow() {
       maxCharges: undefined
     };
     handleUpdateData({ inventory: [...currentDisplayData.inventory, createdItem] });
-  };
-
-  // Helper function to format vault currency display
-  const formatVaultCurrency = (vCurrency: Currency): string => {
-    const parts: string[] = [];
-    if (vCurrency.gp > 0) parts.push(`${vCurrency.gp} GP`);
-    if (vCurrency.sp > 0) parts.push(`${vCurrency.sp} SP`);
-    if (vCurrency.cp > 0) parts.push(`${vCurrency.cp} CP`);
-    if (vCurrency.pp > 0) parts.push(`${vCurrency.pp} PP`);
-    return parts.length > 0 ? parts.join(' ') : 'Empty';
   };
 
   // Close the expanded window
@@ -1363,9 +1343,9 @@ export default function ExpandedInventoryWindow() {
             <div style={{marginTop: '24px', borderTop: '1px solid var(--border)', paddingTop: '16px'}}>
               <h3 style={{fontSize:'14px', color:'var(--accent-gold)', marginTop:0}}>VAULTS (BANKS)</h3>
               {characterData.vaults.length === 0 && <p style={{fontSize:'11px', color:'#666'}}>No vaults created.</p>}
-              {characterData.vaults.map(vault => { const vCurrency = vault.currency || { cp: 0, sp: 0, gp: 0, pp: 0 }; return (
+              {characterData.vaults.map(vault => { const vCurrency = ensureCurrency(vault.currency); return (
                 <div key={vault.id} style={{background:'rgba(255,255,255,0.05)', padding:'12px', borderRadius:'4px', marginBottom:'8px'}}>
-                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}><div style={{fontWeight:'bold', color:'var(--text-main)'}}>{vault.name}</div><div style={{fontWeight:'bold', color:'var(--accent-gold)'}}>{formatVaultCurrency(vCurrency)}</div></div>
+                  <div style={{display:'flex', justifyContent:'space-between', marginBottom:'8px'}}><div style={{fontWeight:'bold', color:'var(--text-main)'}}>{vault.name}</div><div style={{fontWeight:'bold', color:'var(--accent-gold)'}}>{formatCurrency(vCurrency)}</div></div>
                   <div style={{display:'flex', gap:'4px'}}><button onClick={() => transferVaultFunds(vault.id, 'deposit')} style={{flex:1, background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px', borderRadius:'4px', cursor:'pointer'}}>DEPOSIT</button><button onClick={() => transferVaultFunds(vault.id, 'withdraw')} style={{flex:1, background:'#333', border:'none', color:'white', fontSize:'10px', padding:'6px', borderRadius:'4px', cursor:'pointer'}}>WITHDRAW</button><button onClick={() => deleteVault(vault.id)} style={{background:'#333', border:'none', color:'var(--danger)', fontSize:'10px', padding:'6px 12px', borderRadius:'4px', cursor:'pointer'}}>X</button></div>
                 </div>
               );})}

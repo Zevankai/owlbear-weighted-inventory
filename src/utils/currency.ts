@@ -112,3 +112,30 @@ export function calculateBuyback(sellPrice: string, rate: number = 0.8): string 
   const buybackAmount = Math.ceil(amount * rate);
   return `${buybackAmount} ${type}`;
 }
+
+/**
+ * Default currency object with all zero values
+ */
+export const DEFAULT_CURRENCY: Currency = { cp: 0, sp: 0, gp: 0, pp: 0 };
+
+/**
+ * Ensure currency object exists with fallback to default
+ * @param currency - Optional currency object
+ * @returns Currency object (provided or default)
+ */
+export const ensureCurrency = (currency?: Currency): Currency => currency || DEFAULT_CURRENCY;
+
+/**
+ * Format currency object for display
+ * Shows non-zero denominations in GP, SP, CP, PP order
+ * @param currency - Currency object to format
+ * @returns Formatted string (e.g., "50 GP 5 SP") or "Empty" if all zero
+ */
+export function formatCurrency(currency: Currency): string {
+  const parts: string[] = [];
+  if (currency.gp > 0) parts.push(`${currency.gp} GP`);
+  if (currency.sp > 0) parts.push(`${currency.sp} SP`);
+  if (currency.cp > 0) parts.push(`${currency.cp} CP`);
+  if (currency.pp > 0) parts.push(`${currency.pp} PP`);
+  return parts.length > 0 ? parts.join(' ') : 'Empty';
+}

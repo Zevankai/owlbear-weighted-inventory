@@ -1,4 +1,4 @@
-import type { PackType, ItemCategory, CharacterData, StorageType } from './types';
+import type { PackType, ItemCategory, CharacterData, StorageType, Tab, TokenType } from './types';
 
 export const BASE_SLOTS = {
   weapon: 4,
@@ -160,3 +160,20 @@ export const EXPANDED_POPOVER_ID = 'com.weighted-inventory.expanded-window';
 // Default UI dimensions
 export const DEFAULT_POPOVER_WIDTH = 800
 export const WIDE_POPOVER_WIDTH = 1250;
+
+// Storage types that support equipment slots (weapons, body, quick)
+export const STORAGE_TYPES_WITH_EQUIPMENT: StorageType[] = ['Small Pet', 'Large Pet', 'Standard Mount', 'Large Mount'];
+
+// Tab IDs that require equipment slot functionality
+export const EQUIPMENT_TAB_IDS: Tab[] = ['Weapons', 'Body', 'Quick'];
+
+// Token type group labels for favorites display
+export const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
+  player: 'Player Tokens',
+  npc: 'NPC Tokens',
+  party: 'Party Tokens',
+  lore: 'Lore Tokens'
+};
+
+// Token type display order for favorites grouping
+export const TOKEN_TYPE_ORDER: TokenType[] = ['player', 'npc', 'party', 'lore'];

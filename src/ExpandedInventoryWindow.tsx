@@ -6,15 +6,18 @@ import './App.css';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID, STORAGE_DEFINITIONS, PACK_DEFINITIONS, STORAGE_TYPES_WITH_EQUIPMENT, EQUIPMENT_TAB_IDS } from './constants';
 import { ITEM_REPOSITORY } from './data/repository';
-import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType, LoreTabId, LoreEntry } from './types';
+import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType, LoreTabId, LoreEntry, MonsterSettings } from './types';
 import { HomeTab } from './components/tabs/HomeTab';
 import { LoreTab } from './components/tabs/LoreTab';
 import { LoreSettingsTab } from './components/tabs/LoreSettingsTab';
+import { MonsterLootTab } from './components/tabs/MonsterLootTab';
+import { MonsterActionsTab } from './components/tabs/MonsterActionsTab';
 import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/lore';
 import { hexToRgb } from './utils/color';
 import { parseMarkdown } from './utils/markdown';
 import { ensureCurrency, formatCurrency } from './utils/currency';
 import { waitForOBR } from './utils/obr';
+import { isMonsterDead } from './utils/monsterStatus';
 import { MarkdownHint } from './components/MarkdownHint';
 
 export default function ExpandedInventoryWindow() {
@@ -761,6 +764,47 @@ export default function ExpandedInventoryWindow() {
     visibleTabs = [];
   }
 
+  // Monster tokens have special tab handling
+  if (characterData?.tokenType === 'monster') {
+    // Initialize monster settings if not present
+    if (!characterData.monsterSettings) {
+      const defaultMonsterSettings: MonsterSettings = {
+        lootEntries: [],
+        actionEntries: [],
+        lootVisibleToPlayers: false,
+        actionsVisibleToPlayers: false,
+      };
+      updateData({ monsterSettings: defaultMonsterSettings });
+    }
+
+    // For GM: Show Home, Loot, Actions tabs
+    if (playerRole === 'GM') {
+      visibleTabs = [
+        { id: 'Home', label: '||' },
+        { id: 'GM', label: 'LOOT' },
+        { id: 'Reputation', label: 'ACTIONS' }
+      ];
+    } else {
+      // For players: Start with Home tab only
+      visibleTabs = [{ id: 'Home', label: '||' }];
+      
+      if (characterData.monsterSettings) {
+        const sheet = characterData.characterSheet || { hitPoints: { current: 0, max: 1 } };
+        const isDead = isMonsterDead(sheet.hitPoints?.current || 0);
+        
+        // Show Loot tab if monster is dead OR GM has enabled it
+        if (isDead || characterData.monsterSettings.lootVisibleToPlayers) {
+          visibleTabs.push({ id: 'GM', label: 'LOOT' });
+        }
+        
+        // Show Actions tab only if GM has enabled it
+        if (characterData.monsterSettings.actionsVisibleToPlayers) {
+          visibleTabs.push({ id: 'Reputation', label: 'ACTIONS' });
+        }
+      }
+    }
+  }
+
   return (
     <div className="app-container" style={{background: 'var(--bg-dark)', border: viewingStorageId ? '2px solid var(--accent-gold)' : 'none'}}>
       {/* Storage Viewing Banner */}
@@ -900,8 +944,8 @@ export default function ExpandedInventoryWindow() {
         </nav>
       )}
 
-      {/* Standard Tab Navigation (non-lore tokens) */}
-      {characterData?.tokenType !== 'lore' && visibleTabs.length > 0 && (
+      {/* Standard Tab Navigation (non-lore, non-monster tokens) */}
+      {characterData?.tokenType !== 'lore' && characterData?.tokenType !== 'monster' && visibleTabs.length > 0 && (
         <nav className="nav-bar" style={{padding: '8px 12px', gap: '4px'}}>
           {visibleTabs.map((tab) => (
             <button
@@ -911,6 +955,22 @@ export default function ExpandedInventoryWindow() {
               title={tab.id}
             >
               {tab.icon ? tab.icon : tab.label}
+            </button>
+          ))}
+        </nav>
+      )}
+
+      {/* Monster Token Navigation */}
+      {characterData?.tokenType === 'monster' && visibleTabs.length > 0 && (
+        <nav className="nav-bar" style={{padding: '8px 12px', gap: '4px'}}>
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`nav-btn ${activeTab === tab.id ? 'active' : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              title={tab.label}
+            >
+              {tab.label}
             </button>
           ))}
         </nav>
@@ -969,6 +1029,40 @@ export default function ExpandedInventoryWindow() {
           <LoreSettingsTab
             characterData={characterData}
             updateData={updateData}
+          />
+        )}
+
+        {/* MONSTER LOOT TAB */}
+        {activeTab === 'GM' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
+          <MonsterLootTab
+            monsterSettings={characterData.monsterSettings}
+            onUpdate={(updates) => {
+              if (!characterData?.monsterSettings) return;
+              updateData({
+                monsterSettings: {
+                  ...characterData.monsterSettings,
+                  ...updates,
+                },
+              });
+            }}
+            canEdit={playerRole === 'GM'}
+          />
+        )}
+
+        {/* MONSTER ACTIONS TAB */}
+        {activeTab === 'Reputation' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
+          <MonsterActionsTab
+            monsterSettings={characterData.monsterSettings}
+            onUpdate={(updates) => {
+              if (!characterData?.monsterSettings) return;
+              updateData({
+                monsterSettings: {
+                  ...characterData.monsterSettings,
+                  ...updates,
+                },
+              });
+            }}
+            canEdit={playerRole === 'GM'}
           />
         )}
 

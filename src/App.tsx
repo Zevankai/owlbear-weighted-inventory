@@ -19,7 +19,6 @@ import { hexToRgb } from './utils/color';
 import { parseMarkdown } from './utils/markdown';
 import { ensureCurrency, formatCurrency } from './utils/currency';
 import { waitForOBR } from './utils/obr';
-import { isMonsterDead } from './utils/monsterStatus';
 // Currency utilities moved to TradeWindow.tsx
 
 // Components
@@ -32,6 +31,7 @@ import { SpellsTab } from './components/tabs/SpellsTab';
 import { CalendarTab } from './components/tabs/CalendarTab';
 import { MonsterLootTab } from './components/tabs/MonsterLootTab';
 import { MonsterActionsTab } from './components/tabs/MonsterActionsTab';
+import { MonsterPlayerView } from './components/MonsterPlayerView';
 // TradeModal moved to TradeWindow.tsx for separate window rendering
 import { TradeRequestNotification } from './components/TradeRequestNotification';
 import { RestNotification } from './components/RestNotification';
@@ -1452,27 +1452,12 @@ function App() {
     if (playerRole === 'GM') {
       visibleTabs = [
         { id: 'Home', label: '||' },
-        { id: 'GM', label: 'LOOT' },
-        { id: 'Reputation', label: 'ACTIONS' }
+        { id: 'Loot', label: 'LOOT' },
+        { id: 'Actions', label: 'ACTIONS' }
       ];
     } else {
-      // For players: Start with Home tab only
-      visibleTabs = [{ id: 'Home', label: '||' }];
-      
-      if (characterData.monsterSettings) {
-        const sheet = characterData.characterSheet || { hitPoints: { current: 0, max: 1 } };
-        const isDead = isMonsterDead(sheet.hitPoints?.current || 0);
-        
-        // Show Loot tab if monster is dead OR GM has enabled it
-        if (isDead || characterData.monsterSettings.lootVisibleToPlayers) {
-          visibleTabs.push({ id: 'GM', label: 'LOOT' });
-        }
-        
-        // Show Actions tab only if GM has enabled it
-        if (characterData.monsterSettings.actionsVisibleToPlayers) {
-          visibleTabs.push({ id: 'Reputation', label: 'ACTIONS' });
-        }
-      }
+      // For players: Show only Monster tab
+      visibleTabs = [{ id: 'Monster', label: 'MONSTER' }];
     }
   }
 
@@ -2392,7 +2377,7 @@ function App() {
         )}
 
         {/* === MONSTER LOOT TAB === */}
-        {activeTab === 'GM' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
+        {activeTab === 'Loot' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
           <MonsterLootTab
             monsterSettings={characterData.monsterSettings}
             onUpdate={handleUpdateMonsterSettings}
@@ -2411,11 +2396,20 @@ function App() {
         )}
 
         {/* === MONSTER ACTIONS TAB === */}
-        {activeTab === 'Reputation' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
+        {activeTab === 'Actions' && characterData?.tokenType === 'monster' && characterData.monsterSettings && (
           <MonsterActionsTab
             monsterSettings={characterData.monsterSettings}
             onUpdate={handleUpdateMonsterSettings}
             canEdit={playerRole === 'GM'}
+          />
+        )}
+
+        {/* === MONSTER PLAYER VIEW TAB === */}
+        {activeTab === 'Monster' && characterData?.tokenType === 'monster' && playerRole !== 'GM' && (
+          <MonsterPlayerView
+            tokenImage={tokenImage}
+            tokenName={tokenName}
+            characterData={characterData}
           />
         )}
 

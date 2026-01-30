@@ -12,7 +12,7 @@ export interface Theme {
   background: string;
 }
 
-export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation' | 'LoreSettings' | 'Spells' | 'Calendar';
+export type Tab = 'Home' | 'Pack' | 'Weapons' | 'Body' | 'Quick' | 'Coin' | 'Create' | 'External' | 'Search' | 'Transfer' | 'GM' | 'Reputation' | 'LoreSettings' | 'Spells' | 'Calendar' | 'Loot' | 'Actions' | 'Monster';
 
 // Lore system types
 export type LoreTabId = 

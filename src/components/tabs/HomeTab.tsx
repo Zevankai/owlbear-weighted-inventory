@@ -22,7 +22,6 @@ import { useCalendar } from '../../hooks/useCalendar';
 import { formatCustomDate } from '../../utils/calendar/dateFormatting';
 import { initiateRestNotification } from '../../utils/restNotifications';
 import { MarkdownHint } from '../MarkdownHint';
-import { getMonsterStatus } from '../../utils/monsterStatus';
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -3082,318 +3081,226 @@ export function HomeTab({
       )}
 
       {/* === MONSTER TOKEN SPECIFIC UI === */}
-      {!viewingStorageId && characterData.tokenType === 'monster' && (
-        <>
-          {/* Monster view for players (restricted) */}
-          {playerRole !== 'GM' && (
-            <div className="section" style={{ textAlign: 'center', padding: '24px' }}>
-              {/* Token Image */}
-              {tokenImage && (
-                <div style={{
-                  position: 'relative',
-                  width: '120px',
-                  height: '120px',
-                  margin: '0 auto',
-                }}>
-                  <div style={{
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '50%',
-                    overflow: 'hidden',
-                    border: '3px solid #e53935',
-                    background: 'transparent',
-                    boxShadow: '0 4px 12px rgba(229, 57, 53, 0.5)',
-                  }}>
-                    <img
-                      src={tokenImage}
-                      alt={characterData.name || tokenName || 'Monster'}
-                      style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                    />
-                  </div>
-                </div>
-              )}
-              
-              {/* Monster Name */}
-              <h2 style={{ color: '#e53935', marginTop: '12px', marginBottom: '8px', fontSize: '20px' }}>
-                {characterData.name || tokenName || 'Unknown Creature'}
-              </h2>
-              
-              {/* Status Indicators */}
-              {(() => {
-                const sheet = characterData.characterSheet || createDefaultCharacterSheet();
-                const status = getMonsterStatus(sheet.hitPoints.current, sheet.hitPoints.max);
-                
-                return (
-                  <>
-                    {status === 'bloodied' && (
-                      <div style={{ 
-                        color: '#ff5722', 
-                        background: 'rgba(255, 87, 34, 0.2)',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
-                        fontWeight: 'bold',
-                        marginTop: '12px',
-                        display: 'inline-block'
-                      }}>
-                        🩸 BLOODIED
-                      </div>
-                    )}
-                    
-                    {status === 'dead' && (
-                      <div style={{ 
-                        color: '#888', 
-                        background: 'rgba(0, 0, 0, 0.3)',
-                        padding: '8px 16px',
-                        borderRadius: '4px',
-                        fontWeight: 'bold',
-                        marginTop: '12px',
-                        display: 'inline-block'
-                      }}>
-                        💀 DEAD
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-              
-              {/* Monster Type Label */}
-              <div style={{ 
-                fontSize: '10px', 
-                color: '#e53935', 
-                marginTop: '12px',
-                textTransform: 'uppercase',
-                letterSpacing: '1px',
-                fontWeight: 'bold'
-              }}>
-                Monster
-              </div>
-            </div>
-          )}
-
-          {/* Monster view for GM (full control) */}
-          {playerRole === 'GM' && (
-            <>
-              {/* Token Image and Name */}
-              <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-                {tokenImage && (
-                  <div style={{
-                    position: 'relative',
-                    width: '120px',
-                    height: '120px',
-                    margin: '0 auto 12px',
-                  }}>
-                    <div style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: '50%',
-                      overflow: 'hidden',
-                      border: '3px solid #e53935',
-                      background: 'transparent',
-                      boxShadow: '0 4px 12px rgba(229, 57, 53, 0.5)',
-                    }}>
-                      <img
-                        src={tokenImage}
-                        alt={characterData.name || tokenName || 'Monster'}
-                        style={{width: '100%', height: '100%', objectFit: 'cover'}}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Editable Monster Name */}
-                <DebouncedInput
-                  value={characterData.name || tokenName || ''}
-                  onChange={(val) => updateData({ name: val })}
-                  className="search-input"
-                  placeholder="Enter monster name..."
-                  style={{
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    color: '#e53935',
-                    textAlign: 'center',
-                    width: '100%',
-                    maxWidth: '300px',
-                    background: 'rgba(229, 57, 53, 0.1)',
-                    border: '1px solid rgba(229, 57, 53, 0.3)',
-                    padding: '8px',
-                    borderRadius: '6px',
-                  }}
-                />
-
-                <div style={{ 
-                  fontSize: '10px', 
-                  color: '#e53935', 
-                  marginTop: '8px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1px',
-                  fontWeight: 'bold'
-                }}>
-                  Monster Token
-                </div>
-              </div>
-
-              {/* HP and AC Display - Simplified Combat Stats */}
+      {!viewingStorageId && characterData.tokenType === 'monster' && playerRole === 'GM' && (
+        <div className="section" style={{ textAlign: 'center', padding: '24px' }}>
+          {/* Token Image and Name */}
+          <div style={{ marginBottom: '16px' }}>
+            {tokenImage && (
               <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '12px',
-                marginBottom: '16px',
+                position: 'relative',
+                width: '120px',
+                height: '120px',
+                margin: '0 auto 12px',
               }}>
-                {/* HP Section */}
                 <div style={{
-                  background: 'rgba(229, 57, 53, 0.1)',
-                  border: '1px solid rgba(229, 57, 53, 0.3)',
-                  borderRadius: '8px',
-                  padding: '12px',
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '3px solid #e53935',
+                  background: 'transparent',
+                  boxShadow: '0 4px 12px rgba(229, 57, 53, 0.5)',
                 }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '10px',
-                    color: '#e53935',
-                    textTransform: 'uppercase',
-                    fontWeight: 'bold',
-                    marginBottom: '8px',
-                    letterSpacing: '0.5px'
-                  }}>
-                    ❤️ Hit Points
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                    <DebouncedInput
-                      value={String((characterData.characterSheet || createDefaultCharacterSheet()).hitPoints.current)}
-                      onChange={(val) => {
-                        const sheet = characterData.characterSheet || createDefaultCharacterSheet();
-                        updateData({
-                          characterSheet: {
-                            ...sheet,
-                            hitPoints: { ...sheet.hitPoints, current: Number(val) || 0 }
-                          }
-                        });
-                      }}
-                      type="number"
-                      style={{
-                        width: '60px',
-                        padding: '6px',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        background: 'rgba(0,0,0,0.3)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                    <span style={{ color: '#888', fontSize: '14px' }}>/</span>
-                    <DebouncedInput
-                      value={String((characterData.characterSheet || createDefaultCharacterSheet()).hitPoints.max)}
-                      onChange={(val) => {
-                        const sheet = characterData.characterSheet || createDefaultCharacterSheet();
-                        updateData({
-                          characterSheet: {
-                            ...sheet,
-                            hitPoints: { ...sheet.hitPoints, max: Number(val) || 0 }
-                          }
-                        });
-                      }}
-                      type="number"
-                      style={{
-                        width: '60px',
-                        padding: '6px',
-                        fontSize: '16px',
-                        fontWeight: 'bold',
-                        textAlign: 'center',
-                        background: 'rgba(0,0,0,0.3)',
-                        border: '1px solid rgba(255,255,255,0.2)',
-                        borderRadius: '4px',
-                        color: '#fff',
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {/* AC Section */}
-                <div style={{
-                  background: 'rgba(229, 57, 53, 0.1)',
-                  border: '1px solid rgba(229, 57, 53, 0.3)',
-                  borderRadius: '8px',
-                  padding: '12px',
-                }}>
-                  <label style={{
-                    display: 'block',
-                    fontSize: '10px',
-                    color: '#e53935',
-                    textTransform: 'uppercase',
-                    fontWeight: 'bold',
-                    marginBottom: '8px',
-                    letterSpacing: '0.5px'
-                  }}>
-                    🛡️ Armor Class
-                  </label>
-                  <DebouncedInput
-                    value={String((characterData.characterSheet || createDefaultCharacterSheet()).armorClass)}
-                    onChange={(val) => {
-                      const sheet = characterData.characterSheet || createDefaultCharacterSheet();
-                      updateData({
-                        characterSheet: {
-                          ...sheet,
-                          armorClass: Number(val) || 10
-                        }
-                      });
-                    }}
-                    type="number"
-                    style={{
-                      width: '80px',
-                      padding: '6px',
-                      fontSize: '16px',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                      background: 'rgba(0,0,0,0.3)',
-                      border: '1px solid rgba(255,255,255,0.2)',
-                      borderRadius: '4px',
-                      color: '#fff',
-                    }}
+                  <img
+                    src={tokenImage}
+                    alt={characterData.name || tokenName || 'Monster'}
+                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
                   />
                 </div>
               </div>
+            )}
 
-              {/* Death Saves Section */}
-              <div style={{
+            {/* Editable Monster Name */}
+            <DebouncedInput
+              value={characterData.name || tokenName || ''}
+              onChange={(val) => updateData({ name: val })}
+              className="search-input"
+              placeholder="Enter monster name..."
+              style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: '#e53935',
+                textAlign: 'center',
+                width: '100%',
+                maxWidth: '300px',
                 background: 'rgba(229, 57, 53, 0.1)',
                 border: '1px solid rgba(229, 57, 53, 0.3)',
-                borderRadius: '8px',
-                padding: '12px',
-                marginBottom: '16px',
+                padding: '8px',
+                borderRadius: '6px',
+              }}
+            />
+
+            <div style={{ 
+              fontSize: '10px', 
+              color: '#e53935', 
+              marginTop: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontWeight: 'bold'
+            }}>
+              Monster Token
+            </div>
+          </div>
+
+          {/* HP and AC Display - Simplified Combat Stats */}
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '12px',
+            marginBottom: '16px',
+          }}>
+            {/* HP Section */}
+            <div style={{
+              background: 'rgba(229, 57, 53, 0.1)',
+              border: '1px solid rgba(229, 57, 53, 0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+            }}>
+              <label style={{
+                display: 'block',
+                fontSize: '10px',
+                color: '#e53935',
+                textTransform: 'uppercase',
+                fontWeight: 'bold',
+                marginBottom: '8px',
+                letterSpacing: '0.5px'
               }}>
-                <label style={{
-                  display: 'block',
-                  fontSize: '10px',
-                  color: '#e53935',
-                  textTransform: 'uppercase',
-                  fontWeight: 'bold',
-                  marginBottom: '8px',
-                  letterSpacing: '0.5px'
-                }}>
-                  💀 Death Saves
-                </label>
-                <DeathSavesDisplay
-                  deathSaves={(characterData.characterStats?.deathSaves) || createDefaultDeathSaves()}
-                  onUpdate={(updates) => {
-                    const stats = characterData.characterStats || createDefaultCharacterStats();
+                ❤️ Hit Points
+              </label>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <DebouncedInput
+                  value={String((characterData.characterSheet || createDefaultCharacterSheet()).hitPoints.current)}
+                  onChange={(val) => {
+                    const sheet = characterData.characterSheet || createDefaultCharacterSheet();
                     updateData({
-                      characterStats: {
-                        ...stats,
-                        deathSaves: {
-                          ...(stats.deathSaves || createDefaultDeathSaves()),
-                          ...updates
-                        }
+                      characterSheet: {
+                        ...sheet,
+                        hitPoints: { ...sheet.hitPoints, current: Number(val) || 0 }
                       }
                     });
                   }}
-                  canEdit={true}
+                  type="number"
+                  style={{
+                    width: '60px',
+                    padding: '6px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '4px',
+                    color: '#fff',
+                  }}
+                />
+                <span style={{ color: '#888', fontSize: '14px' }}>/</span>
+                <DebouncedInput
+                  value={String((characterData.characterSheet || createDefaultCharacterSheet()).hitPoints.max)}
+                  onChange={(val) => {
+                    const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+                    updateData({
+                      characterSheet: {
+                        ...sheet,
+                        hitPoints: { ...sheet.hitPoints, max: Number(val) || 0 }
+                      }
+                    });
+                  }}
+                  type="number"
+                  style={{
+                    width: '60px',
+                    padding: '6px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    background: 'rgba(0,0,0,0.3)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    borderRadius: '4px',
+                    color: '#fff',
+                  }}
                 />
               </div>
-            </>
-          )}
-        </>
+            </div>
+
+            {/* AC Section */}
+            <div style={{
+              background: 'rgba(229, 57, 53, 0.1)',
+              border: '1px solid rgba(229, 57, 53, 0.3)',
+              borderRadius: '8px',
+              padding: '12px',
+            }}>
+              <label style={{
+                display: 'block',
+                fontSize: '10px',
+                color: '#e53935',
+                textTransform: 'uppercase',
+                fontWeight: 'bold',
+                marginBottom: '8px',
+                letterSpacing: '0.5px'
+              }}>
+                🛡️ Armor Class
+              </label>
+              <DebouncedInput
+                value={String((characterData.characterSheet || createDefaultCharacterSheet()).armorClass)}
+                onChange={(val) => {
+                  const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+                  updateData({
+                    characterSheet: {
+                      ...sheet,
+                      armorClass: Number(val) || 10
+                    }
+                  });
+                }}
+                type="number"
+                style={{
+                  width: '80px',
+                  padding: '6px',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  textAlign: 'center',
+                  background: 'rgba(0,0,0,0.3)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Death Saves Section */}
+          <div style={{
+            background: 'rgba(229, 57, 53, 0.1)',
+            border: '1px solid rgba(229, 57, 53, 0.3)',
+            borderRadius: '8px',
+            padding: '12px',
+          }}>
+            <label style={{
+              display: 'block',
+              fontSize: '10px',
+              color: '#e53935',
+              textTransform: 'uppercase',
+              fontWeight: 'bold',
+              marginBottom: '8px',
+              letterSpacing: '0.5px'
+            }}>
+              💀 Death Saves
+            </label>
+            <DeathSavesDisplay
+              deathSaves={(characterData.characterStats?.deathSaves) || createDefaultDeathSaves()}
+              onUpdate={(updates) => {
+                const stats = characterData.characterStats || createDefaultCharacterStats();
+                updateData({
+                  characterStats: {
+                    ...stats,
+                    deathSaves: {
+                      ...(stats.deathSaves || createDefaultDeathSaves()),
+                      ...updates
+                    }
+                  }
+                });
+              }}
+              canEdit={true}
+            />
+          </div>
+        </div>
       )}
 
       {/* === STANDARD TOKEN UI (non-lore, non-monster tokens) === */}

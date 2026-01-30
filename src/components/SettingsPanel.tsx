@@ -215,12 +215,14 @@ export function SettingsPanel({
                     <option value="npc">NPC Token</option>
                     <option value="party">Party Token</option>
                     <option value="lore">Lore Token</option>
+                    <option value="monster">Monster Token</option>
                   </select>
                   <p style={{ fontSize: '10px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
                     {characterData.tokenType === 'player' && 'Standard token claimable by one player'}
                     {characterData.tokenType === 'npc' && 'GM-controlled NPC with inventory'}
                     {characterData.tokenType === 'party' && 'Shared inventory accessible by all players'}
                     {characterData.tokenType === 'lore' && 'Information token (no inventory)'}
+                    {characterData.tokenType === 'monster' && 'Combat enemy with simplified UI'}
                     {!characterData.tokenType && 'Standard token claimable by one player'}
                   </p>
                 </div>

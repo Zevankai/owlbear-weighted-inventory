@@ -46,6 +46,8 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
 
     let active = true;
     let unsubscribe: (() => void) | undefined;
+    // Use a local variable to track the current notification to avoid stale closure
+    let currentNotification: RestNotificationData | null = null;
 
     const setup = async () => {
       await waitForOBR();
@@ -57,8 +59,19 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
         const notificationData = metadata[REST_NOTIFICATION_KEY] as RestNotificationData | undefined;
         
         if (notificationData) {
+          // Ignore old notifications (older than 5 minutes)
+          const NOTIFICATION_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+          if (Date.now() - notificationData.timestamp > NOTIFICATION_EXPIRY_MS) {
+            // Clear the stale notification
+            OBR.room.setMetadata({
+              [REST_NOTIFICATION_KEY]: undefined,
+            });
+            return;
+          }
+
           // Check if this is a new notification (different ID)
-          if (!notification || notification.id !== notificationData.id) {
+          if (!currentNotification || currentNotification.id !== notificationData.id) {
+            currentNotification = notificationData;
             setNotification(notificationData);
             setHasResponded(false);
             
@@ -68,6 +81,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
             }
           } else {
             // Update existing notification (confirmations may have changed)
+            currentNotification = notificationData;
             setNotification(notificationData);
             
             // Check if all players have confirmed
@@ -88,6 +102,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
           }
         } else {
           // Notification was cleared
+          currentNotification = null;
           setNotification(null);
           setHasResponded(false);
         }
@@ -102,7 +117,7 @@ export const RestNotification: React.FC<RestNotificationProps> = ({
       active = false;
       if (unsubscribe) unsubscribe();
     };
-  }, [playerId, onAllConfirmed, onConfirm, notification]);
+  }, [playerId, onAllConfirmed, onConfirm]);
 
   const handleConfirm = async () => {
     if (!notification || hasResponded) return;

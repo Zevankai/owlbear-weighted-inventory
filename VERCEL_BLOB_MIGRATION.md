@@ -45,11 +45,15 @@ repositories/{campaignId}/custom-spells.json     # GM's custom spells
 
 ## Environment Setup
 
-### Required Environment Variable
-Set the Vercel Blob storage token in your Vercel project:
+### Required Environment Variables
+Set the following environment variables in your Vercel project:
+
 ```
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
+ALLOWED_ORIGINS=https://your-owlbear-domain.com,https://another-allowed-origin.com
 ```
+
+**Note**: `ALLOWED_ORIGINS` is optional. If not set, CORS will allow all origins (*). In production, it's recommended to set specific allowed origins for security.
 
 ## Usage
 
@@ -103,6 +107,11 @@ function MyComponent() {
 ### 4. Type Safety
 - All storage operations use existing TypeScript types
 - Type-safe interfaces prevent data corruption
+
+### 5. Security
+- Uses Vercel Blob SDK methods for secure API access (no token exposure)
+- CORS can be restricted to specific allowed origins via `ALLOWED_ORIGINS` environment variable
+- Blob access is public (downloadUrl), but only the API endpoints can write data
 
 ## Testing
 

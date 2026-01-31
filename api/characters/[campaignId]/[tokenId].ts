@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { put, del } from '@vercel/blob';
+import { put, del, list } from '@vercel/blob';
 
 /**
  * Serverless function for character/lore token data
@@ -9,8 +9,14 @@ import { put, del } from '@vercel/blob';
  * DELETE - Delete character data
  */
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // Enable CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Enable CORS - restrict to specific origins in production
+  const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || ['*'];
+  const origin = req.headers.origin || '';
+  
+  if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', allowedOrigins.includes('*') ? '*' : origin);
+  }
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -28,15 +34,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     if (req.method === 'GET') {
-      // Load character data
+      // Load character data using Vercel Blob SDK
       try {
-        const blobUrl = `${process.env.BLOB_READ_WRITE_TOKEN}/${blobPath}`;
-        const response = await fetch(blobUrl);
+        // List blobs to check if the file exists and get its URL
+        const { blobs } = await list({ prefix: blobPath, limit: 1 });
+        
+        if (blobs.length === 0) {
+          return res.status(404).json({ error: 'Character data not found' });
+        }
+
+        // Fetch the blob content using the download URL
+        const response = await fetch(blobs[0].downloadUrl);
         
         if (!response.ok) {
-          if (response.status === 404) {
-            return res.status(404).json({ error: 'Character data not found' });
-          }
           throw new Error(`Failed to fetch blob: ${response.statusText}`);
         }
 

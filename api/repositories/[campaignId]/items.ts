@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { put, head } from '@vercel/blob';
+import { put } from '@vercel/blob';
 
 /**
  * Serverless function for custom items repository

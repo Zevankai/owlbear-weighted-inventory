@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { put, del, head } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 
 /**
  * Serverless function for character/lore token data

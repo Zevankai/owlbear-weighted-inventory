@@ -1557,12 +1557,13 @@ function App() {
       updateData({ monsterSettings: defaultMonsterSettings });
     }
 
-    // For GM: Show Home, Pack, Create tabs
+    // For GM: Show Home, Pack, Create, Actions tabs
     if (playerRole === 'GM') {
       visibleTabs = [
         { id: 'Home' as Tab, label: '||' },
         { id: 'Pack' as Tab, label: 'PACK' },
-        { id: 'Create' as Tab, label: 'CREATE' }
+        { id: 'Create' as Tab, label: 'CREATE' },
+        { id: 'Actions' as Tab, label: 'ACTIONS' }
       ];
     } else {
       // For players: Show Home tab, and Pack tab if inventory is visible to players

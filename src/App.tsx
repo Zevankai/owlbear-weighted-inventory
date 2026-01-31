@@ -1444,20 +1444,25 @@ function App() {
         actionEntries: [],
         lootVisibleToPlayers: false,
         actionsVisibleToPlayers: false,
+        inventoryVisibleToPlayers: false,
       };
       updateData({ monsterSettings: defaultMonsterSettings });
     }
 
-    // For GM: Show Home, Loot, Actions tabs
+    // For GM: Show Home, Pack, Create tabs
     if (playerRole === 'GM') {
       visibleTabs = [
-        { id: 'Home', label: '||' },
-        { id: 'Loot', label: 'LOOT' },
-        { id: 'Actions', label: 'ACTIONS' }
+        { id: 'Home' as Tab, label: '||' },
+        { id: 'Pack' as Tab, label: 'PACK' },
+        { id: 'Create' as Tab, label: 'CREATE' }
       ];
     } else {
-      // For players: Show only Monster tab
-      visibleTabs = [{ id: 'Monster', label: 'MONSTER' }];
+      // For players: Show Home tab, and Pack tab if inventory is visible to players
+      const showPackTab = characterData.monsterSettings?.inventoryVisibleToPlayers;
+      visibleTabs = [
+        { id: 'Home' as Tab, label: 'HOME' },
+        ...(showPackTab ? [{ id: 'Pack' as Tab, label: 'PACK' }] : [])
+      ];
     }
   }
 

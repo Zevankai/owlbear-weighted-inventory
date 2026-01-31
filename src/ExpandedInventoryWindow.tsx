@@ -5,7 +5,6 @@ import './App.css';
 
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, EXPANDED_POPOVER_ID, STORAGE_DEFINITIONS, PACK_DEFINITIONS, STORAGE_TYPES_WITH_EQUIPMENT, EQUIPMENT_TAB_IDS } from './constants';
-import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, CharacterData, Tab, StorageType, Vault, Currency, PackType, LoreTabId, LoreEntry, MonsterSettings } from './types';
 import { HomeTab } from './components/tabs/HomeTab';
 import { LoreTab } from './components/tabs/LoreTab';
@@ -19,6 +18,8 @@ import { parseMarkdown } from './utils/markdown';
 import { ensureCurrency, formatCurrency } from './utils/currency';
 import { waitForOBR } from './utils/obr';
 import { MarkdownHint } from './components/MarkdownHint';
+import { useRepository } from './context/RepositoryContext';
+import type { RepoItem } from './data/repository';
 
 export default function ExpandedInventoryWindow() {
   const [loading, setLoading] = useState(true);
@@ -28,6 +29,9 @@ export default function ExpandedInventoryWindow() {
   const [characterData, setCharacterData] = useState<CharacterData | null>(null);
   const [playerId, setPlayerId] = useState<string>('');
   const [playerRole, setPlayerRole] = useState<'GM' | 'PLAYER'>('PLAYER');
+
+  // Load repository data (merged built-in + custom)
+  const { itemRepository } = useRepository();
 
   // Lore tab state
   const [activeLoreTab, setActiveLoreTab] = useState<LoreTabId>('overview');
@@ -589,7 +593,7 @@ export default function ExpandedInventoryWindow() {
   };
 
   // Helper function to add item from repository
-  const handleAddFromRepository = (repoItem: typeof ITEM_REPOSITORY[0]) => {
+  const handleAddFromRepository = (repoItem: RepoItem) => {
     if (!currentDisplayData) return;
     const createdItem: Item = {
       id: uuidv4(),
@@ -1316,7 +1320,7 @@ export default function ExpandedInventoryWindow() {
               <input className="search-input" placeholder="Search by name, category, or type" value={repoSearch} onChange={(e) => { setRepoSearch(e.target.value); setShowRepo(e.target.value.length > 1); }} onFocus={() => { if (repoSearch.length > 1) setShowRepo(true); }} />
               {showRepo && repoSearch.length > 1 && (
                 <div style={{position: 'absolute', top: '100%', left: 0, right: 0, background: '#222', border: '1px solid var(--accent-gold)', maxHeight: '300px', overflowY: 'auto', zIndex: 100, borderRadius: '0 0 4px 4px'}}>
-                  {ITEM_REPOSITORY.filter(i => i.name.toLowerCase().includes(repoSearch.toLowerCase()) || i.category.toLowerCase().includes(repoSearch.toLowerCase()) || i.type.toLowerCase().includes(repoSearch.toLowerCase())).map((repoItem, idx) => (
+                  {itemRepository.filter(i => i.name.toLowerCase().includes(repoSearch.toLowerCase()) || i.category.toLowerCase().includes(repoSearch.toLowerCase()) || i.type.toLowerCase().includes(repoSearch.toLowerCase())).map((repoItem, idx) => (
                     <div key={idx} style={{padding: '8px', cursor: 'pointer', borderBottom:'1px solid #333', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}} onMouseEnter={(e) => e.currentTarget.style.background = '#444'} onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}>
                       <div style={{flex: 1}} onClick={() => { setNewItem({name: repoItem.name, category: repoItem.category, type: repoItem.type, weight: repoItem.weight, value: repoItem.value, damage: repoItem.damage || '', ac: repoItem.ac, properties: repoItem.properties || '', requiresAttunement: repoItem.requiresAttunement || false, qty: 1}); setRepoSearch(''); setShowRepo(false); }}>
                         <div style={{fontWeight:'bold', color:'var(--text-main)'}}>{repoItem.name}</div>

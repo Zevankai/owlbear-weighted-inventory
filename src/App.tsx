@@ -7,9 +7,11 @@ import './App.css';
 import { useInventory } from './hooks/useInventory';
 import { usePackLogic } from './hooks/usePackLogic';
 import { ITEM_CATEGORIES, DEFAULT_CATEGORY_WEIGHTS, PACK_DEFINITIONS, STORAGE_DEFINITIONS, TRADE_POPOVER_ID, EXPANDED_POPOVER_ID, WIDE_POPOVER_WIDTH, TOKEN_TYPE_LABELS, TOKEN_TYPE_ORDER } from './constants';
-import { ITEM_REPOSITORY } from './data/repository';
 import type { Item, ItemCategory, StorageType, CharacterData, Vault, Currency, ActiveTrade, Tab, LoreTabId, LoreEntry, TokenType, RestType, MonsterSettings } from './types';
 import { ACTIVE_TRADE_KEY } from './constants';
+
+// Repository context
+import { useRepository } from './context/RepositoryContext';
 
 // Lore constants
 import { LORE_TAB_DEFINITIONS, generateDefaultLoreSettings } from './constants/lore';
@@ -71,6 +73,9 @@ function App() {
     removeFavoriteById, canEditToken, checkProximity,
     gmCustomizations, updateGMCustomizations
   } = useInventory();
+
+  // 2. Load Repository Data (merged built-in + custom)
+  const { itemRepository } = useRepository();
 
   // Track previous tokenId to detect token changes
   const prevTokenIdRef = useRef<string | null>(null);
@@ -2069,7 +2074,7 @@ function App() {
                             zIndex: 100,
                             borderRadius: '0 0 4px 4px'
                         }}>
-                            {ITEM_REPOSITORY
+                            {itemRepository
                                 .filter(i => {
                                     const search = repoSearch.toLowerCase();
                                     return i.name.toLowerCase().includes(search) ||

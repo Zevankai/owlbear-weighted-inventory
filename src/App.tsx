@@ -248,6 +248,11 @@ function App() {
   // Rest notification state
   const [preSelectedRestType, setPreSelectedRestType] = useState<RestType | null>(null);
   const [showTimeAdvancementNotif, setShowTimeAdvancementNotif] = useState(false);
+
+  // Loot transfer state
+  const [lootTransferItem, setLootTransferItem] = useState<Item | null>(null);
+  const [lootTransferTargets, setLootTransferTargets] = useState<Array<{id: string; name: string; image?: string}>>([]);
+  const [showLootTransferModal, setShowLootTransferModal] = useState(false);
   const [timeAdvancementData, setTimeAdvancementData] = useState<{
     restType: RestType;
     hoursAdvanced: number;
@@ -766,6 +771,109 @@ function App() {
 
       const newStorages = characterData.externalStorages.map(s => s.id === viewingStorageId ? { ...s, inventory: newStorageInv } : s);
       updateData({ inventory: newPlayerInv, externalStorages: newStorages });
+  };
+
+  // Loot Transfer Handler - for players looting from monster tokens
+  const handleLootItem = async (item: Item) => {
+    if (!playerId || !tokenId) return;
+    
+    try {
+      // Query all tokens claimed by the current player
+      const allTokens = await OBR.scene.items.getItems();
+      const playerTokens = allTokens
+        .filter(token => {
+          const data = token.metadata['com.weighted-inventory/data'] as CharacterData | undefined;
+          return data?.claimedBy === playerId && token.id !== tokenId; // Exclude current monster token
+        })
+        .map(token => ({
+          id: token.id,
+          name: token.name || 'Unnamed Token',
+          image: (token as any).image?.url
+        }));
+
+      if (playerTokens.length === 0) {
+        alert('You need to have a claimed token to loot items. Select your character token and use the "Claim Token" button to claim it first.');
+        return;
+      }
+
+      if (playerTokens.length === 1) {
+        // Transfer directly to the single claimed token
+        await transferLootToToken(item, playerTokens[0].id);
+      } else {
+        // Show modal to select target token
+        setLootTransferItem(item);
+        setLootTransferTargets(playerTokens);
+        setShowLootTransferModal(true);
+      }
+    } catch (error) {
+      console.error('Error looting item:', error);
+      alert('Failed to loot item. Please try again.');
+    }
+  };
+
+  const transferLootToToken = async (item: Item, targetTokenId: string) => {
+    if (!characterData || !tokenId) return;
+
+    try {
+      // Get target token's data
+      const targetTokens = await OBR.scene.items.getItems([targetTokenId]);
+      if (targetTokens.length === 0) return;
+
+      const targetToken = targetTokens[0];
+      const targetData = targetToken.metadata['com.weighted-inventory/data'] as CharacterData | undefined;
+      
+      if (!targetData) return;
+
+      // Remove item from monster's inventory
+      const newMonsterInv = characterData.inventory.filter(i => i.id !== item.id);
+      
+      // Add item to target token's inventory (unequipped, unattuned)
+      const itemToTransfer = { 
+        ...item, 
+        id: uuidv4(), // Generate new ID to avoid conflicts and ensure it's treated as a distinct instance
+        isAttuned: false, 
+        equippedSlot: null 
+      };
+      const newTargetInv = [...targetData.inventory, itemToTransfer];
+
+      // Update both tokens
+      await OBR.scene.items.updateItems([tokenId], (items) => {
+        for (const item of items) {
+          item.metadata['com.weighted-inventory/data'] = {
+            ...characterData,
+            inventory: newMonsterInv
+          };
+        }
+      });
+
+      await OBR.scene.items.updateItems([targetTokenId], (items) => {
+        for (const item of items) {
+          item.metadata['com.weighted-inventory/data'] = {
+            ...targetData,
+            inventory: newTargetInv
+          };
+        }
+      });
+
+      // Update local state
+      updateData({ inventory: newMonsterInv });
+      
+      // Show success message
+      alert(`${item.name} looted successfully!`);
+      
+      // Close modal if open
+      setShowLootTransferModal(false);
+      setLootTransferItem(null);
+    } catch (error) {
+      console.error('Error transferring loot:', error);
+      alert('Failed to transfer loot. Please try again.');
+    }
+  };
+
+  const handleLootTransferSelect = (targetTokenId: string) => {
+    if (lootTransferItem) {
+      transferLootToToken(lootTransferItem, targetTokenId);
+    }
   };
 
   // --- GLOBAL SEARCH ACTIONS ---
@@ -1444,20 +1552,25 @@ function App() {
         actionEntries: [],
         lootVisibleToPlayers: false,
         actionsVisibleToPlayers: false,
+        inventoryVisibleToPlayers: false,
       };
       updateData({ monsterSettings: defaultMonsterSettings });
     }
 
-    // For GM: Show Home, Loot, Actions tabs
+    // For GM: Show Home, Pack, Create tabs
     if (playerRole === 'GM') {
       visibleTabs = [
-        { id: 'Home', label: '||' },
-        { id: 'Loot', label: 'LOOT' },
-        { id: 'Actions', label: 'ACTIONS' }
+        { id: 'Home' as Tab, label: '||' },
+        { id: 'Pack' as Tab, label: 'PACK' },
+        { id: 'Create' as Tab, label: 'CREATE' }
       ];
     } else {
-      // For players: Show only Monster tab
-      visibleTabs = [{ id: 'Monster', label: 'MONSTER' }];
+      // For players: Show Home tab, and Pack tab if inventory is visible to players
+      const showPackTab = characterData.monsterSettings?.inventoryVisibleToPlayers;
+      visibleTabs = [
+        { id: 'Home' as Tab, label: 'HOME' },
+        ...(showPackTab ? [{ id: 'Pack' as Tab, label: 'PACK' }] : [])
+      ];
     }
   }
 
@@ -1649,10 +1762,35 @@ function App() {
                                         </td>
                                         <td style={{padding: '6px 3px', textAlign:'center', fontSize: '10px', color: '#888'}}>{item.weight * item.qty}</td>
                                         <td style={{padding: '6px 3px', textAlign:'right'}}>
-                                            <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                                            <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Equip/Unequip"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
-                                            <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginRight: 3}} title="Sell"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></button>
-                                            <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}} title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                            {/* Show Loot button for players viewing monster inventory */}
+                                            {characterData?.tokenType === 'monster' && playerRole !== 'GM' && (
+                                              <button 
+                                                onClick={() => handleLootItem(item)} 
+                                                style={{
+                                                  background: 'rgba(76, 175, 80, 0.2)',
+                                                  border: '1px solid #4caf50',
+                                                  borderRadius: '4px',
+                                                  color: '#4caf50',
+                                                  cursor: 'pointer',
+                                                  padding: '4px 8px',
+                                                  fontSize: '10px',
+                                                  fontWeight: 'bold',
+                                                  marginRight: '6px'
+                                                }} 
+                                                title="Loot this item"
+                                              >
+                                                💰 Loot
+                                              </button>
+                                            )}
+                                            {/* Standard action buttons for GM or non-monster tokens */}
+                                            {(characterData?.tokenType !== 'monster' || playerRole === 'GM') && (
+                                              <>
+                                                <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+                                                <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Equip/Unequip"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
+                                                <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginRight: 3}} title="Sell"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></button>
+                                                <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}} title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                              </>
+                                            )}
                                         </td>
                                     </tr>
                                     {editingItemId === item.id ? (
@@ -2470,6 +2608,118 @@ function App() {
         partners={tradePartners}
         loading={loadingTradePartners}
       />
+
+      {/* Loot Transfer Modal */}
+      {showLootTransferModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.8)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10000,
+        }}>
+          <div style={{
+            background: 'var(--bg-dark)',
+            border: '2px solid var(--accent-gold)',
+            borderRadius: '8px',
+            padding: '24px',
+            maxWidth: '400px',
+            width: '90%',
+          }}>
+            <h2 style={{
+              color: 'var(--accent-gold)',
+              marginTop: 0,
+              marginBottom: '16px',
+              fontSize: '18px',
+            }}>
+              Select Target Token
+            </h2>
+            <p style={{
+              color: '#ccc',
+              fontSize: '13px',
+              marginBottom: '16px',
+            }}>
+              Choose which token to transfer <strong>{lootTransferItem?.name}</strong> to:
+            </p>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              marginBottom: '16px',
+            }}>
+              {lootTransferTargets.map(target => (
+                <button
+                  key={target.id}
+                  onClick={() => handleLootTransferSelect(target.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '12px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    borderRadius: '6px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                    e.currentTarget.style.borderColor = 'var(--accent-gold)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                    e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                  }}
+                >
+                  {target.image && (
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      overflow: 'hidden',
+                      border: '2px solid var(--accent-gold)',
+                      flexShrink: 0,
+                    }}>
+                      <img 
+                        src={target.image} 
+                        alt={target.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    </div>
+                  )}
+                  <span style={{ fontSize: '14px', fontWeight: 'bold' }}>
+                    {target.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                setShowLootTransferModal(false);
+                setLootTransferItem(null);
+              }}
+              style={{
+                width: '100%',
+                padding: '10px',
+                background: 'rgba(255, 255, 255, 0.1)',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                borderRadius: '6px',
+                color: '#fff',
+                cursor: 'pointer',
+                fontSize: '13px',
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Trade Request Notification */}
       <TradeRequestNotification

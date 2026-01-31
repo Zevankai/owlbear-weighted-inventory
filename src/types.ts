@@ -537,8 +537,9 @@ export interface MonsterActionEntry {
 export interface MonsterSettings {
   lootEntries: MonsterLootEntry[];
   actionEntries: MonsterActionEntry[];
-  lootVisibleToPlayers: boolean; // GM can toggle this manually
+  lootVisibleToPlayers: boolean; // GM can toggle this manually (deprecated, kept for backwards compatibility)
   actionsVisibleToPlayers: boolean; // GM can toggle this manually
+  inventoryVisibleToPlayers?: boolean; // GM can toggle to show/hide Pack tab from players
 }
 
 export interface CharacterData {

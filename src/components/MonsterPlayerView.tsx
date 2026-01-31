@@ -1,5 +1,5 @@
 import React from 'react';
-import type { CharacterData, MonsterSettings } from '../types';
+import type { CharacterData } from '../types';
 import { createDefaultCharacterSheet } from '../utils/characterSheet';
 
 interface MonsterPlayerViewProps {
@@ -18,16 +18,6 @@ export const MonsterPlayerView: React.FC<MonsterPlayerViewProps> = ({
   const maxHP = sheet.hitPoints.max;
   const isDead = currentHP <= 0;
   const isBloodied = currentHP > 0 && currentHP <= maxHP / 2;
-  
-  const monsterSettings: MonsterSettings = characterData.monsterSettings || {
-    lootEntries: [],
-    actionEntries: [],
-    lootVisibleToPlayers: false,
-    actionsVisibleToPlayers: false,
-  };
-  
-  // Show loot if monster is dead OR GM enabled visibility
-  const showLoot = isDead || monsterSettings.lootVisibleToPlayers;
   
   return (
     <div className="section" style={{ textAlign: 'center', padding: '24px' }}>
@@ -97,48 +87,17 @@ export const MonsterPlayerView: React.FC<MonsterPlayerViewProps> = ({
         </div>
       )}
       
-      {/* Loot Section - only if visible */}
-      {showLoot && monsterSettings.lootEntries.length > 0 && (
-        <div style={{
-          marginTop: '24px',
-          textAlign: 'left',
-          background: 'rgba(255, 255, 255, 0.05)',
-          borderRadius: '8px',
-          padding: '16px'
-        }}>
-          <h3 style={{ 
-            color: 'var(--accent-gold)', 
-            fontSize: '12px', 
-            textTransform: 'uppercase',
-            marginBottom: '12px'
-          }}>
-            💰 Loot
-          </h3>
-          {monsterSettings.lootEntries.map(entry => (
-            <div key={entry.id} style={{
-              padding: '8px',
-              background: 'rgba(0, 0, 0, 0.2)',
-              borderRadius: '4px',
-              marginBottom: '8px',
-              fontSize: '13px'
-            }}>
-              {entry.content}
-            </div>
-          ))}
-        </div>
-      )}
-      
-      {/* Empty loot message when dead but no loot */}
-      {showLoot && monsterSettings.lootEntries.length === 0 && isDead && (
-        <div style={{
-          marginTop: '24px',
-          color: 'var(--text-muted)',
-          fontStyle: 'italic',
-          fontSize: '12px'
-        }}>
-          No loot found
-        </div>
-      )}
+      {/* Info message about Pack tab */}
+      <div style={{
+        marginTop: '24px',
+        color: 'var(--text-muted)',
+        fontStyle: 'italic',
+        fontSize: '12px'
+      }}>
+        {characterData.monsterSettings?.inventoryVisibleToPlayers 
+          ? 'Switch to the Pack tab to view and loot items'
+          : 'Inventory is not visible'}
+      </div>
     </div>
   );
 };

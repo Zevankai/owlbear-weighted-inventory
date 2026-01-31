@@ -223,6 +223,108 @@ const AbilityScoreCircle = ({ ability, score, modifier, canEdit, onScoreChange }
   );
 };
 
+// Monster Ability Score Circle - Red themed version for monster tokens
+interface MonsterAbilityScoreCircleProps {
+  ability: keyof AbilityScores;
+  score: number;
+  modifier: number;
+  onScoreChange: (score: number) => void;
+}
+
+const MonsterAbilityScoreCircle = ({ ability, score, modifier, onScoreChange }: MonsterAbilityScoreCircleProps) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState(score.toString());
+
+  const handleClick = () => {
+    setEditValue(score.toString());
+    setIsEditing(true);
+  };
+
+  const handleSave = () => {
+    const parsed = parseInt(editValue, 10);
+    const newScore = isNaN(parsed) ? 10 : Math.max(1, Math.min(30, parsed));
+    onScoreChange(newScore);
+    setIsEditing(false);
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '2px',
+    }}>
+      <span style={{
+        fontSize: '8px',
+        color: 'rgba(229, 57, 53, 0.8)',
+        textTransform: 'uppercase',
+        letterSpacing: '0.3px',
+        fontWeight: 'bold',
+      }}>
+        {ABILITY_ABBREV[ability]}
+      </span>
+      <div
+        onClick={handleClick}
+        style={{
+          width: '42px',
+          height: '42px',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, rgba(229, 57, 53, 0.3), rgba(200, 40, 40, 0.3))',
+          border: '2px solid rgba(229, 57, 53, 0.6)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+          boxShadow: '0 2px 6px rgba(229, 57, 53, 0.3)',
+        }}
+        title="Click to edit"
+      >
+        {isEditing ? (
+          <input
+            type="number"
+            value={editValue}
+            min={1}
+            max={30}
+            onChange={(e) => setEditValue(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+            autoFocus
+            style={{
+              width: '28px',
+              background: 'transparent',
+              border: 'none',
+              color: '#e53935',
+              fontSize: '12px',
+              fontWeight: 'bold',
+              textAlign: 'center',
+              outline: 'none',
+            }}
+          />
+        ) : (
+          <>
+            <span style={{
+              fontSize: '14px',
+              fontWeight: 'bold',
+              color: '#e53935',
+              lineHeight: 1,
+            }}>
+              {modifier >= 0 ? `+${modifier}` : modifier}
+            </span>
+            <span style={{
+              fontSize: '9px',
+              color: 'rgba(229, 57, 53, 0.8)',
+            }}>
+              {score}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Death Saves Component - Clickable skull icons
 interface DeathSavesDisplayProps {
   deathSaves: DeathSaves;
@@ -3143,6 +3245,144 @@ export function HomeTab({
               fontWeight: 'bold'
             }}>
               Monster Token
+            </div>
+          </div>
+
+          {/* Toolbar/Icon Row */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '6px',
+            marginBottom: '16px',
+            flexWrap: 'wrap',
+          }}>
+            {/* Settings */}
+            <button
+              onClick={() => { setShowSettings(true); loadDebugInfo(); }}
+              style={{
+                background: 'transparent',
+                color: '#e53935',
+                border: '1px solid rgba(229, 57, 53, 0.3)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '10px',
+                fontWeight: 'bold',
+              }}
+              title="Settings - Change token type"
+            >
+              ⚙️ Settings
+            </button>
+
+            {/* Favorite Star */}
+            <button
+              onClick={toggleFavorite}
+              style={{
+                background: isFavorited ? 'rgba(229, 57, 53, 0.15)' : 'transparent',
+                color: isFavorited ? '#e53935' : '#666',
+                border: '1px solid ' + (isFavorited ? 'rgba(229, 57, 53, 0.3)' : '#333'),
+                padding: '2px 6px',
+                borderRadius: '3px',
+                cursor: 'pointer',
+                fontSize: '11px',
+              }}
+              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {isFavorited ? '⭐' : '☆'}
+            </button>
+
+            {/* View Favorites List */}
+            {(favorites.length > 0 || hasClaimedToken) && (
+              <button
+                onClick={() => setViewingFavorites(true)}
+                style={{
+                  background: 'transparent',
+                  color: '#e53935',
+                  border: '1px solid rgba(229, 57, 53, 0.3)',
+                  padding: '2px 6px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                }}
+                title="View all favorite tokens"
+              >
+                📋
+              </button>
+            )}
+
+            {/* Pack Visibility Toggle */}
+            <button
+              onClick={() => {
+                const currentSettings = characterData.monsterSettings || {
+                  lootEntries: [],
+                  actionEntries: [],
+                  lootVisibleToPlayers: false,
+                  actionsVisibleToPlayers: false,
+                  inventoryVisibleToPlayers: false,
+                };
+                updateData({
+                  monsterSettings: {
+                    ...currentSettings,
+                    inventoryVisibleToPlayers: !currentSettings.inventoryVisibleToPlayers,
+                  }
+                });
+              }}
+              style={{
+                background: characterData.monsterSettings?.inventoryVisibleToPlayers 
+                  ? 'rgba(76, 175, 80, 0.2)' 
+                  : 'rgba(244, 67, 54, 0.2)',
+                color: characterData.monsterSettings?.inventoryVisibleToPlayers ? '#4caf50' : '#f44336',
+                border: `1px solid ${characterData.monsterSettings?.inventoryVisibleToPlayers ? '#4caf50' : '#f44336'}`,
+                padding: '4px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '9px',
+                fontWeight: 'bold',
+              }}
+              title={characterData.monsterSettings?.inventoryVisibleToPlayers ? 'Pack visible to players' : 'Pack hidden from players'}
+            >
+              {characterData.monsterSettings?.inventoryVisibleToPlayers ? '👁️ Pack Visible' : '🔒 Pack Hidden'}
+            </button>
+          </div>
+
+          {/* Ability Scores Bar */}
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              padding: '8px 12px',
+              background: 'rgba(229, 57, 53, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(229, 57, 53, 0.3)',
+            }}>
+              {(() => {
+                const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+                return (Object.keys(sheet.abilityScores) as Array<keyof AbilityScores>).map((ability) => (
+                  <MonsterAbilityScoreCircle
+                    key={ability}
+                    ability={ability}
+                    score={sheet.abilityScores[ability].base}
+                    modifier={sheet.abilityScores[ability].modifier}
+                    onScoreChange={(newScore) => {
+                      const sheet = characterData.characterSheet || createDefaultCharacterSheet();
+                      const newModifier = calculateModifier(newScore);
+                      updateData({
+                        characterSheet: {
+                          ...sheet,
+                          abilityScores: {
+                            ...sheet.abilityScores,
+                            [ability]: {
+                              base: newScore,
+                              modifier: newModifier,
+                            }
+                          }
+                        }
+                      });
+                    }}
+                  />
+                ));
+              })()}
             </div>
           </div>
 

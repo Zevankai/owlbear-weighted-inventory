@@ -125,16 +125,18 @@ export function GMOverviewTab({
   };
 
   // Filter items based on search
-  const searchResults = searchQuery.length > 1
-    ? itemRepository.filter(item => {
-        const query = searchQuery.toLowerCase();
-        return (
-          item.name.toLowerCase().includes(query) ||
-          item.category.toLowerCase().includes(query) ||
-          item.type.toLowerCase().includes(query)
-        );
-      })
-    : [];
+  const searchResults = (() => {
+    if (searchQuery.length < 2) return [];
+    
+    const query = searchQuery.toLowerCase();
+    return itemRepository.filter(item => {
+      return (
+        item.name.toLowerCase().includes(query) ||
+        item.category.toLowerCase().includes(query) ||
+        item.type.toLowerCase().includes(query)
+      );
+    });
+  })();
 
   return (
     <div className="section">

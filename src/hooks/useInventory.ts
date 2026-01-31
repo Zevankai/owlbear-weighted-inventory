@@ -209,7 +209,7 @@ export function useInventory() {
     setTokenName(name);
     setTokenImage((token as any).image?.url || null);
 
-    // Try to load from Vercel Blob storage first (hybrid approach)
+    // Try to load from Vercel Blob storage (with OBR metadata fallback handled by storageService)
     let data: CharacterData | null = null;
     try {
       const campaignId = await getCampaignId();
@@ -217,12 +217,6 @@ export function useInventory() {
       console.log('[handleSelection] Loaded from storage service:', data ? `${data.inventory?.length || 0} items` : 'null');
     } catch (error) {
       console.error('[handleSelection] Error loading from storage service:', error);
-    }
-
-    // If no data from Vercel Blob, try OBR metadata (fallback is already handled in loadCharacterData)
-    if (!data) {
-      data = token.metadata[TOKEN_DATA_KEY] as CharacterData | undefined || null;
-      console.log('[handleSelection] Token metadata:', data ? `${data.inventory?.length || 0} items` : 'null');
     }
 
     // If still no data, check for legacy formats to migrate

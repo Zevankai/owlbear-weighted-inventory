@@ -67,6 +67,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Custom items must be an array' });
       }
 
+      // Note: Using 'public' access since Owlbear Rodeo is a collaborative platform
+      // where players share game resources. Custom items are campaign-specific.
       const blob = await put(blobPath, JSON.stringify(customItems), {
         access: 'public',
         contentType: 'application/json',

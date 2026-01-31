@@ -66,6 +66,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'No character data provided' });
       }
 
+      // Note: Using 'public' access since Owlbear Rodeo is a collaborative platform
+      // where players share game state. If more granular access control is needed,
+      // consider implementing authentication and using token-based access.
       const blob = await put(blobPath, JSON.stringify(characterData), {
         access: 'public',
         contentType: 'application/json',
@@ -81,8 +84,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     if (req.method === 'DELETE') {
       // Delete character data
-      await del(blobPath);
-      return res.status(200).json({ success: true });
+      try {
+        // Check if blob exists before attempting deletion
+        const { blobs } = await list({ prefix: blobPath, limit: 1 });
+        
+        if (blobs.length === 0) {
+          return res.status(404).json({ error: 'Character data not found' });
+        }
+        
+        await del(blobPath);
+        return res.status(200).json({ success: true });
+      } catch (error) {
+        console.error('Error deleting character data:', error);
+        return res.status(500).json({ 
+          error: 'Failed to delete character data',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

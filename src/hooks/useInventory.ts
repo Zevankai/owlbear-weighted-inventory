@@ -5,6 +5,7 @@ import type { CharacterData, TokenType, GMCustomizations } from '../types';
 import { DEFAULT_CHARACTER_DATA } from '../constants';
 import type { Vector2 } from '@owlbear-rodeo/sdk';
 import { createDefaultExhaustionState, createDefaultRestHistory } from '../utils/characterStats';
+import { loadCharacterData, saveCharacterData, getCampaignId } from '../services/storageService';
 
 // Favorite entry type with token type for grouping
 export interface FavoriteEntry {
@@ -208,11 +209,23 @@ export function useInventory() {
     setTokenName(name);
     setTokenImage((token as any).image?.url || null);
 
-    // Try to load existing data from token metadata
-    let data = token.metadata[TOKEN_DATA_KEY] as CharacterData | undefined || null;
-    console.log('[handleSelection] Token metadata:', data ? `${data.inventory?.length || 0} items` : 'null');
+    // Try to load from Vercel Blob storage first (hybrid approach)
+    let data: CharacterData | null = null;
+    try {
+      const campaignId = await getCampaignId();
+      data = await loadCharacterData(campaignId, token.id);
+      console.log('[handleSelection] Loaded from storage service:', data ? `${data.inventory?.length || 0} items` : 'null');
+    } catch (error) {
+      console.error('[handleSelection] Error loading from storage service:', error);
+    }
 
-    // If no data, check for legacy formats to migrate
+    // If no data from Vercel Blob, try OBR metadata (fallback is already handled in loadCharacterData)
+    if (!data) {
+      data = token.metadata[TOKEN_DATA_KEY] as CharacterData | undefined || null;
+      console.log('[handleSelection] Token metadata:', data ? `${data.inventory?.length || 0} items` : 'null');
+    }
+
+    // If still no data, check for legacy formats to migrate
     if (!data) {
       console.log('[handleSelection] No data found, checking legacy...');
       data = await migrateLegacyData(token);
@@ -234,13 +247,12 @@ export function useInventory() {
       needsPersist = true;
     }
     
-    // Persist migration changes to token metadata if any changes were made
+    // Persist migration changes using storage service if any changes were made
     if (needsPersist) {
-      console.log('[Migration] Persisting migration changes to token metadata');
+      console.log('[Migration] Persisting migration changes via storage service');
       try {
-        await OBR.scene.items.updateItems([token.id], (items) => {
-          items[0].metadata[TOKEN_DATA_KEY] = migratedData;
-        });
+        const campaignId = await getCampaignId();
+        await saveCharacterData(campaignId, token.id, migratedData);
         console.log('[Migration] Persisted successfully');
       } catch (err) {
         console.error('[Migration] Failed to persist changes:', err);
@@ -415,7 +427,7 @@ export function useInventory() {
       return { ...current, ...updates };
     });
 
-    // Save to token's own metadata (16KB per token!)
+    // Save using storage service (hybrid approach: Vercel Blob + OBR metadata cache)
     try {
       const items = await OBR.scene.items.getItems([idToSave]);
       if (items.length === 0) {
@@ -427,11 +439,14 @@ export function useInventory() {
       const mergedData = { ...currentData, ...updates };
       console.log('[updateData] Saving merged data, size:', JSON.stringify(mergedData).length, 'bytes');
 
-      await OBR.scene.items.updateItems([idToSave], (items) => {
-        items[0].metadata[TOKEN_DATA_KEY] = mergedData;
-      });
+      const campaignId = await getCampaignId();
+      const success = await saveCharacterData(campaignId, idToSave, mergedData);
 
-      console.log('[updateData] SUCCESS - saved to token metadata');
+      if (success) {
+        console.log('[updateData] SUCCESS - saved via storage service');
+      } else {
+        console.error('[updateData] FAILED - storage service returned false');
+      }
     } catch (err) {
       console.error('[updateData] FAILED:', err);
     }

@@ -6,6 +6,7 @@ import ExpandedInventoryWindow from './ExpandedInventoryWindow'
 import './index.css'
 import OBR from '@owlbear-rodeo/sdk'
 import { MAIN_POPOVER_ID, DEFAULT_POPOVER_WIDTH } from './constants'
+import { RepositoryProvider } from './context/RepositoryContext'
 
 OBR.onReady(() => {
   OBR.contextMenu.create({
@@ -44,7 +45,9 @@ OBR.onReady(() => {
 
   ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
-      <Component />
+      <RepositoryProvider>
+        <Component />
+      </RepositoryProvider>
     </React.StrictMode>,
   )
 });

@@ -12,6 +12,7 @@
   "dependencies": {
     "@owlbear-rodeo/sdk": "^3.1.0",
     "@types/uuid": "^10.0.0",
+    "@vercel/blob": "^2.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "uuid": "^13.0.0"
@@ -21,6 +22,7 @@
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "@vercel/node": "^5.5.28",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "@vitejs/plugin-react": "^5.1.0",
     "eslint": "^9.39.1",

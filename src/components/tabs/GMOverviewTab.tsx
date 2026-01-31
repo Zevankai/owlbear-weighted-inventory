@@ -41,11 +41,12 @@ export function GMOverviewTab({
 
   // State for editing
   const [editingItem, setEditingItem] = useState<RepoItem | null>(null);
+  const [originalEditingItemName, setOriginalEditingItemName] = useState<string>('');
 
   // Handler to create repository item
   const handleCreateRepoItem = async () => {
     if (!newRepoItem.name) {
-      alert('Item name is required');
+      alert('Please enter an item name to create a repository item.');
       return;
     }
 
@@ -78,7 +79,7 @@ export function GMOverviewTab({
       });
       alert(`Item "${repoItem.name}" added to repository!`);
     } else {
-      alert('Failed to add item to repository');
+      alert('Failed to add item to repository. Please try again or check for duplicate names.');
     }
   };
 
@@ -86,17 +87,19 @@ export function GMOverviewTab({
   const handleEditRepoItem = async () => {
     if (!editingItem) return;
 
+    // Use the original name to find and replace the item
     const updatedCustomItems = customItems.map(item =>
-      item.name === editingItem.name ? editingItem : item
+      item.name === originalEditingItemName ? editingItem : item
     );
 
     const success = await updateCustomItems(updatedCustomItems);
     
     if (success) {
       setEditingItem(null);
+      setOriginalEditingItemName('');
       alert(`Item "${editingItem.name}" updated!`);
     } else {
-      alert('Failed to update item');
+      alert('Failed to update item in repository. Please try again or check for conflicts.');
     }
   };
 
@@ -112,7 +115,7 @@ export function GMOverviewTab({
     if (success) {
       alert(`Item "${itemToDelete.name}" deleted from repository`);
     } else {
-      alert('Failed to delete item');
+      alert('Failed to delete item from repository. Please try again.');
     }
   };
 
@@ -351,7 +354,7 @@ export function GMOverviewTab({
                 type="number"
                 className="search-input"
                 value={newRepoItem.weight}
-                onChange={e => setNewRepoItem({ ...newRepoItem, weight: parseFloat(e.target.value) })}
+                onChange={e => setNewRepoItem({ ...newRepoItem, weight: parseFloat(e.target.value) || 0 })}
               />
             </div>
 
@@ -363,7 +366,7 @@ export function GMOverviewTab({
                 className="search-input"
                 value={newRepoItem.value}
                 onChange={e => setNewRepoItem({ ...newRepoItem, value: e.target.value })}
-                placeholder="10gp"
+                placeholder="Ex: 10 gp"
               />
             </div>
 
@@ -390,7 +393,7 @@ export function GMOverviewTab({
                   type="number"
                   className="search-input"
                   value={newRepoItem.ac || ''}
-                  onChange={e => setNewRepoItem({ ...newRepoItem, ac: parseInt(e.target.value) })}
+                  onChange={e => setNewRepoItem({ ...newRepoItem, ac: parseInt(e.target.value) || undefined })}
                 />
               </div>
             )}
@@ -536,7 +539,7 @@ export function GMOverviewTab({
                               type="number"
                               className="search-input"
                               value={editingItem.weight}
-                              onChange={e => setEditingItem({ ...editingItem, weight: parseFloat(e.target.value) })}
+                              onChange={e => setEditingItem({ ...editingItem, weight: parseFloat(e.target.value) || 0 })}
                               style={{ fontSize: '11px', padding: '4px 8px' }}
                             />
                           </div>
@@ -567,7 +570,7 @@ export function GMOverviewTab({
                                 type="number"
                                 className="search-input"
                                 value={editingItem.ac || ''}
-                                onChange={e => setEditingItem({ ...editingItem, ac: parseInt(e.target.value) })}
+                                onChange={e => setEditingItem({ ...editingItem, ac: parseInt(e.target.value) || undefined })}
                                 style={{ fontSize: '11px', padding: '4px 8px' }}
                               />
                             </div>
@@ -610,7 +613,10 @@ export function GMOverviewTab({
                             SAVE
                           </button>
                           <button
-                            onClick={() => setEditingItem(null)}
+                            onClick={() => {
+                              setEditingItem(null);
+                              setOriginalEditingItemName('');
+                            }}
                             style={{
                               flex: 1,
                               padding: '6px 12px',
@@ -685,7 +691,10 @@ export function GMOverviewTab({
                           {isCustom && (
                             <div style={{ display: 'flex', gap: '6px', marginLeft: '12px' }}>
                               <button
-                                onClick={() => setEditingItem({ ...item })}
+                                onClick={() => {
+                                  setEditingItem({ ...item });
+                                  setOriginalEditingItemName(item.name);
+                                }}
                                 style={{
                                   padding: '4px 10px',
                                   background: '#4a9eff',

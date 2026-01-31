@@ -13,6 +13,7 @@ import {
   getSpellLevelName,
   type SpellFilters 
 } from '../../data/spellRepository';
+import { useRepository } from '../../context/RepositoryContext';
 
 interface SpellsTabProps {
   characterData: CharacterData;
@@ -46,6 +47,9 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
 }) => {
   const [editingSpellId, setEditingSpellId] = useState<string | null>(null);
   const [newSpellLevel, setNewSpellLevel] = useState<number>(0);
+  
+  // Load repository data (merged built-in + custom)
+  const { spellRepository } = useRepository();
   
   // Repository search and filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -223,7 +227,7 @@ export const SpellsTab: React.FC<SpellsTabProps> = ({
       concentration: filterConcentration,
       ritual: filterRitual,
     };
-    return searchSpells(filters);
+    return searchSpells(filters, spellRepository);
   };
 
   const groupedSpells = groupSpellsByLevel(spellManagement.knownSpells);

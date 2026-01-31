@@ -4805,8 +4805,8 @@ export interface SpellFilters {
   ritual?: boolean;
 }
 
-export function searchSpells(filters: SpellFilters): RepositorySpell[] {
-  let results = [...SPELL_REPOSITORY];
+export function searchSpells(filters: SpellFilters, repository: RepositorySpell[] = SPELL_REPOSITORY): RepositorySpell[] {
+  let results = [...repository];
 
   // Text search (name or description)
   if (filters.query && filters.query.trim()) {

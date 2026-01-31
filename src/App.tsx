@@ -792,7 +792,7 @@ function App() {
         }));
 
       if (playerTokens.length === 0) {
-        alert('You need to have a claimed token to loot items.');
+        alert('You need to have a claimed token to loot items. Select your character token and use the "Claim Token" button to claim it first.');
         return;
       }
 
@@ -830,7 +830,7 @@ function App() {
       // Add item to target token's inventory (unequipped, unattuned)
       const itemToTransfer = { 
         ...item, 
-        id: uuidv4(), // Generate new ID to avoid conflicts
+        id: uuidv4(), // Generate new ID to avoid conflicts and ensure it's treated as a distinct instance
         isAttuned: false, 
         equippedSlot: null 
       };

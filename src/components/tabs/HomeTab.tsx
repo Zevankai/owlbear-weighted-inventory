@@ -3356,9 +3356,9 @@ export function HomeTab({
               borderRadius: '8px',
               border: '1px solid rgba(229, 57, 53, 0.3)',
             }}>
-              {(Object.keys((characterData.characterSheet || createDefaultCharacterSheet()).abilityScores) as Array<keyof AbilityScores>).map((ability) => {
+              {(() => {
                 const sheet = characterData.characterSheet || createDefaultCharacterSheet();
-                return (
+                return (Object.keys(sheet.abilityScores) as Array<keyof AbilityScores>).map((ability) => (
                   <MonsterAbilityScoreCircle
                     key={ability}
                     ability={ability}
@@ -3381,8 +3381,8 @@ export function HomeTab({
                       });
                     }}
                   />
-                );
-              })}
+                ));
+              })()}
             </div>
           </div>
 

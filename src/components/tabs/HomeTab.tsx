@@ -2795,7 +2795,9 @@ export function HomeTab({
       {/* === TWO COLUMN DASHBOARD - Main layout with stats, token, and status boxes === */}
       {(() => {
         // Show for player tokens, party tokens, or NPC tokens when user is GM
+        // Do not show for monster tokens (they have their own simplified UI)
         const showCharacterSheet = characterData.tokenType !== 'lore' && 
+          characterData.tokenType !== 'monster' &&
           (characterData.tokenType !== 'npc' || playerRole === 'GM');
         const shouldShowBanner = !viewingStorageId && showCharacterSheet;
         
@@ -2854,7 +2856,7 @@ export function HomeTab({
       })()}
 
       {/* === CONDITIONS & EXHAUSTION - Purple Collapsible section === */}
-      {!viewingStorageId && characterData.tokenType !== 'lore' && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
+      {!viewingStorageId && characterData.tokenType !== 'lore' && characterData.tokenType !== 'monster' && (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
         <PurpleCollapsibleSection title="Conditions & Exhaustion" defaultExpanded={false}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             {/* Full Conditions Panel */}
@@ -2880,6 +2882,7 @@ export function HomeTab({
       {/* === SKILLS & PROFICIENCIES - Purple Collapsible section - Just beneath Conditions and Exhaustion === */}
       {!viewingStorageId && 
        characterData.tokenType !== 'lore' &&
+       characterData.tokenType !== 'monster' &&
        (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
         <PurpleCollapsibleSection title="Skills & Proficiencies" defaultExpanded={false}>
           <CharacterSheetSection
@@ -2893,6 +2896,7 @@ export function HomeTab({
       {/* === FEATURES & TRAITS - Purple Collapsible section - Beneath Skills & Proficiencies === */}
       {!viewingStorageId && 
        characterData.tokenType !== 'lore' &&
+       characterData.tokenType !== 'monster' &&
        (characterData.tokenType !== 'npc' || playerRole === 'GM') && (
         <PurpleCollapsibleSection title="Features & Traits" defaultExpanded={false}>
           {(() => {

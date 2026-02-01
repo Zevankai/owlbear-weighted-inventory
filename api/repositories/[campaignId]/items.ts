@@ -62,25 +62,47 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       // Save custom items
       const customItems = req.body;
+      
+      console.log('[items API] PUT request:', {
+        campaignId,
+        itemCount: Array.isArray(customItems) ? customItems.length : 'invalid',
+        bodySize: JSON.stringify(customItems).length,
+      });
 
       if (!Array.isArray(customItems)) {
+        console.error('[items API] Invalid body - not an array');
         return res.status(400).json({ error: 'Custom items must be an array' });
       }
 
-      // Note: Using 'public' access since Owlbear Rodeo is a collaborative platform
-      // where players share game resources. Custom items are campaign-specific.
-      const blob = await put(blobPath, JSON.stringify(customItems), {
-        access: 'public',
-        contentType: 'application/json',
-        addRandomSuffix: false,
-      });
+      try {
+        // Note: Using 'public' access since Owlbear Rodeo is a collaborative platform
+        // where players share game resources. Custom items are campaign-specific.
+        const blob = await put(blobPath, JSON.stringify(customItems), {
+          access: 'public',
+          contentType: 'application/json',
+          addRandomSuffix: false,
+        });
 
-      return res.status(200).json({ 
-        success: true, 
-        url: blob.url,
-        path: blobPath,
-        count: customItems.length
-      });
+        console.log('[items API] Successfully saved to blob:', blob.url);
+        
+        return res.status(200).json({ 
+          success: true, 
+          url: blob.url,
+          path: blobPath,
+          count: customItems.length
+        });
+      } catch (blobError) {
+        console.error('[items API] Vercel Blob put() failed:', {
+          error: blobError,
+          message: blobError instanceof Error ? blobError.message : 'Unknown error',
+          stack: blobError instanceof Error ? blobError.stack : undefined,
+        });
+        
+        return res.status(500).json({ 
+          error: 'Failed to save to blob storage',
+          message: blobError instanceof Error ? blobError.message : 'Unknown error'
+        });
+      }
     }
 
     return res.status(405).json({ error: 'Method not allowed' });

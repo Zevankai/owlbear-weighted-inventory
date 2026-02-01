@@ -171,8 +171,14 @@ export const deleteCharacterData = async (
  * Load custom items for a campaign
  */
 export const loadCustomItems = async (campaignId: string): Promise<RepoItem[]> => {
+  const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/items`;
+  
+  console.log('[StorageService] Loading custom items:', {
+    campaignId,
+    url,
+  });
+
   try {
-    const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/items`;
     const response = await fetch(url);
 
     if (response.ok) {
@@ -186,7 +192,18 @@ export const loadCustomItems = async (campaignId: string): Promise<RepoItem[]> =
       return [];
     }
 
-    throw new Error(`Failed to load custom items: ${response.statusText}`);
+    // Parse error response body for detailed error message
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+      console.error('[StorageService] API error response:', errorData);
+    } catch {
+      // If response body isn't JSON, use status text
+      errorMessage = response.statusText || errorMessage;
+    }
+
+    throw new Error(`Failed to load custom items: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error loading custom items:', error);
     return [];
@@ -200,8 +217,15 @@ export const saveCustomItems = async (
   campaignId: string,
   items: RepoItem[]
 ): Promise<boolean> => {
+  const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/items`;
+  
+  console.log('[StorageService] Saving custom items:', {
+    campaignId,
+    itemCount: items.length,
+    payloadSize: JSON.stringify(items).length,
+  });
+
   try {
-    const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/items`;
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -211,11 +235,23 @@ export const saveCustomItems = async (
     });
 
     if (response.ok) {
-      console.log('[StorageService] Saved custom items to Vercel Blob');
+      const result = await response.json();
+      console.log('[StorageService] Saved custom items to Vercel Blob:', result);
       return true;
     }
 
-    throw new Error(`Failed to save custom items: ${response.statusText}`);
+    // Parse error response body for detailed error message
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+      console.error('[StorageService] API error response:', errorData);
+    } catch {
+      // If response body isn't JSON, use status text
+      errorMessage = response.statusText || errorMessage;
+    }
+
+    throw new Error(`Failed to save custom items: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error saving custom items:', error);
     return false;
@@ -226,8 +262,14 @@ export const saveCustomItems = async (
  * Load custom spells for a campaign
  */
 export const loadCustomSpells = async (campaignId: string): Promise<RepositorySpell[]> => {
+  const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/spells`;
+  
+  console.log('[StorageService] Loading custom spells:', {
+    campaignId,
+    url,
+  });
+
   try {
-    const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/spells`;
     const response = await fetch(url);
 
     if (response.ok) {
@@ -241,7 +283,18 @@ export const loadCustomSpells = async (campaignId: string): Promise<RepositorySp
       return [];
     }
 
-    throw new Error(`Failed to load custom spells: ${response.statusText}`);
+    // Parse error response body for detailed error message
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+      console.error('[StorageService] API error response:', errorData);
+    } catch {
+      // If response body isn't JSON, use status text
+      errorMessage = response.statusText || errorMessage;
+    }
+
+    throw new Error(`Failed to load custom spells: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error loading custom spells:', error);
     return [];
@@ -255,8 +308,15 @@ export const saveCustomSpells = async (
   campaignId: string,
   spells: RepositorySpell[]
 ): Promise<boolean> => {
+  const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/spells`;
+  
+  console.log('[StorageService] Saving custom spells:', {
+    campaignId,
+    spellCount: spells.length,
+    payloadSize: JSON.stringify(spells).length,
+  });
+
   try {
-    const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/spells`;
     const response = await fetch(url, {
       method: 'PUT',
       headers: {
@@ -266,11 +326,23 @@ export const saveCustomSpells = async (
     });
 
     if (response.ok) {
-      console.log('[StorageService] Saved custom spells to Vercel Blob');
+      const result = await response.json();
+      console.log('[StorageService] Saved custom spells to Vercel Blob:', result);
       return true;
     }
 
-    throw new Error(`Failed to save custom spells: ${response.statusText}`);
+    // Parse error response body for detailed error message
+    let errorMessage = `HTTP ${response.status}`;
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorData.error || errorMessage;
+      console.error('[StorageService] API error response:', errorData);
+    } catch {
+      // If response body isn't JSON, use status text
+      errorMessage = response.statusText || errorMessage;
+    }
+
+    throw new Error(`Failed to save custom spells: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error saving custom spells:', error);
     return false;

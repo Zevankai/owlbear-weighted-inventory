@@ -173,8 +173,9 @@ export const TOKEN_TYPE_LABELS: Record<TokenType, string> = {
   npc: 'NPC Tokens',
   party: 'Party Tokens',
   lore: 'Lore Tokens',
-  monster: 'Monster Tokens'
+  monster: 'Monster Tokens',
+  merchant: 'Merchant Tokens'
 };
 
 // Token type display order for favorites grouping
-export const TOKEN_TYPE_ORDER: TokenType[] = ['player', 'npc', 'party', 'lore', 'monster'];
+export const TOKEN_TYPE_ORDER: TokenType[] = ['player', 'npc', 'party', 'lore', 'monster', 'merchant'];

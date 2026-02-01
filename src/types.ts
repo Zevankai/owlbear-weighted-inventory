@@ -5,7 +5,7 @@ export type Currency = {
   pp: number;
 };
 
-export type TokenType = 'player' | 'npc' | 'party' | 'lore' | 'monster';
+export type TokenType = 'player' | 'npc' | 'party' | 'lore' | 'monster' | 'merchant';
 
 export interface Theme {
   accent: string;
@@ -21,7 +21,7 @@ export type LoreTabId =
   | 'menu' | 'secrets' | 'properties' | 'legends'
   | 'members' | 'goals' | 'resources' | 'images' | 'notes';
 
-export type LoreType = 'town' | 'dungeon' | 'tavern' | 'shop' | 'item' | 'faction' | 'region' | 'custom';
+export type LoreType = 'town' | 'dungeon' | 'tavern' | 'item' | 'faction' | 'region' | 'custom';
 
 // Extended LoreEntry with optional specialized fields for different tab types
 export interface LoreEntry {
@@ -83,6 +83,35 @@ export interface LoreSettings {
   loreType: LoreType;
   tabs: LoreTabConfig[];
   allowPlayerEditing?: boolean;  // When true, players can add/edit entries in visible tabs (default: false)
+}
+
+// Merchant system types
+export interface ShopPresetItem {
+  repositoryItemId?: string;       // Reference to repository item (if from repo)
+  customItem?: Partial<Item>;      // Or a fully custom item
+  defaultQty: number;              // How many in stock by default
+  qtyVariance?: number;            // ±variance for randomization
+}
+
+export interface ShopPreset {
+  id: string;
+  name: string;                    // "Village Blacksmith", "Shady Apothecary"
+  description?: string;
+  items: ShopPresetItem[];         // Curated item list
+  priceModifier: number;           // Default markup for this preset
+  buybackRate: number;             // Default buyback rate
+  stockRandomization?: number;     // 0-100, what % of items appear when generated
+}
+
+export interface MerchantSettings {
+  shopName?: string;                // Display name for the shop
+  presetId?: string;                // Reference to a ShopPreset (for future implementation)
+  priceModifier: number;            // 1.0 = standard, 1.2 = 20% markup, 0.8 = discount
+  buybackRate: number;              // 0.5 = buys at 50% value (standard D&D)
+  unlimitedStock: boolean;          // If true, qty doesn't decrease on purchase
+  restockEnabled: boolean;          // Reserved for future calendar-based restock system
+  restockIntervalDays: number;      // Reserved for future - days between restocks (minimum 1)
+  lastRestockDate?: { year: number; monthIndex: number; day: number }; // Reserved for future
 }
 
 export type PackType =
@@ -543,7 +572,7 @@ export interface MonsterSettings {
 }
 
 export interface CharacterData {
-  tokenType: TokenType;  // Type of token: player (default), npc, party, lore, or monster
+  tokenType: TokenType;  // Type of token: player (default), npc, party, lore, monster, or merchant
   packType: PackType;
   inventory: Item[];
   currency: Currency;
@@ -560,6 +589,7 @@ export interface CharacterData {
   gmNotes?: string;       // GM-only notes (hidden from players)
   loreSettings?: LoreSettings;  // Lore system settings (only for tokenType === 'lore')
   monsterSettings?: MonsterSettings;  // Monster settings (only for tokenType === 'monster')
+  merchantSettings?: MerchantSettings;  // Merchant settings (only for tokenType === 'merchant')
   name?: string;  // Custom display name (overrides token name, GM-editable for lore tokens)
   characterSheet?: CharacterSheet;  // D&D 5e character sheet (optional for backwards compatibility)
   characterStats?: CharacterStats;  // New unified character stats

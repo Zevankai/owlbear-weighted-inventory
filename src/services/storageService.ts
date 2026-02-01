@@ -20,6 +20,22 @@ const getApiBaseUrl = (): string => {
 };
 
 /**
+ * Extract error message from API response
+ */
+const extractErrorMessage = async (response: Response): Promise<string> => {
+  let errorMessage = `HTTP ${response.status}`;
+  try {
+    const errorData = await response.json();
+    errorMessage = errorData.message || errorData.error || errorMessage;
+    console.error('[StorageService] API error response:', errorData);
+  } catch {
+    // If response body isn't JSON, use status text
+    errorMessage = response.statusText || errorMessage;
+  }
+  return errorMessage;
+};
+
+/**
  * Get the campaign ID from OBR room ID
  */
 export const getCampaignId = async (): Promise<string> => {
@@ -192,17 +208,7 @@ export const loadCustomItems = async (campaignId: string): Promise<RepoItem[]> =
       return [];
     }
 
-    // Parse error response body for detailed error message
-    let errorMessage = `HTTP ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-      console.error('[StorageService] API error response:', errorData);
-    } catch {
-      // If response body isn't JSON, use status text
-      errorMessage = response.statusText || errorMessage;
-    }
-
+    const errorMessage = await extractErrorMessage(response);
     throw new Error(`Failed to load custom items: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error loading custom items:', error);
@@ -240,17 +246,7 @@ export const saveCustomItems = async (
       return true;
     }
 
-    // Parse error response body for detailed error message
-    let errorMessage = `HTTP ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-      console.error('[StorageService] API error response:', errorData);
-    } catch {
-      // If response body isn't JSON, use status text
-      errorMessage = response.statusText || errorMessage;
-    }
-
+    const errorMessage = await extractErrorMessage(response);
     throw new Error(`Failed to save custom items: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error saving custom items:', error);
@@ -283,17 +279,7 @@ export const loadCustomSpells = async (campaignId: string): Promise<RepositorySp
       return [];
     }
 
-    // Parse error response body for detailed error message
-    let errorMessage = `HTTP ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-      console.error('[StorageService] API error response:', errorData);
-    } catch {
-      // If response body isn't JSON, use status text
-      errorMessage = response.statusText || errorMessage;
-    }
-
+    const errorMessage = await extractErrorMessage(response);
     throw new Error(`Failed to load custom spells: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error loading custom spells:', error);
@@ -331,17 +317,7 @@ export const saveCustomSpells = async (
       return true;
     }
 
-    // Parse error response body for detailed error message
-    let errorMessage = `HTTP ${response.status}`;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || errorMessage;
-      console.error('[StorageService] API error response:', errorData);
-    } catch {
-      // If response body isn't JSON, use status text
-      errorMessage = response.statusText || errorMessage;
-    }
-
+    const errorMessage = await extractErrorMessage(response);
     throw new Error(`Failed to save custom spells: ${errorMessage}`);
   } catch (error) {
     console.error('[StorageService] Error saving custom spells:', error);

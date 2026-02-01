@@ -62,11 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       // Save custom spells
       const customSpells = req.body;
+      const bodyJson = JSON.stringify(customSpells);
       
       console.log('[spells API] PUT request:', {
         campaignId,
         spellCount: Array.isArray(customSpells) ? customSpells.length : 'invalid',
-        bodySize: JSON.stringify(customSpells).length,
+        bodySize: bodyJson.length,
       });
 
       if (!Array.isArray(customSpells)) {
@@ -77,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         // Note: Using 'public' access since Owlbear Rodeo is a collaborative platform
         // where players share game resources. Custom spells are campaign-specific.
-        const blob = await put(blobPath, JSON.stringify(customSpells), {
+        const blob = await put(blobPath, bodyJson, {
           access: 'public',
           contentType: 'application/json',
           addRandomSuffix: false,

@@ -62,11 +62,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'PUT') {
       // Save custom items
       const customItems = req.body;
+      const bodyJson = JSON.stringify(customItems);
       
       console.log('[items API] PUT request:', {
         campaignId,
         itemCount: Array.isArray(customItems) ? customItems.length : 'invalid',
-        bodySize: JSON.stringify(customItems).length,
+        bodySize: bodyJson.length,
       });
 
       if (!Array.isArray(customItems)) {
@@ -77,7 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       try {
         // Note: Using 'public' access since Owlbear Rodeo is a collaborative platform
         // where players share game resources. Custom items are campaign-specific.
-        const blob = await put(blobPath, JSON.stringify(customItems), {
+        const blob = await put(blobPath, bodyJson, {
           access: 'public',
           contentType: 'application/json',
           addRandomSuffix: false,

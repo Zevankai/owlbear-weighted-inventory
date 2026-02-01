@@ -86,8 +86,20 @@ function MyComponent() {
 
 1. **Backwards Compatible**: Existing OBR metadata continues to work
 2. **Automatic Migration**: On first load, data is migrated to Vercel Blob
-3. **Hybrid Storage**: Both systems are updated on every save
-4. **Fallback**: If Vercel Blob is unavailable, OBR metadata is used
+3. **Migration Tracking**: The `migratedToBlob` flag ensures tokens stay migrated
+4. **Hybrid Storage**: Both systems are updated on every save for redundancy
+5. **Smart Fallback**: OBR metadata serves as cache and fallback
+
+### Migration Tracking Flag
+
+Each token's data includes a `migratedToBlob` flag that indicates whether it has been successfully migrated to Vercel Blob storage:
+
+- **Automatic Setting**: The flag is automatically set to `true` on the first save to blob storage
+- **Prevents Confusion**: Once migrated, the system knows to trust blob storage as the authoritative source
+- **Backward Compatible**: Existing tokens without the flag are automatically migrated on first load
+- **Consistency Warnings**: If a migrated token is not found in blob storage, appropriate warnings are logged
+
+This ensures that once a token is migrated to blob storage, it will always use blob storage going forward, preventing any confusion between storage systems.
 
 ## Key Features
 
@@ -102,11 +114,13 @@ function MyComponent() {
 
 ### 3. Graceful Degradation
 - If Vercel Blob is unavailable, the extension falls back to OBR metadata
+- Migration status is tracked to ensure proper fallback behavior
 - No data loss or functionality degradation
 
 ### 4. Type Safety
 - All storage operations use existing TypeScript types
 - Type-safe interfaces prevent data corruption
+- Migration flag is part of the CharacterData type
 
 ### 5. Security
 - Uses Vercel Blob SDK methods for secure API access (no token exposure)

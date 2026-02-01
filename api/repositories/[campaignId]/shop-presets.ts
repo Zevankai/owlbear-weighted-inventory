@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { put, list, del } from '@vercel/blob';
+import { put, list } from '@vercel/blob';
 
 /**
  * Serverless function for shop presets repository
@@ -67,23 +67,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(400).json({ error: 'Shop presets must be an array' });
       }
 
-      // Delete existing blob if it exists to avoid conflicts
-      try {
-        const { blobs } = await list({ prefix: blobPath, limit: 1 });
-        if (blobs.length > 0) {
-          await del(blobs[0].url);
-        }
-      } catch (deleteError) {
-        console.warn('Could not delete existing blob:', deleteError);
-        // Continue anyway - the blob might not exist
-      }
-
       // Note: Using 'public' access since Owlbear Rodeo is a collaborative platform
       // where players share game resources. Shop presets are campaign-specific.
       const blob = await put(blobPath, JSON.stringify(shopPresets), {
         access: 'public',
         contentType: 'application/json',
         addRandomSuffix: false,
+        allowOverwrite: true,
       });
 
       return res.status(200).json({ 

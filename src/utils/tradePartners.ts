@@ -9,6 +9,7 @@ export function mapItemsToTradePartners(
   items: Array<{ id: string; name: string; metadata: Record<string, unknown>; image?: { url: string } }>,
   currentTokenId: string,
   playerId: string,
+  // Reserved for future use when role-based filtering may be needed
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _playerRole: 'GM' | 'PLAYER' = 'PLAYER'
 ): TradePartner[] {

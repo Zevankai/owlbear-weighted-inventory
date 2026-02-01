@@ -1178,7 +1178,7 @@ export default function ExpandedInventoryWindow() {
                             </>
                           )}
                           {/* Merchant tokens: Only show edit and delete buttons (GM only), no equip/sell */}
-                          {canEditToken() && characterData?.tokenType === 'merchant' && playerRole === 'GM' && (
+                          {characterData?.tokenType === 'merchant' && playerRole === 'GM' && (
                             <>
                               <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Edit">✎</button>
                               <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px'}} title="Delete">✕</button>

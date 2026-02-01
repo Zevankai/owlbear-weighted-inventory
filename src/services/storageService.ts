@@ -49,14 +49,27 @@ export const loadCharacterData = async (
     }
 
     if (response.status === 404) {
-      console.log('[StorageService] No character data in Vercel Blob');
+      console.log('[StorageService] No character data in Vercel Blob, checking OBR metadata fallback');
+      // Fallback to OBR metadata when Vercel Blob returns 404
+      try {
+        const items = await OBR.scene.items.getItems([tokenId]);
+        if (items.length > 0) {
+          const data = items[0].metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
+          if (data) {
+            console.log('[StorageService] Loaded character data from OBR metadata (fallback)');
+            return data;
+          }
+        }
+      } catch (obrError) {
+        console.error('[StorageService] Failed to load from OBR metadata:', obrError);
+      }
       return null;
     }
 
     throw new Error(`Failed to load character data: ${response.statusText}`);
   } catch (error) {
     console.error('[StorageService] Error loading from Vercel Blob, falling back to OBR metadata:', error);
-    // Fallback to OBR metadata
+    // Fallback to OBR metadata on network errors
     try {
       const items = await OBR.scene.items.getItems([tokenId]);
       if (items.length > 0) {

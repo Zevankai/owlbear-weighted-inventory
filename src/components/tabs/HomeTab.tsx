@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project } from '../../types';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project, MerchantSettings } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
 import type { CalendarConfig } from '../../types/calendar';
 import { ReputationDisplay } from '../ReputationDisplay';
@@ -22,6 +22,15 @@ import { useCalendar } from '../../hooks/useCalendar';
 import { formatCustomDate } from '../../utils/calendar/dateFormatting';
 import { initiateRestNotification } from '../../utils/restNotifications';
 import { MarkdownHint } from '../MarkdownHint';
+
+// Default merchant settings for consistent defaults
+const DEFAULT_MERCHANT_SETTINGS: MerchantSettings = {
+  priceModifier: 1.0,
+  buybackRate: 0.5,
+  unlimitedStock: false,
+  restockEnabled: false,
+  restockIntervalDays: 7
+};
 
 // Token image sizing constants
 const TOKEN_SIZE_SIDEBAR = '75px'; // Circular token in sidebar - compact but readable
@@ -3638,7 +3647,7 @@ export function HomeTab({
                 value={characterData.merchantSettings?.shopName || ''}
                 onChange={(val) => updateData({ 
                   merchantSettings: { 
-                    ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                    ...(characterData.merchantSettings || DEFAULT_MERCHANT_SETTINGS),
                     shopName: val 
                   }
                 })}
@@ -3665,15 +3674,15 @@ export function HomeTab({
                 value={characterData.merchantSettings?.priceModifier || 1.0}
                 onChange={(e) => updateData({ 
                   merchantSettings: { 
-                    ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                    ...(characterData.merchantSettings || DEFAULT_MERCHANT_SETTINGS),
                     priceModifier: parseFloat(e.target.value)
                   }
                 })}
                 style={{ width: '100%' }}
               />
               <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
-                {characterData.merchantSettings?.priceModifier === 1.0 ? 'Standard prices' : 
-                 characterData.merchantSettings && characterData.merchantSettings.priceModifier > 1.0 ? 'Markup' : 'Discount'}
+                {(characterData.merchantSettings?.priceModifier ?? 1.0) === 1.0 ? 'Standard prices' : 
+                 (characterData.merchantSettings?.priceModifier ?? 1.0) > 1.0 ? 'Markup' : 'Discount'}
               </div>
             </div>
 
@@ -3690,7 +3699,7 @@ export function HomeTab({
                 value={characterData.merchantSettings?.buybackRate || 0.5}
                 onChange={(e) => updateData({ 
                   merchantSettings: { 
-                    ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                    ...(characterData.merchantSettings || DEFAULT_MERCHANT_SETTINGS),
                     buybackRate: parseFloat(e.target.value)
                   }
                 })}
@@ -3709,7 +3718,7 @@ export function HomeTab({
                   checked={characterData.merchantSettings?.unlimitedStock || false}
                   onChange={(e) => updateData({ 
                     merchantSettings: { 
-                      ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                      ...(characterData.merchantSettings || DEFAULT_MERCHANT_SETTINGS),
                       unlimitedStock: e.target.checked
                     }
                   })}

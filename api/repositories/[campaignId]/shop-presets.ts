@@ -47,7 +47,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const response = await fetch(blobs[0].downloadUrl);
         
         if (!response.ok) {
-          throw new Error(`Failed to fetch blob: ${response.statusText}`);
+          throw new Error(`Failed to fetch blob from ${blobs[0].downloadUrl}: ${response.statusText}`);
         }
 
         const data = await response.json();

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import type { RefObject } from 'react';
-import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project, MerchantSettings, ShopPreset } from '../../types';
+import type { CharacterData, PackType, ActiveTrade, CharacterStats, ConditionType, RestType, GMCustomizations, CharacterSheet, InjuryLocation, CharacterInjuryData, DeathSaves, AbilityScores, SuperiorityDice, Scar, Project, MerchantSettings } from '../../types';
 import { INJURY_HP_VALUES } from '../../types';
 import type { CalendarConfig } from '../../types/calendar';
 import { ReputationDisplay } from '../ReputationDisplay';

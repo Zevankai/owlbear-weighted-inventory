@@ -38,9 +38,9 @@ export function generateStockFromPreset(
     let item: Item | null = null;
     
     if (presetItem.repositoryItemId) {
-      // Find item in repository
+      // Find item in repository by name (RepoItem uses name as unique identifier)
       const repoItem = itemRepository.find(
-        (i) => i.id === presetItem.repositoryItemId
+        (i) => i.name === presetItem.repositoryItemId
       );
       
       if (repoItem) {
@@ -51,17 +51,13 @@ export function generateStockFromPreset(
           qty: quantity,
           weight: repoItem.weight,
           value: repoItem.value,
-          description: repoItem.description,
           category: repoItem.category,
           type: repoItem.type,
-          rarity: repoItem.rarity,
-          attunement: repoItem.attunement,
+          requiresAttunement: repoItem.requiresAttunement ?? false,
+          isAttuned: false,
           ...(repoItem.damage && { damage: repoItem.damage }),
-          ...(repoItem.armorClass && { armorClass: repoItem.armorClass }),
+          ...(repoItem.ac && { ac: repoItem.ac }),
           ...(repoItem.properties && { properties: repoItem.properties }),
-          ...(repoItem.capacity && { capacity: repoItem.capacity }),
-          ...(repoItem.charges && { charges: repoItem.charges }),
-          ...(repoItem.maxCharges && { maxCharges: repoItem.maxCharges }),
         };
       }
     } else if (presetItem.customItem) {
@@ -71,18 +67,17 @@ export function generateStockFromPreset(
         name: presetItem.customItem.name ?? 'Unknown Item',
         qty: quantity,
         weight: presetItem.customItem.weight ?? 0,
-        value: presetItem.customItem.value ?? 0,
-        description: presetItem.customItem.description,
-        category: presetItem.customItem.category,
-        type: presetItem.customItem.type,
-        rarity: presetItem.customItem.rarity,
-        attunement: presetItem.customItem.attunement,
+        value: presetItem.customItem.value ?? '0 gp',
+        category: presetItem.customItem.category ?? 'Other',
+        type: presetItem.customItem.type ?? 'Misc',
+        requiresAttunement: presetItem.customItem.requiresAttunement ?? false,
+        isAttuned: presetItem.customItem.isAttuned ?? false,
         ...(presetItem.customItem.damage && { damage: presetItem.customItem.damage }),
-        ...(presetItem.customItem.armorClass && { armorClass: presetItem.customItem.armorClass }),
+        ...(presetItem.customItem.ac && { ac: presetItem.customItem.ac }),
         ...(presetItem.customItem.properties && { properties: presetItem.customItem.properties }),
-        ...(presetItem.customItem.capacity && { capacity: presetItem.customItem.capacity }),
         ...(presetItem.customItem.charges && { charges: presetItem.customItem.charges }),
         ...(presetItem.customItem.maxCharges && { maxCharges: presetItem.customItem.maxCharges }),
+        ...(presetItem.customItem.notes && { notes: presetItem.customItem.notes }),
       };
     }
     

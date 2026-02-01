@@ -4,7 +4,7 @@
  * Provides UI for creating, editing, and managing shop presets for merchants.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import type { ShopPreset, ShopPresetItem } from '../types';
 import { useShopPresets } from '../hooks/useShopPresets';
 import { useRepository } from '../context/RepositoryContext';
@@ -120,10 +120,10 @@ export const ShopPresetManager: React.FC<ShopPresetManagerProps> = ({ onClose })
     });
   };
   
-  // Get item name by repository ID
+  // Get item name by repository item name (RepoItem uses name as identifier)
   const getItemName = (repositoryItemId?: string): string => {
     if (!repositoryItemId) return 'Custom Item';
-    const item = itemRepository.find((i) => i.id === repositoryItemId);
+    const item = itemRepository.find((i) => i.name === repositoryItemId);
     return item?.name ?? 'Unknown Item';
   };
   
@@ -404,8 +404,8 @@ export const ShopPresetManager: React.FC<ShopPresetManagerProps> = ({ onClose })
               }}
             >
               <option value="">Add item from repository...</option>
-              {itemRepository.map((item) => (
-                <option key={item.id} value={item.id}>
+              {itemRepository.map((item, idx) => (
+                <option key={idx} value={item.name}>
                   {item.name} ({item.category})
                 </option>
               ))}

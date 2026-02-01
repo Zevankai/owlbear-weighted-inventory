@@ -1430,6 +1430,9 @@ function App() {
       // Instant trade - open trade window directly for trading between own tokens or party tokens
       // Party tokens are accessible to everyone, so no acceptance needed
       await handleStartDirectTrade(partner.tokenId);
+    } else if (partner.ownerType === 'merchant') {
+      // Instant trade with merchant - merchants work like party tokens (no request needed)
+      await handleStartDirectTrade(partner.tokenId);
     } else {
       // Send trade request for other players and NPCs
       await handleStartP2PTrade(partner.tokenId);
@@ -1581,6 +1584,24 @@ function App() {
       visibleTabs = [
         { id: 'Home' as Tab, label: 'HOME' },
         ...(showPackTab ? [{ id: 'Pack' as Tab, label: 'PACK' }] : [])
+      ];
+    }
+  }
+
+  // Merchant tokens have simplified tab handling
+  if (characterData?.tokenType === 'merchant') {
+    // For GM: Show Home, Pack, Create tabs only (no Weapons, Body, Quick, Storage, Calendar)
+    if (playerRole === 'GM') {
+      visibleTabs = [
+        { id: 'Home' as Tab, label: '||' },
+        { id: 'Pack' as Tab, label: 'PACK' },
+        { id: 'Create' as Tab, label: 'CREATE' },
+      ];
+    } else {
+      // For players: Show Home tab, and Pack tab (merchant inventory is always visible to players for trading)
+      visibleTabs = [
+        { id: 'Home' as Tab, label: 'HOME' },
+        { id: 'Pack' as Tab, label: 'PACK' },
       ];
     }
   }
@@ -1794,11 +1815,18 @@ function App() {
                                               </button>
                                             )}
                                             {/* Standard action buttons for GM or non-monster tokens */}
-                                            {(characterData?.tokenType !== 'monster' || playerRole === 'GM') && (
+                                            {(characterData?.tokenType !== 'monster' || playerRole === 'GM') && characterData?.tokenType !== 'merchant' && (
                                               <>
                                                 <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                                                 <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Equip/Unequip"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></button>
                                                 <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0, marginRight: 3}} title="Sell"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></button>
+                                                <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}} title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
+                                              </>
+                                            )}
+                                            {/* Merchant tokens: Only show edit and delete buttons (GM only), no equip/sell */}
+                                            {characterData?.tokenType === 'merchant' && playerRole === 'GM' && (
+                                              <>
+                                                <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: 0, marginRight: 3}} title="Edit"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                                                 <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: 0}} title="Delete"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>
                                               </>
                                             )}

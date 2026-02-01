@@ -2946,9 +2946,10 @@ export function HomeTab({
       {/* === TWO COLUMN DASHBOARD - Main layout with stats, token, and status boxes === */}
       {(() => {
         // Show for player tokens, party tokens, or NPC tokens when user is GM
-        // Do not show for monster tokens (they have their own simplified UI)
+        // Do not show for monster tokens or merchant tokens (they have their own simplified UI)
         const showCharacterSheet = characterData.tokenType !== 'lore' && 
           characterData.tokenType !== 'monster' &&
+          characterData.tokenType !== 'merchant' &&
           (characterData.tokenType !== 'npc' || playerRole === 'GM');
         const shouldShowBanner = !viewingStorageId && showCharacterSheet;
         

@@ -9,6 +9,7 @@ export function mapItemsToTradePartners(
   items: Array<{ id: string; name: string; metadata: Record<string, unknown>; image?: { url: string } }>,
   currentTokenId: string,
   playerId: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _playerRole: 'GM' | 'PLAYER' = 'PLAYER'
 ): TradePartner[] {
   const partners: TradePartner[] = [];
@@ -39,6 +40,18 @@ export function mapItemsToTradePartners(
         tokenImage: item.image?.url || null,
         claimedBy: PARTY_TOKEN_MARKER,  // Special marker for party tokens
         ownerType: 'party'
+      });
+      continue;
+    }
+
+    // Merchant tokens: Show as partners to everyone (no claimedBy check needed)
+    if (tokenType === 'merchant') {
+      partners.push({
+        tokenId: item.id,
+        tokenName: item.name || 'Unknown',
+        tokenImage: item.image?.url || null,
+        claimedBy: '__merchant__',  // Special marker for merchant tokens
+        ownerType: 'merchant'
       });
       continue;
     }

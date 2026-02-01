@@ -799,6 +799,24 @@ export default function ExpandedInventoryWindow() {
     }
   }
 
+  // Merchant tokens have simplified tab handling
+  if (characterData?.tokenType === 'merchant') {
+    // For GM: Show Home, Pack, Create tabs only (no Weapons, Body, Quick, Storage, Calendar)
+    if (playerRole === 'GM') {
+      visibleTabs = [
+        { id: 'Home' as Tab, label: '||' },
+        { id: 'Pack' as Tab, label: 'PACK' },
+        { id: 'Create' as Tab, label: 'CREATE' },
+      ];
+    } else {
+      // For players: Show Home tab, and Pack tab (merchant inventory is always visible to players for trading)
+      visibleTabs = [
+        { id: 'Home' as Tab, label: 'HOME' },
+        { id: 'Pack' as Tab, label: 'PACK' },
+      ];
+    }
+  }
+
   return (
     <div className="app-container" style={{background: 'var(--bg-dark)', border: viewingStorageId ? '2px solid var(--accent-gold)' : 'none'}}>
       {/* Storage Viewing Banner */}
@@ -1151,11 +1169,18 @@ export default function ExpandedInventoryWindow() {
                         </td>
                         <td style={{padding: '8px 4px', textAlign: 'center', fontSize: '11px', color: '#888'}}>{item.weight * item.qty}</td>
                         <td style={{padding: '8px 4px', textAlign: 'right'}}>
-                          {canEditToken() && (
+                          {canEditToken() && characterData?.tokenType !== 'merchant' && (
                             <>
                               <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Edit">✎</button>
                               <button onClick={() => handleToggleEquip(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: item.equippedSlot ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Equip/Unequip">⚔</button>
                               <button onClick={() => handleSell(item)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px', marginRight: '4px'}} title="Sell">$</button>
+                              <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px'}} title="Delete">✕</button>
+                            </>
+                          )}
+                          {/* Merchant tokens: Only show edit and delete buttons (GM only), no equip/sell */}
+                          {canEditToken() && characterData?.tokenType === 'merchant' && playerRole === 'GM' && (
+                            <>
+                              <button onClick={() => setEditingItemId(editingItemId === item.id ? null : item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: editingItemId === item.id ? 'var(--accent-gold)' : '#555', padding: '2px', marginRight: '4px'}} title="Edit">✎</button>
                               <button onClick={() => handleDelete(item.id)} style={{background: 'none', border: 'none', cursor: 'pointer', color: '#555', padding: '2px'}} title="Delete">✕</button>
                             </>
                           )}

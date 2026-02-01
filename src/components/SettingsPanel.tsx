@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { CharacterData, Theme, TokenType, CharacterRace, CharacterClass, CharacterStats, GMCustomizations } from '../types';
 import { createDefaultCharacterStats, createDefaultSuperiorityDice } from '../utils/characterStats';
 import OBR from '@owlbear-rodeo/sdk';
-import { saveCharacterData, getCampaignId } from '../services/storageService';
+import { saveCharacterData, getCampaignId, TOKEN_DATA_KEY } from '../services/storageService';
 
 interface DebugInfo {
   roomKeys: string[];
@@ -88,7 +88,6 @@ export function SettingsPanel({
       const campaignId = await getCampaignId();
       
       // Read current token's OBR metadata
-      const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
       const items = await OBR.scene.items.getItems([tokenId]);
       
       if (items.length === 0) {

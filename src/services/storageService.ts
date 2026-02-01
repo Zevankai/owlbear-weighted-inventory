@@ -10,7 +10,7 @@ import type { RepoItem } from '../data/repository';
 import type { RepositorySpell } from '../types';
 import OBR from '@owlbear-rodeo/sdk';
 
-const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
+export const TOKEN_DATA_KEY = 'com.weighted-inventory/data';
 
 // API base URL - will be the same origin in production
 const getApiBaseUrl = (): string => {

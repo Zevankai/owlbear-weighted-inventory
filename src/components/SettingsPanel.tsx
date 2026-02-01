@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import type { CharacterData, Theme, TokenType, CharacterRace, CharacterClass, CharacterStats, GMCustomizations } from '../types';
 import { createDefaultCharacterStats, createDefaultSuperiorityDice } from '../utils/characterStats';
+import OBR from '@owlbear-rodeo/sdk';
+import { saveCharacterData, getCampaignId, TOKEN_DATA_KEY } from '../services/storageService';
 
 interface DebugInfo {
   roomKeys: string[];
@@ -52,6 +54,8 @@ export function SettingsPanel({
   const [activeTab, setActiveTab] = useState<SettingsTab>('style');
   const [newCustomRace, setNewCustomRace] = useState('');
   const [newCustomClass, setNewCustomClass] = useState('');
+  const [isMigrating, setIsMigrating] = useState(false);
+  const [migrationMessage, setMigrationMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   
   if (!isOpen) return null;
   
@@ -67,6 +71,53 @@ export function SettingsPanel({
         ...updates,
       }
     });
+  };
+  
+  // Migration handler to save OBR metadata to Vercel Blob
+  const handleMigrateToBlobStorage = async () => {
+    if (!tokenId) {
+      setMigrationMessage({ type: 'error', text: 'No token selected' });
+      return;
+    }
+    
+    setIsMigrating(true);
+    setMigrationMessage(null);
+    
+    try {
+      // Get campaign ID
+      const campaignId = await getCampaignId();
+      
+      // Read current token's OBR metadata
+      const items = await OBR.scene.items.getItems([tokenId]);
+      
+      if (items.length === 0) {
+        setMigrationMessage({ type: 'error', text: 'Token not found' });
+        setIsMigrating(false);
+        return;
+      }
+      
+      const obrData = items[0].metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
+      
+      if (!obrData) {
+        setMigrationMessage({ type: 'error', text: 'No data found in OBR metadata' });
+        setIsMigrating(false);
+        return;
+      }
+      
+      // Save to Vercel Blob
+      const success = await saveCharacterData(campaignId, tokenId, obrData);
+      
+      if (success) {
+        setMigrationMessage({ type: 'success', text: 'Successfully migrated to Blob Storage!' });
+      } else {
+        setMigrationMessage({ type: 'error', text: 'Failed to save to Blob Storage' });
+      }
+    } catch (error) {
+      console.error('[SettingsPanel] Migration error:', error);
+      setMigrationMessage({ type: 'error', text: 'Migration failed: ' + (error instanceof Error ? error.message : 'Unknown error') });
+    } finally {
+      setIsMigrating(false);
+    }
   };
   
   // Combine default and custom races/classes
@@ -451,6 +502,43 @@ export function SettingsPanel({
                     <div style={{ color: '#51cf66', fontSize: '11px' }}>✓ Clean (using token storage)</div>
                   )}
                 </div>
+
+                {/* Migration to Blob Storage Button */}
+                {tokenId && (
+                  <div style={{ marginBottom: '8px' }}>
+                    <button
+                      onClick={handleMigrateToBlobStorage}
+                      disabled={isMigrating}
+                      style={{
+                        background: '#4dabf7',
+                        color: 'white',
+                        border: 'none',
+                        padding: '8px 12px',
+                        borderRadius: '4px',
+                        cursor: isMigrating ? 'wait' : 'pointer',
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        width: '100%',
+                        opacity: isMigrating ? 0.6 : 1
+                      }}
+                    >
+                      {isMigrating ? 'MIGRATING...' : '☁️ MIGRATE TO BLOB STORAGE'}
+                    </button>
+                    {migrationMessage && (
+                      <div style={{
+                        marginTop: '6px',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        background: migrationMessage.type === 'success' ? 'rgba(81, 207, 102, 0.2)' : 'rgba(255, 107, 107, 0.2)',
+                        color: migrationMessage.type === 'success' ? '#51cf66' : '#ff6b6b',
+                        border: `1px solid ${migrationMessage.type === 'success' ? '#51cf66' : '#ff6b6b'}`
+                      }}>
+                        {migrationMessage.text}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <button
                   onClick={loadDebugInfo}

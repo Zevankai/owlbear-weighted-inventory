@@ -32,7 +32,7 @@ export const getCampaignId = async (): Promise<string> => {
 
 /**
  * Load character data from Vercel Blob storage
- * Falls back to OBR metadata if blob storage fails
+ * Falls back to OBR metadata if blob storage fails (only for non-migrated tokens)
  */
 export const loadCharacterData = async (
   campaignId: string,
@@ -56,7 +56,13 @@ export const loadCharacterData = async (
         if (items.length > 0) {
           const data = items[0].metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
           if (data) {
-            console.log('[StorageService] Loaded character data from OBR metadata (fallback)');
+            // Check if this token was already migrated to blob
+            if (data.migratedToBlob) {
+              console.warn('[StorageService] Token marked as migrated but not found in blob - this indicates a potential data consistency issue');
+              // Return the data but log the concern - the next save will re-sync it
+            } else {
+              console.log('[StorageService] Loaded character data from OBR metadata (fallback for non-migrated token)');
+            }
             return data;
           }
         }
@@ -75,7 +81,12 @@ export const loadCharacterData = async (
       if (items.length > 0) {
         const data = items[0].metadata[TOKEN_DATA_KEY] as CharacterData | undefined;
         if (data) {
-          console.log('[StorageService] Loaded character data from OBR metadata (fallback)');
+          // Check if this token was already migrated to blob
+          if (data.migratedToBlob) {
+            console.warn('[StorageService] Token marked as migrated but blob storage failed - using OBR metadata as temporary fallback');
+          } else {
+            console.log('[StorageService] Loaded character data from OBR metadata (fallback for non-migrated token)');
+          }
           return data;
         }
       }
@@ -89,6 +100,7 @@ export const loadCharacterData = async (
 /**
  * Save character data to Vercel Blob storage
  * Also updates OBR metadata as cache
+ * Automatically marks data as migrated to blob on successful save
  */
 export const saveCharacterData = async (
   campaignId: string,
@@ -96,6 +108,12 @@ export const saveCharacterData = async (
   data: CharacterData
 ): Promise<boolean> => {
   let blobSaveSuccess = false;
+
+  // Ensure the migratedToBlob flag is set
+  const dataToSave: CharacterData = {
+    ...data,
+    migratedToBlob: true,
+  };
 
   // Try to save to Vercel Blob
   try {
@@ -105,11 +123,11 @@ export const saveCharacterData = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify(dataToSave),
     });
 
     if (response.ok) {
-      console.log('[StorageService] Saved character data to Vercel Blob');
+      console.log('[StorageService] Saved character data to Vercel Blob (migratedToBlob: true)');
       blobSaveSuccess = true;
     } else {
       throw new Error(`Failed to save character data: ${response.statusText}`);
@@ -121,7 +139,7 @@ export const saveCharacterData = async (
   // Always update OBR metadata as cache (and fallback)
   try {
     await OBR.scene.items.updateItems([tokenId], (items) => {
-      items[0].metadata[TOKEN_DATA_KEY] = data;
+      items[0].metadata[TOKEN_DATA_KEY] = dataToSave;
     });
     console.log('[StorageService] Saved character data to OBR metadata (cache)');
   } catch (error) {

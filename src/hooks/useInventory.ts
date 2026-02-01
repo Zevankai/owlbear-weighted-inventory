@@ -241,6 +241,14 @@ export function useInventory() {
       needsPersist = true;
     }
     
+    // Migration: ensure migratedToBlob flag is set for tokens that have data
+    // This handles existing tokens that haven't been marked yet
+    if (data && !migratedData.migratedToBlob) {
+      console.log('[Migration] Setting migratedToBlob flag for existing token');
+      migratedData = { ...migratedData, migratedToBlob: true };
+      needsPersist = true;
+    }
+    
     // Persist migration changes using storage service if any changes were made
     if (needsPersist) {
       console.log('[Migration] Persisting migration changes via storage service');

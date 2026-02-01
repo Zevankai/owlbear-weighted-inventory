@@ -593,4 +593,5 @@ export interface CharacterData {
   projects?: Project[];  // Active projects in progress
   completedProjects?: Project[];  // Completed projects for display
   scars?: Scar[];  // Scars from healed serious/critical injuries
+  migratedToBlob?: boolean;  // Flag indicating token data has been migrated to Vercel Blob storage
 }

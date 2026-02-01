@@ -1483,6 +1483,7 @@ function App() {
 
   // Add Spells tab for player/party tokens, and NPC tokens (GM only)
   const showSpellsTab = !viewingStorageId && characterData?.tokenType !== 'lore' && 
+    characterData?.tokenType !== 'monster' && characterData?.tokenType !== 'merchant' &&
     (characterData?.tokenType !== 'npc' || playerRole === 'GM');
   if (showSpellsTab) {
     baseTabs.push({ id: 'Spells', label: 'SPELLS' });

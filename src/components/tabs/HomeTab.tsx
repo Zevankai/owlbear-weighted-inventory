@@ -3547,8 +3547,241 @@ export function HomeTab({
         </div>
       )}
 
+      {/* === MERCHANT TOKEN SPECIFIC UI === */}
+      {!viewingStorageId && characterData.tokenType === 'merchant' && playerRole === 'GM' && (
+        <div className="section" style={{ textAlign: 'center', padding: '24px' }}>
+          {/* Token Image and Name */}
+          <div style={{ marginBottom: '16px' }}>
+            {tokenImage && (
+              <div style={{
+                position: 'relative',
+                width: '120px',
+                height: '120px',
+                margin: '0 auto 12px',
+              }}>
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '3px solid #8BC34A',
+                  background: 'transparent',
+                  boxShadow: '0 4px 12px rgba(139, 195, 74, 0.5)',
+                }}>
+                  <img
+                    src={tokenImage}
+                    alt={characterData.name || tokenName || 'Merchant'}
+                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Editable Merchant Name */}
+            <DebouncedInput
+              value={characterData.name || tokenName || ''}
+              onChange={(val) => updateData({ name: val })}
+              className="search-input"
+              placeholder="Enter merchant name..."
+              style={{
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: '#8BC34A',
+                textAlign: 'center',
+                width: '100%',
+                maxWidth: '300px',
+                background: 'rgba(139, 195, 74, 0.1)',
+                border: '1px solid rgba(139, 195, 74, 0.3)',
+                padding: '8px',
+                borderRadius: '6px',
+              }}
+            />
+
+            <div style={{ 
+              fontSize: '10px', 
+              color: '#8BC34A', 
+              marginTop: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontWeight: 'bold'
+            }}>
+              Merchant Token
+            </div>
+          </div>
+
+          {/* Merchant Settings Section */}
+          <div style={{ 
+            marginTop: '24px',
+            textAlign: 'left',
+            background: 'rgba(139, 195, 74, 0.05)',
+            border: '1px solid rgba(139, 195, 74, 0.2)',
+            borderRadius: '8px',
+            padding: '16px'
+          }}>
+            <div style={{ 
+              fontSize: '14px', 
+              fontWeight: 'bold', 
+              color: '#8BC34A',
+              marginBottom: '12px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              🏪 Shop Configuration
+            </div>
+
+            {/* Shop Name */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '11px', color: '#8BC34A', display: 'block', marginBottom: '4px' }}>
+                Shop Name
+              </label>
+              <DebouncedInput
+                value={characterData.merchantSettings?.shopName || ''}
+                onChange={(val) => updateData({ 
+                  merchantSettings: { 
+                    ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                    shopName: val 
+                  }
+                })}
+                className="search-input"
+                placeholder="e.g., Blacksmith's Forge, Potions & Elixirs..."
+                style={{
+                  width: '100%',
+                  fontSize: '12px',
+                  padding: '6px 8px'
+                }}
+              />
+            </div>
+
+            {/* Price Modifier */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '11px', color: '#8BC34A', display: 'block', marginBottom: '4px' }}>
+                Price Modifier: {((characterData.merchantSettings?.priceModifier || 1.0) * 100).toFixed(0)}%
+              </label>
+              <input
+                type="range"
+                min="0.5"
+                max="2.0"
+                step="0.05"
+                value={characterData.merchantSettings?.priceModifier || 1.0}
+                onChange={(e) => updateData({ 
+                  merchantSettings: { 
+                    ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                    priceModifier: parseFloat(e.target.value)
+                  }
+                })}
+                style={{ width: '100%' }}
+              />
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                {characterData.merchantSettings?.priceModifier === 1.0 ? 'Standard prices' : 
+                 characterData.merchantSettings && characterData.merchantSettings.priceModifier > 1.0 ? 'Markup' : 'Discount'}
+              </div>
+            </div>
+
+            {/* Buyback Rate */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '11px', color: '#8BC34A', display: 'block', marginBottom: '4px' }}>
+                Buyback Rate: {((characterData.merchantSettings?.buybackRate || 0.5) * 100).toFixed(0)}%
+              </label>
+              <input
+                type="range"
+                min="0.1"
+                max="1.0"
+                step="0.05"
+                value={characterData.merchantSettings?.buybackRate || 0.5}
+                onChange={(e) => updateData({ 
+                  merchantSettings: { 
+                    ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                    buybackRate: parseFloat(e.target.value)
+                  }
+                })}
+                style={{ width: '100%' }}
+              />
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                How much merchant pays for items (% of value)
+              </div>
+            </div>
+
+            {/* Unlimited Stock Toggle */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '11px', color: '#8BC34A' }}>
+                <input
+                  type="checkbox"
+                  checked={characterData.merchantSettings?.unlimitedStock || false}
+                  onChange={(e) => updateData({ 
+                    merchantSettings: { 
+                      ...(characterData.merchantSettings || { priceModifier: 1.0, buybackRate: 0.5, unlimitedStock: false, restockEnabled: false, restockIntervalDays: 7 }),
+                      unlimitedStock: e.target.checked
+                    }
+                  })}
+                />
+                Unlimited Stock
+              </label>
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '2px', marginLeft: '20px' }}>
+                When enabled, items won't be removed from inventory on purchase
+              </div>
+            </div>
+
+            <div style={{
+              marginTop: '16px',
+              padding: '12px',
+              background: 'rgba(139, 195, 74, 0.1)',
+              borderRadius: '6px',
+              fontSize: '10px',
+              color: '#888'
+            }}>
+              💡 <strong>Tip:</strong> Shop presets and advanced stock management features are coming soon!
+              <br />Use the Pack tab to manually add items to this merchant's inventory.
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '8px', 
+            marginTop: '16px',
+            justifyContent: 'center',
+            flexWrap: 'wrap'
+          }}>
+            {/* Settings Button */}
+            <button
+              onClick={() => { setShowSettings(true); loadDebugInfo(); }}
+              style={{
+                background: 'rgba(139, 195, 74, 0.1)',
+                color: '#8BC34A',
+                border: '1px solid rgba(139, 195, 74, 0.3)',
+                padding: '4px 8px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '10px',
+                fontWeight: 'bold',
+              }}
+              title="Settings - Change token type"
+            >
+              ⚙️ Settings
+            </button>
+
+            {/* Favorite Star */}
+            <button
+              onClick={toggleFavorite}
+              style={{
+                background: isFavorited ? 'rgba(139, 195, 74, 0.15)' : 'transparent',
+                color: isFavorited ? '#8BC34A' : '#666',
+                border: '1px solid ' + (isFavorited ? 'rgba(139, 195, 74, 0.3)' : '#333'),
+                padding: '2px 6px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {isFavorited ? '⭐' : '☆'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* === STANDARD TOKEN UI (non-lore, non-monster tokens) === */}
-      {characterData.tokenType !== 'lore' && characterData.tokenType !== 'monster' && (
+      {characterData.tokenType !== 'lore' && characterData.tokenType !== 'monster' && characterData.tokenType !== 'merchant' && (
         <>
           {viewingStorageId && (
         <div style={{marginBottom: '12px'}}>

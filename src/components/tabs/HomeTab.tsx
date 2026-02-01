@@ -13,6 +13,7 @@ import { RestModal } from '../RestModal';
 import type { RestEffectsToApply } from '../RestModal';
 import { EditPopup } from '../EditPopup';
 import { InjuryPromptModal } from '../InjuryPromptModal';
+import { ShopPresetManager } from '../ShopPresetManager';
 import { createDefaultCharacterSheet, calculateModifier, ABILITY_ABBREV } from '../../utils/characterSheet';
 import { createDefaultExhaustionState, createDefaultRestHistory, createDefaultCharacterStats, createDefaultDeathSaves, createDefaultHitDice, createDefaultSuperiorityDice } from '../../utils/characterStats';
 import { createDefaultConditions, CONDITION_LABELS, INJURY_CONDITION_TYPES } from '../../data/conditions';
@@ -22,14 +23,15 @@ import { useCalendar } from '../../hooks/useCalendar';
 import { formatCustomDate } from '../../utils/calendar/dateFormatting';
 import { initiateRestNotification } from '../../utils/restNotifications';
 import { MarkdownHint } from '../MarkdownHint';
+import { useShopPresets } from '../../hooks/useShopPresets';
+import { useRepository } from '../../context/RepositoryContext';
+import { generateStockFromPreset } from '../../utils/stockGeneration';
 
 // Default merchant settings for consistent defaults
 const DEFAULT_MERCHANT_SETTINGS: MerchantSettings = {
   priceModifier: 1.0,
   buybackRate: 0.5,
-  unlimitedStock: false,
-  restockEnabled: false,
-  restockIntervalDays: 7
+  unlimitedStock: false
 };
 
 // Token image sizing constants
@@ -2078,6 +2080,14 @@ export function HomeTab({
   const [showRestModal, setShowRestModal] = useState(false);
   const [initialRestType, setInitialRestType] = useState<RestType | null>(null);
   
+  // State for Shop Preset Manager
+  const [showPresetManager, setShowPresetManager] = useState(false);
+  const [selectedPresetId, setSelectedPresetId] = useState<string>('');
+  
+  // Get shop presets and item repository
+  const { presets: shopPresets } = useShopPresets();
+  const { itemRepository } = useRepository();
+  
   // Effect to open RestModal when preSelectedRestType is set
   useEffect(() => {
     if (preSelectedRestType && !showRestModal) {
@@ -2128,6 +2138,36 @@ export function HomeTab({
       }
     });
   }, [characterStats, defaultStats, updateData]);
+  
+  // Handle applying a shop preset
+  const handleApplyPreset = useCallback(() => {
+    if (!selectedPresetId) return;
+    
+    const preset = shopPresets.find(p => p.id === selectedPresetId);
+    if (!preset) return;
+    
+    const confirmed = confirm(
+      `This will replace the merchant's current inventory with generated stock from '${preset.name}'. Continue?`
+    );
+    
+    if (!confirmed) return;
+    
+    // Generate stock from preset
+    const generatedItems = generateStockFromPreset(preset, itemRepository);
+    
+    // Update merchant data
+    updateData({
+      inventory: generatedItems,
+      merchantSettings: {
+        ...(characterData.merchantSettings || DEFAULT_MERCHANT_SETTINGS),
+        presetId: preset.id,
+        priceModifier: preset.priceModifier,
+        buybackRate: preset.buybackRate,
+      }
+    });
+    
+    console.log('[HomeTab] Applied preset:', preset.name, 'Generated items:', generatedItems.length);
+  }, [selectedPresetId, shopPresets, itemRepository, characterData.merchantSettings, updateData]);
   
   // Helper function to calculate hours between two calendar dates
   const calculateHoursBetweenDates = useCallback((
@@ -3730,16 +3770,105 @@ export function HomeTab({
               </div>
             </div>
 
+            {/* Shop Presets Section */}
             <div style={{
               marginTop: '16px',
               padding: '12px',
               background: 'rgba(139, 195, 74, 0.1)',
               borderRadius: '6px',
-              fontSize: '10px',
-              color: '#888'
+              border: '1px solid rgba(139, 195, 74, 0.2)',
             }}>
-              💡 <strong>Tip:</strong> Shop presets and advanced stock management features are coming soon!
-              <br />Use the Pack tab to manually add items to this merchant's inventory.
+              <div style={{ 
+                fontSize: '11px', 
+                fontWeight: 'bold', 
+                color: '#8BC34A',
+                marginBottom: '8px',
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px'
+              }}>
+                🎲 Shop Presets
+              </div>
+              
+              {/* Preset Selection */}
+              <div style={{ marginBottom: '8px' }}>
+                <select
+                  value={selectedPresetId}
+                  onChange={(e) => setSelectedPresetId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '6px 8px',
+                    borderRadius: '4px',
+                    border: '1px solid rgba(139, 195, 74, 0.3)',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    color: '#fff',
+                    fontSize: '11px',
+                  }}
+                >
+                  <option value="">Select a preset...</option>
+                  {shopPresets.map((preset) => (
+                    <option key={preset.id} value={preset.id}>
+                      {preset.name} ({preset.items.length} items)
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Current Preset Info */}
+              {characterData.merchantSettings?.presetId && (
+                <div style={{ 
+                  fontSize: '9px', 
+                  color: '#aaa', 
+                  marginBottom: '8px',
+                  fontStyle: 'italic'
+                }}>
+                  Current: {shopPresets.find(p => p.id === characterData.merchantSettings?.presetId)?.name || 'Unknown'}
+                </div>
+              )}
+              
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                <button
+                  onClick={handleApplyPreset}
+                  disabled={!selectedPresetId}
+                  style={{
+                    flex: 1,
+                    padding: '6px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: selectedPresetId 
+                      ? 'linear-gradient(135deg, rgba(139, 195, 74, 0.8), rgba(104, 159, 56, 0.8))'
+                      : 'rgba(100, 100, 100, 0.3)',
+                    color: selectedPresetId ? '#fff' : '#666',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    cursor: selectedPresetId ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  Generate Stock
+                </button>
+                <button
+                  onClick={() => setShowPresetManager(true)}
+                  style={{
+                    flex: 1,
+                    padding: '6px',
+                    borderRadius: '4px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, rgba(139, 195, 74, 0.6), rgba(104, 159, 56, 0.6))',
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: 'bold',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  Manage Presets
+                </button>
+              </div>
+              
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '8px' }}>
+                💡 Generate random stock from presets or manage your shop configurations
+              </div>
             </div>
           </div>
 
@@ -4414,6 +4543,11 @@ export function HomeTab({
             </>
           )}
         </div>
+      )}
+      
+      {/* Shop Preset Manager Modal */}
+      {showPresetManager && (
+        <ShopPresetManager onClose={() => setShowPresetManager(false)} />
       )}
     </div>
   );

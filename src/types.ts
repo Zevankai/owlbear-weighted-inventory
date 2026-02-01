@@ -105,13 +105,10 @@ export interface ShopPreset {
 
 export interface MerchantSettings {
   shopName?: string;                // Display name for the shop
-  presetId?: string;                // Reference to a ShopPreset (for future implementation)
+  presetId?: string;                // Reference to a ShopPreset
   priceModifier: number;            // 1.0 = standard, 1.2 = 20% markup, 0.8 = discount
   buybackRate: number;              // 0.5 = buys at 50% value (standard D&D)
   unlimitedStock: boolean;          // If true, qty doesn't decrease on purchase
-  restockEnabled: boolean;          // Reserved for future calendar-based restock system
-  restockIntervalDays: number;      // Reserved for future - days between restocks (minimum 1)
-  lastRestockDate?: { year: number; monthIndex: number; day: number }; // Reserved for future
 }
 
 export type PackType =

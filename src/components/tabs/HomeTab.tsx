@@ -2777,7 +2777,7 @@ export function HomeTab({
   
   // Helper to check if trade button should be shown
   const showTradeButton = !activeTrade && tokenId && 
-    (characterData.claimedBy || characterData.tokenType === 'party') && 
+    (characterData.claimedBy || characterData.tokenType === 'party' || characterData.tokenType === 'merchant') && 
     onOpenTradePartnerModal;
 
   return (
@@ -4013,6 +4013,48 @@ export function HomeTab({
             )}
           </div>
 
+          {/* Trade Button for Players */}
+          {showTradeButton && onOpenTradePartnerModal && (
+            <div style={{ marginTop: '20px' }}>
+              <button
+                onClick={onOpenTradePartnerModal}
+                style={{
+                  background: 'rgba(240, 225, 48, 0.15)',
+                  border: '2px solid rgba(240, 225, 48, 0.4)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  padding: '12px 24px',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                  color: 'var(--accent-gold)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  maxWidth: '280px',
+                  margin: '0 auto',
+                  boxShadow: '0 2px 8px rgba(240, 225, 48, 0.3)',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(240, 225, 48, 0.25)';
+                  e.currentTarget.style.transform = 'translateY(-2px)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(240, 225, 48, 0.4)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(240, 225, 48, 0.15)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(240, 225, 48, 0.3)';
+                }}
+                title="Trade with this merchant"
+              >
+                <span style={{ fontSize: '18px' }}>$</span>
+                <span>Initiate Trade</span>
+              </button>
+            </div>
+          )}
+
           <div style={{
             marginTop: '16px',
             padding: '12px',
@@ -4022,7 +4064,7 @@ export function HomeTab({
             color: '#888',
             textAlign: 'left'
           }}>
-            💡 <strong>How to trade:</strong> Use the Pack tab to view available items, then use the Transfer button to initiate a trade with the merchant.
+            💡 <strong>How to trade:</strong> Click the "Initiate Trade" button above to open a trade window with this merchant.
           </div>
 
           {/* Favorite Star */}

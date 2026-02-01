@@ -1127,7 +1127,8 @@ function App() {
                   npc: '#ff9800',
                   party: '#4caf50',
                   lore: '#9c27b0',
-                  monster: '#e53935'
+                  monster: '#e53935',
+                  merchant: '#8BC34A'
                 };
                 
                 return (

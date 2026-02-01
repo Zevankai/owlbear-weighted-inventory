@@ -216,6 +216,7 @@ export function SettingsPanel({
                     <option value="party">Party Token</option>
                     <option value="lore">Lore Token</option>
                     <option value="monster">Monster Token</option>
+                    <option value="merchant">Merchant Token</option>
                   </select>
                   <p style={{ fontSize: '10px', color: '#666', marginTop: '8px', marginBottom: 0 }}>
                     {characterData.tokenType === 'player' && 'Standard token claimable by one player'}
@@ -223,6 +224,7 @@ export function SettingsPanel({
                     {characterData.tokenType === 'party' && 'Shared inventory accessible by all players'}
                     {characterData.tokenType === 'lore' && 'Information token (no inventory)'}
                     {characterData.tokenType === 'monster' && 'Combat enemy with simplified UI'}
+                    {characterData.tokenType === 'merchant' && 'NPC merchant with shop inventory and trade functionality'}
                     {!characterData.tokenType && 'Standard token claimable by one player'}
                   </p>
                 </div>

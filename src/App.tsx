@@ -138,10 +138,12 @@ function App() {
   // GMs can always expand, players can only expand tokens they have claimed
   // Party tokens can be expanded by all players
   // Lore tokens can be expanded by all players (to read lore content)
+  // Merchant tokens can be expanded by all players (to trade)
   const canExpandToken = () => {
     if (playerRole === 'GM') return true;
     if (characterData?.tokenType === 'party') return true;
     if (characterData?.tokenType === 'lore') return true; // All players can expand lore tokens
+    if (characterData?.tokenType === 'merchant') return true; // All players can expand merchant tokens
     if (characterData?.claimedBy === playerId) return true;
     return false;
   };
@@ -151,6 +153,7 @@ function App() {
     if (!characterData) return 'No token selected';
     if (characterData.tokenType === 'party') return ''; // Party tokens are always expandable
     if (characterData.tokenType === 'lore') return ''; // Lore tokens are expandable by all players
+    if (characterData.tokenType === 'merchant') return ''; // Merchant tokens are expandable by all players
     if (!characterData.claimedBy) return 'Claim this token first to expand';
     if (characterData.claimedBy !== playerId) return 'This token is claimed by another player';
     return '';

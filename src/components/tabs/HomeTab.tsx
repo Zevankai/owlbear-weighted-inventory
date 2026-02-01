@@ -3780,6 +3780,133 @@ export function HomeTab({
         </div>
       )}
 
+      {/* === MERCHANT TOKEN PLAYER VIEW === */}
+      {!viewingStorageId && characterData.tokenType === 'merchant' && playerRole !== 'GM' && (
+        <div className="section" style={{ textAlign: 'center', padding: '24px' }}>
+          {/* Token Image and Name */}
+          <div style={{ marginBottom: '16px' }}>
+            {tokenImage && (
+              <div style={{
+                position: 'relative',
+                width: '120px',
+                height: '120px',
+                margin: '0 auto 12px',
+              }}>
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  borderRadius: '50%',
+                  overflow: 'hidden',
+                  border: '3px solid #8BC34A',
+                  background: 'transparent',
+                  boxShadow: '0 4px 12px rgba(139, 195, 74, 0.5)',
+                }}>
+                  <img
+                    src={tokenImage}
+                    alt={characterData.name || tokenName || 'Merchant'}
+                    style={{width: '100%', height: '100%', objectFit: 'cover'}}
+                  />
+                </div>
+              </div>
+            )}
+
+            <h2 style={{
+              fontSize: '18px',
+              fontWeight: 'bold',
+              color: '#8BC34A',
+              marginBottom: '4px'
+            }}>
+              {characterData.merchantSettings?.shopName || characterData.name || tokenName || 'Merchant'}
+            </h2>
+
+            <div style={{ 
+              fontSize: '10px', 
+              color: '#8BC34A', 
+              marginTop: '8px',
+              textTransform: 'uppercase',
+              letterSpacing: '1px',
+              fontWeight: 'bold'
+            }}>
+              🏪 Merchant Shop
+            </div>
+          </div>
+
+          {/* Shop Info */}
+          <div style={{ 
+            marginTop: '20px',
+            textAlign: 'left',
+            background: 'rgba(139, 195, 74, 0.05)',
+            border: '1px solid rgba(139, 195, 74, 0.2)',
+            borderRadius: '8px',
+            padding: '16px'
+          }}>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#8BC34A',
+              marginBottom: '12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>💰 <strong>Prices:</strong> {((characterData.merchantSettings?.priceModifier || 1.0) * 100).toFixed(0)}% of base value</span>
+            </div>
+            <div style={{ 
+              fontSize: '12px', 
+              color: '#8BC34A',
+              marginBottom: '12px',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>🤝 <strong>Buying at:</strong> {((characterData.merchantSettings?.buybackRate || 0.5) * 100).toFixed(0)}% of item value</span>
+            </div>
+            {characterData.merchantSettings?.unlimitedStock && (
+              <div style={{ 
+                fontSize: '11px', 
+                color: '#8BC34A',
+                padding: '8px',
+                background: 'rgba(139, 195, 74, 0.1)',
+                borderRadius: '4px',
+                marginTop: '8px'
+              }}>
+                ♾️ Unlimited stock available
+              </div>
+            )}
+          </div>
+
+          <div style={{
+            marginTop: '16px',
+            padding: '12px',
+            background: 'rgba(139, 195, 74, 0.1)',
+            borderRadius: '6px',
+            fontSize: '11px',
+            color: '#888',
+            textAlign: 'left'
+          }}>
+            💡 <strong>How to trade:</strong> Use the Pack tab to view available items, then use the Transfer button to initiate a trade with the merchant.
+          </div>
+
+          {/* Favorite Star */}
+          <div style={{ marginTop: '16px' }}>
+            <button
+              onClick={toggleFavorite}
+              style={{
+                background: isFavorited ? 'rgba(139, 195, 74, 0.15)' : 'transparent',
+                color: isFavorited ? '#8BC34A' : '#666',
+                border: '1px solid ' + (isFavorited ? 'rgba(139, 195, 74, 0.3)' : '#333'),
+                padding: '2px 6px',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+              }}
+              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+            >
+              {isFavorited ? '⭐' : '☆'}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* === STANDARD TOKEN UI (non-lore, non-monster tokens) === */}
       {characterData.tokenType !== 'lore' && characterData.tokenType !== 'monster' && characterData.tokenType !== 'merchant' && (
         <>

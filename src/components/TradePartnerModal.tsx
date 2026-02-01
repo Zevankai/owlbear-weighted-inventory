@@ -1,4 +1,4 @@
-export type OwnerType = 'self' | 'party' | 'other-player' | 'npc';
+export type OwnerType = 'self' | 'party' | 'other-player' | 'npc' | 'merchant';
 
 export interface TradePartner {
   tokenId: string;
@@ -26,6 +26,8 @@ function getOwnerLabel(ownerType: OwnerType): string {
       return '(Another player)';
     case 'npc':
       return '(NPC)';
+    case 'merchant':
+      return '(Merchant)';
   }
 }
 
@@ -39,6 +41,8 @@ function getOwnerColor(ownerType: OwnerType): string {
       return '#888';
     case 'npc':
       return '#9b59b6';
+    case 'merchant':
+      return '#8BC34A';
   }
 }
 

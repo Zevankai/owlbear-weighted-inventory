@@ -5,7 +5,7 @@
  * to/from Vercel Blob storage with graceful fallback to OBR metadata.
  */
 
-import type { CharacterData } from '../types';
+import type { CharacterData, ShopPreset } from '../types';
 import type { RepoItem } from '../data/repository';
 import type { RepositorySpell } from '../types';
 import OBR from '@owlbear-rodeo/sdk';
@@ -273,6 +273,61 @@ export const saveCustomSpells = async (
     throw new Error(`Failed to save custom spells: ${response.statusText}`);
   } catch (error) {
     console.error('[StorageService] Error saving custom spells:', error);
+    return false;
+  }
+};
+
+/**
+ * Load shop presets for a campaign
+ */
+export const loadShopPresets = async (campaignId: string): Promise<ShopPreset[]> => {
+  try {
+    const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/shop-presets`;
+    const response = await fetch(url);
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('[StorageService] Loaded shop presets from Vercel Blob:', data.length);
+      return data as ShopPreset[];
+    }
+
+    if (response.status === 404) {
+      console.log('[StorageService] No shop presets found');
+      return [];
+    }
+
+    throw new Error(`Failed to load shop presets: ${response.statusText}`);
+  } catch (error) {
+    console.error('[StorageService] Error loading shop presets:', error);
+    return [];
+  }
+};
+
+/**
+ * Save shop presets for a campaign
+ */
+export const saveShopPresets = async (
+  campaignId: string,
+  presets: ShopPreset[]
+): Promise<boolean> => {
+  try {
+    const url = `${getApiBaseUrl()}/api/repositories/${campaignId}/shop-presets`;
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(presets),
+    });
+
+    if (response.ok) {
+      console.log('[StorageService] Saved shop presets to Vercel Blob');
+      return true;
+    }
+
+    throw new Error(`Failed to save shop presets: ${response.statusText}`);
+  } catch (error) {
+    console.error('[StorageService] Error saving shop presets:', error);
     return false;
   }
 };
